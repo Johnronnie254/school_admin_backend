@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'admin_interface',
+    'school_admin',
 ]
 
 MIDDLEWARE = [
@@ -76,8 +77,12 @@ WSGI_APPLICATION = 'school_admin.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',  # Use SQLite and create the database file in your project directory
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'school_management',  # Replace with your database name
+        'USER': 'postgres',
+        'PASSWORD': 'ronnie254',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
