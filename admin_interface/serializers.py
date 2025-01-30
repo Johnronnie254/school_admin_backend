@@ -20,12 +20,6 @@ class FileUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
 
     def validate_file(self, value):
-        # Check if the file is an Excel file
         if not value.name.endswith('.xlsx'):
             raise serializers.ValidationError("Only Excel files (.xlsx) are allowed.")
-        
-        # Optionally, you can also validate the file type by checking the MIME type
-        if not value.content_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']:
-            raise serializers.ValidationError("Invalid file type. Please upload a valid Excel file.")
-        
         return value
