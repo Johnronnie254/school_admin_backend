@@ -1,27 +1,31 @@
 from rest_framework import serializers
-from .models import Teacher, Student, Notification, LeaveRequest, SalaryAdvanceRequest
+from admin_interface.models import Teacher, Student, Notification
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
-        fields = '__all__'
+        fields = ['id', 'name', 'email', 'phone_number', 'class_assigned', 'subjects']
 
 class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
-        fields = '__all__'
+        fields = ['id', 'name', 'guardian', 'contact', 'grade']
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = '__all__'
+        fields = ['id', 'message', 'target_group', 'date']
 
-class LeaveRequestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LeaveRequest
-        fields = '__all__'
+class FileUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
 
-class SalaryAdvanceRequestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SalaryAdvanceRequest
-        fields = '__all__'
+    def validate_file(self, value):
+        # Check if the file is an Excel file
+        if not value.name.endswith('.xlsx'):
+            raise serializers.ValidationError("Only Excel files (.xlsx) are allowed.")
+        
+        # Optionally, you can also validate the file type by checking the MIME type
+        if not value.content_type in ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']:
+            raise serializers.ValidationError("Invalid file type. Please upload a valid Excel file.")
+        
+        return value
