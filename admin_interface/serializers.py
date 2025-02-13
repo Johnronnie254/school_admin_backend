@@ -1,25 +1,56 @@
 from rest_framework import serializers
-from admin_interface.models import Teacher, Student, Notification
+from .models import User, Teacher, Student, Notification
+from rest_framework_simplejwt.tokens import RefreshToken
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'is_teacher')
+
+class RegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'password', 'is_teacher')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            username=validated_data['username'],
+            password=validated_data['password'],
+            is_teacher=validated_data.get('is_teacher', False)
+        )
+        return user
 
 class TeacherSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
     class Meta:
         model = Teacher
-        fields = ['id', 'name', 'email', 'phone_number', 'class_assigned', 'subjects']
+        fields = '__all__'
 
 class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
-        fields = ['id', 'name', 'guardian', 'contact', 'grade']
+        fields = '__all__'
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'message', 'target_group', 'date']
+        fields = '__all__'
 
-class FileUploadSerializer(serializers.Serializer):
-    file = serializers.FileField()
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
 
-    def validate_file(self, value):
-        if not value.name.endswith('.xlsx'):
-            raise serializers.ValidationError("Only Excel files (.xlsx) are allowed.")
-        return value
+    def validate(self, data):
+        from django.contrib.auth import authenticate
+        user = authenticate(email=data['email'], password=data['password'])
+        if not user:
+            raise serializers.ValidationError("Invalid credentials.")
+        refresh = RefreshToken.for_user(user)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'user': UserSerializer(user).data
+        }
