@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from .models import Teacher, Student, Notification, User
 from .serializers import (
     UserSerializer, RegisterSerializer, LoginSerializer, 
@@ -13,13 +13,29 @@ class RegisterView(generics.CreateAPIView):
     """Handles user registration."""
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
 
 class LoginView(APIView):
     """Handles user login and returns JWT tokens."""
+    permission_classes = [permissions.AllowAny]
+
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return Response(serializer.validated_data)
+
+        email = serializer.validated_data["email"]
+        password = serializer.validated_data["password"]
+
+        user = authenticate(request, username=email, password=password)
+
+        if user is None:
+            return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        })
 
 class LogoutView(APIView):
     """Handles user logout."""
@@ -27,12 +43,15 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
-            refresh_token = request.data["refresh"]
+            refresh_token = request.data.get("refresh")
+            if not refresh_token:
+                return Response({"error": "Refresh token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({"message": "Logged out successfully"}, status=200)
-        except Exception as e:
-            return Response({"error": "Invalid token"}, status=400)
+            return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
 class TeacherListView(generics.ListCreateAPIView):
     """Handles listing and creating teachers."""
@@ -46,14 +65,14 @@ class StudentListView(generics.ListCreateAPIView):
     serializer_class = StudentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class StudentByGradeView(APIView):
+class StudentByGradeView(generics.ListAPIView):
     """Filters students by grade."""
+    serializer_class = StudentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, grade):
-        students = Student.objects.filter(grade=grade)
-        serializer = StudentSerializer(students, many=True)
-        return Response(serializer.data)
+    def get_queryset(self):
+        grade = self.kwargs["grade"]
+        return Student.objects.filter(grade=grade)
 
 class NotificationListView(generics.ListCreateAPIView):
     """Handles listing and creating notifications."""

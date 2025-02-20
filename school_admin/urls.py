@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import (
+from admin_interface.views import (
     RegisterView, LoginView, LogoutView, TeacherListView,
     StudentListView, StudentByGradeView, NotificationListView
 )
+
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),

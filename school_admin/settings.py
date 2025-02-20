@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    
+
     # Your apps
     'admin_interface',
     'school_admin',
@@ -74,12 +74,8 @@ CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000'
 # Database Configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'school_management'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'your-db-password'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -112,7 +108,7 @@ SIMPLE_JWT = {
 }
 
 # Custom user model
-AUTH_USER_MODEL = 'school_admin.User'
+AUTH_USER_MODEL = 'admin_interface.User'
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
