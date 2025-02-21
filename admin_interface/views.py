@@ -10,26 +10,13 @@ from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 
 class RegisterView(generics.CreateAPIView):
-    """Handles user registration and returns user details after signup."""
+    """Handles user registration."""
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            "message": "User registered successfully",
-            "user": UserSerializer(user).data,
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-        }, status=status.HTTP_201_CREATED)
-
 class LoginView(APIView):
-    """Handles user login and returns JWT tokens along with user info."""
+    """Handles user login and returns JWT tokens."""
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
@@ -39,21 +26,20 @@ class LoginView(APIView):
         email = serializer.validated_data["email"]
         password = serializer.validated_data["password"]
 
-        user = authenticate(request, username=email, password=password)
+        # FIX: Change username=email to email=email
+        user = authenticate(request, email=email, password=password)
 
         if user is None:
             return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
 
         refresh = RefreshToken.for_user(user)
         return Response({
-            "message": "Login successful",
-            "user": UserSerializer(user).data,
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-        }, status=status.HTTP_200_OK)
+        })
 
 class LogoutView(APIView):
-    """Handles user logout and blacklists refresh tokens."""
+    """Handles user logout."""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
