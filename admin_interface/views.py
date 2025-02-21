@@ -10,13 +10,26 @@ from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 
 class RegisterView(generics.CreateAPIView):
-    """Handles user registration."""
+    """Handles user registration and returns user details after signup."""
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "message": "User registered successfully",
+            "user": UserSerializer(user).data,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
+
 class LoginView(APIView):
-    """Handles user login and returns JWT tokens."""
+    """Handles user login and returns JWT tokens along with user info."""
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
@@ -33,12 +46,14 @@ class LoginView(APIView):
 
         refresh = RefreshToken.for_user(user)
         return Response({
+            "message": "Login successful",
+            "user": UserSerializer(user).data,
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-        })
+        }, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
-    """Handles user logout."""
+    """Handles user logout and blacklists refresh tokens."""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
