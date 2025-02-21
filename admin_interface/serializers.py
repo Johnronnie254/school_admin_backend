@@ -1,12 +1,13 @@
 from rest_framework import serializers
 from .models import User, Teacher, Student, Notification
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User (Admins)"""
     class Meta:
         model = User
-        fields = ('id', 'email')  # Removed username and is_teacher (not needed)
+        fields = ('id', 'email')
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Serializer for registering Admin Users"""
@@ -29,10 +30,11 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        from django.contrib.auth import authenticate
-        user = authenticate(username=data['email'], password=data['password'])  # Ensuring email is used
+        """Validate user credentials"""
+        user = authenticate(email=data['email'], password=data['password'])  # Use email instead of username
         if not user:
-            raise serializers.ValidationError("Invalid credentials.")
+            raise serializers.ValidationError("Invalid email or password.")
+
         refresh = RefreshToken.for_user(user)
         return {
             'refresh': str(refresh),
@@ -41,7 +43,7 @@ class LoginSerializer(serializers.Serializer):
         }
 
 class TeacherSerializer(serializers.ModelSerializer):
-    """Serializer for Teachers (Independent from User)"""
+    """Serializer for Teachers"""
     class Meta:
         model = Teacher
         fields = '__all__'
