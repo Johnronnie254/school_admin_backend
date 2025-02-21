@@ -23,19 +23,16 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email = serializer.validated_data["email"]
-        password = serializer.validated_data["password"]
+        user = serializer.validated_data.get("user")
 
-        # FIX: Change username=email to email=email
-        user = authenticate(request, email=email, password=password)
-
-        if user is None:
+        if not user:
             return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
 
         refresh = RefreshToken.for_user(user)
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
+            "user": UserSerializer(user).data
         })
 
 class LogoutView(APIView):
