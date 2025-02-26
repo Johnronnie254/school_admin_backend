@@ -68,6 +68,23 @@ class TeacherDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TeacherSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+from rest_framework.parsers import MultiPartParser, FormParser
+
+class TeacherUploadView(APIView):
+    """Handles bulk teacher uploads via file."""
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # TODO: Process file and save teachers (CSV/Excel parsing)
+        
+        return Response({"message": "File uploaded successfully!"}, status=status.HTTP_201_CREATED)
+
+
 
 class StudentListView(generics.ListCreateAPIView):
     """Handles listing and creating students."""
