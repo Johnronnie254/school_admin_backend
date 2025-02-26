@@ -24,16 +24,14 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = serializer.validated_data.get("user")
+        refresh = serializer.validated_data.get("refresh")
+        access = serializer.validated_data.get("access")
 
-        if not user:
-            return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        refresh = RefreshToken.for_user(user)
         return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
+            "refresh": refresh,
+            "access": access,
             "user": UserSerializer(user).data
-        })
+        }, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
     """Handles user logout."""
@@ -57,11 +55,25 @@ class TeacherListView(generics.ListCreateAPIView):
     serializer_class = TeacherSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        """Ensure email uniqueness before creating a teacher."""
+        email = request.data.get("email")
+        if Teacher.objects.filter(email=email).exists():
+            return Response({"error": "A teacher with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
+
 class StudentListView(generics.ListCreateAPIView):
     """Handles listing and creating students."""
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        """Ensure contact uniqueness before creating a student."""
+        contact = request.data.get("contact")
+        if Student.objects.filter(contact=contact).exists():
+            return Response({"error": "A student with this contact already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
 
 class StudentByGradeView(generics.ListAPIView):
     """Filters students by grade."""
@@ -69,8 +81,11 @@ class StudentByGradeView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        grade = self.kwargs["grade"]
-        return Student.objects.filter(grade=grade)
+        """Ensure the grade is valid and fetch students accordingly."""
+        grade = self.kwargs.get("grade")
+        if not grade.isdigit():
+            return Student.objects.none()  # Return empty queryset if grade is invalid
+        return Student.objects.filter(grade=int(grade))
 
 class NotificationListView(generics.ListCreateAPIView):
     """Handles listing and creating notifications."""
