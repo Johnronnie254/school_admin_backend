@@ -16,6 +16,8 @@ urlpatterns = [
 
     path('students/', StudentListView.as_view(), name='students'),
     path('students/grade/<int:grade>/', StudentByGradeView.as_view(), name='students-by-grade'),  # ✅ Fixed
+    path('students/<int:pk>/', StudentDetailView.as_view(), name='student-detail'),
+
 
     path('notifications/', NotificationListView.as_view(), name='notifications'),
 ]
