@@ -88,11 +88,10 @@ class StudentByGradeView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Ensure the grade is valid and fetch students accordingly."""
-        grade = self.kwargs.get("grade")
-        if not grade.isdigit():
-            return Student.objects.none()  # Return empty queryset if grade is invalid
-        return Student.objects.filter(grade=int(grade))
+        """Fetch students of the given grade."""
+        grade = self.kwargs.get("grade")  # Already an integer from URL
+        return Student.objects.filter(grade=grade)
+
 
 class NotificationListView(generics.ListCreateAPIView):
     """Handles listing and creating notifications."""
