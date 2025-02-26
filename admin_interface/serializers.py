@@ -34,7 +34,7 @@ class LoginSerializer(serializers.Serializer):
         email = data.get('email')
         password = data.get('password')
 
-        user = authenticate(username=email, password=password)  # Ensure correct authentication
+        user = authenticate(username=email, password=password)
         if not user:
             raise serializers.ValidationError("Invalid email or password.")
 
@@ -51,11 +51,23 @@ class TeacherSerializer(serializers.ModelSerializer):
         model = Teacher
         fields = '__all__'
 
+    def validate_email(self, value):
+        """Ensure email is unique"""
+        if Teacher.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A teacher with this email already exists.")
+        return value
+
 class StudentSerializer(serializers.ModelSerializer):
     """Serializer for Students"""
     class Meta:
         model = Student
         fields = '__all__'
+
+    def validate_contact(self, value):
+        """Ensure contact is unique"""
+        if Student.objects.filter(contact=value).exists():
+            raise serializers.ValidationError("A student with this contact already exists.")
+        return value
 
 class NotificationSerializer(serializers.ModelSerializer):
     """Serializer for Notifications"""
