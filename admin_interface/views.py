@@ -62,6 +62,13 @@ class TeacherListView(generics.ListCreateAPIView):
             return Response({"error": "A teacher with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
 
+class TeacherDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Handles retrieving, updating, and deleting a single teacher."""
+    queryset = Teacher.objects.all()
+    serializer_class = TeacherSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
 class StudentListView(generics.ListCreateAPIView):
     """Handles listing and creating students."""
     queryset = Student.objects.all()
