@@ -116,6 +116,23 @@ class StudentByGradeView(generics.ListAPIView):
         grade = self.kwargs.get("grade")  # Already an integer from URL
         return Student.objects.filter(grade=grade)
 
+from rest_framework.parsers import MultiPartParser, FormParser
+
+class StudentUploadView(APIView):
+    """Handles bulk student uploads via file."""
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, grade):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # TODO: Process CSV/Excel file and save students to the database
+        
+        return Response({"message": "File uploaded successfully!"}, status=status.HTTP_201_CREATED)
+
+
 
 class NotificationListView(generics.ListCreateAPIView):
     """Handles listing and creating notifications."""
