@@ -39,6 +39,8 @@ class Teacher(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
+    class_assigned = models.CharField(max_length=255, blank=True, null=True)  # Added field
+    subjects = models.JSONField(default=list)  # List of subjects
     created_at = models.DateTimeField(auto_now_add=True)  # Auto timestamp
     updated_at = models.DateTimeField(auto_now=True)
 
