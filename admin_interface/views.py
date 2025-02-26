@@ -99,6 +99,13 @@ class StudentListView(generics.ListCreateAPIView):
             return Response({"error": "A student with this contact already exists."}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
 
+class StudentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Handles retrieving, updating, and deleting a student."""
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
 class StudentByGradeView(generics.ListAPIView):
     """Filters students by grade."""
     serializer_class = StudentSerializer
