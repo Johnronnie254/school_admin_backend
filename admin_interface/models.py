@@ -1,6 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+import uuid
 
+class Role(models.TextChoices):
+    ADMIN = 'admin', 'Administrator'
+    TEACHER = 'teacher', 'Teacher'
+    PARENT = 'parent', 'Parent'
 
 # Custom User Manager
 class UserManager(BaseUserManager):
@@ -21,14 +26,16 @@ class UserManager(BaseUserManager):
 
 # Custom User model for Admins only
 class User(AbstractUser):
-    """Custom user model for Admins who manage Teachers and Students."""
+    """Custom user model with role-based access"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = None  # Remove username field (authentication is via email)
     email = models.EmailField(unique=True)
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.PARENT)
     
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []  # Only email is required
+    REQUIRED_FIELDS = ["role"]
 
     def __str__(self):
         return self.email
@@ -36,12 +43,33 @@ class User(AbstractUser):
 
 class Teacher(models.Model):
     """Independent Teacher model."""
-    name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, db_index=True)
+    email = models.EmailField(unique=True, db_index=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
-    class_assigned = models.CharField(max_length=255, blank=True, null=True)  # Added field
-    subjects = models.JSONField(default=list)  # List of subjects
-    created_at = models.DateTimeField(auto_now_add=True)  # Auto timestamp
+    class_assigned = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    subjects = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['name', 'email']),
+            models.Index(fields=['class_assigned']),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class Parent(models.Model):
+    """Model for Parents/Guardians"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=15, unique=True)
+    password = models.CharField(max_length=255)  # Will store hashed password
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -50,13 +78,21 @@ class Teacher(models.Model):
 
 class Student(models.Model):
     """Independent Student model."""
-    name = models.CharField(max_length=255)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255, db_index=True)
     guardian = models.CharField(max_length=255)
-    contact = models.CharField(max_length=15)  # Phone numbers are usually 10-15 chars
-    grade = models.PositiveIntegerField()  # Ensures grades are positive numbers
-    class_assigned = models.CharField(max_length=255, blank=True, null=True)
+    contact = models.CharField(max_length=15, unique=True)
+    grade = models.PositiveIntegerField(db_index=True)
+    class_assigned = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    parent = models.ForeignKey(Parent, on_delete=models.SET_NULL, null=True, related_name='children')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['name', 'grade']),
+            models.Index(fields=['class_assigned']),
+        ]
 
     def __str__(self):
         return f"{self.name} - Grade {self.grade}"
@@ -64,6 +100,7 @@ class Student(models.Model):
 
 class Notification(models.Model):
     """Model for storing notifications sent to teachers or students."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     TARGET_CHOICES = [
         ("teachers", "Teachers"),
         ("students", "Students"),
@@ -76,3 +113,123 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification to {self.get_target_group_display()}"
+
+
+class ExamResult(models.Model):
+    """Model for storing student exam results"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='exam_results')
+    exam_name = models.CharField(max_length=255)
+    subject = models.CharField(max_length=100)
+    marks = models.DecimalField(max_digits=5, decimal_places=2)
+    grade = models.CharField(max_length=2)
+    term = models.CharField(max_length=20)
+    year = models.PositiveIntegerField()
+    remarks = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['student', 'year', 'term']),
+        ]
+
+    def __str__(self):
+        return f"{self.student.name} - {self.subject} ({self.exam_name})"
+
+
+class SchoolFee(models.Model):
+    """Model for tracking school fee payments"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='fee_records')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    term = models.CharField(max_length=20)
+    year = models.PositiveIntegerField()
+    payment_date = models.DateField()
+    payment_method = models.CharField(max_length=50)
+    transaction_id = models.UUIDField(default=uuid.uuid4, unique=True)
+    status = models.CharField(max_length=20, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['student', 'year', 'term']),
+            models.Index(fields=['transaction_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.student.name} - {self.term} {self.year}"
+
+
+class Attendance(models.Model):
+    """Model for tracking student attendance"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='attendance_records')
+    date = models.DateField()
+    status = models.CharField(max_length=20, choices=[
+        ('present', 'Present'),
+        ('absent', 'Absent'),
+        ('late', 'Late'),
+        ('excused', 'Excused')
+    ])
+    reason = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['student', 'date']
+        indexes = [models.Index(fields=['student', 'date'])]
+
+
+class TimeTable(models.Model):
+    """Model for school timetable"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    grade = models.PositiveIntegerField()
+    day = models.CharField(max_length=10)
+    period = models.PositiveIntegerField()
+    subject = models.CharField(max_length=100)
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    room = models.CharField(max_length=50)
+
+    class Meta:
+        unique_together = ['grade', 'day', 'period']
+        ordering = ['day', 'period']
+
+
+class Document(models.Model):
+    """Model for storing school documents"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255)
+    file = models.FileField(upload_to='documents/%Y/%m/')
+    document_type = models.CharField(max_length=50, choices=[
+        ('report', 'Report Card'),
+        ('assignment', 'Assignment'),
+        ('syllabus', 'Syllabus'),
+        ('other', 'Other')
+    ])
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SchoolEvent(models.Model):
+    """Model for school events and calendar"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    event_type = models.CharField(max_length=50, choices=[
+        ('holiday', 'Holiday'),
+        ('exam', 'Examination'),
+        ('meeting', 'Meeting'),
+        ('activity', 'Activity')
+    ])
+    participants = models.CharField(max_length=50, choices=[
+        ('all', 'All'),
+        ('teachers', 'Teachers'),
+        ('students', 'Students'),
+        ('parents', 'Parents')
+    ])
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
