@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 import uuid
+from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
 
 class Role(models.TextChoices):
     ADMIN = 'admin', 'Administrator'
@@ -46,9 +48,21 @@ class Teacher(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, db_index=True)
     email = models.EmailField(unique=True, db_index=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    phone_regex = RegexValidator(
+        regex=r'^07\d{8}$',
+        message="Phone number must be in format '07XXXXXXXX'"
+    )
+    phone_number = models.CharField(
+        validators=[phone_regex], 
+        max_length=15,
+        null=True,
+        blank=True,
+        error_messages={
+            'invalid': "Phone number must be in format '07XXXXXXXX'"
+        }
+    )
     class_assigned = models.CharField(max_length=255, blank=True, null=True, db_index=True)
-    subjects = models.JSONField(default=list)
+    subjects = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -57,9 +71,22 @@ class Teacher(models.Model):
             models.Index(fields=['name', 'email']),
             models.Index(fields=['class_assigned']),
         ]
+        ordering = ['name']
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+        # Validate phone number
+        if not self.phone_regex.regex.match(str(self.phone_number)):
+            raise ValidationError({
+                'phone_number': self.phone_regex.message
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class Parent(models.Model):
@@ -110,9 +137,13 @@ class Notification(models.Model):
     message = models.TextField()
     target_group = models.CharField(max_length=10, choices=TARGET_CHOICES, default="both")
     created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f"Notification to {self.get_target_group_display()}"
+
+    class Meta:
+        ordering = ['-created_at']
 
 
 class ExamResult(models.Model):
@@ -196,6 +227,16 @@ class TimeTable(models.Model):
         unique_together = ['grade', 'day', 'period']
         ordering = ['day', 'period']
 
+    def clean(self):
+        if self.start_time and self.end_time and self.start_time >= self.end_time:
+            raise ValidationError({
+                'end_time': 'End time must be after start time'
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 class Document(models.Model):
     """Model for storing school documents"""
@@ -211,6 +252,9 @@ class Document(models.Model):
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.student.name}"
 
 
 class SchoolEvent(models.Model):

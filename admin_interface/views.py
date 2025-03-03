@@ -1,19 +1,19 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
     ExamResultSerializer, SchoolFeeSerializer, 
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
-    UserSerializer
+    UserSerializer, DocumentSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -142,7 +142,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'email', 'class_assigned']
     ordering_fields = ['name', 'created_at']
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (JSONParser, FormParser, MultiPartParser)
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -528,14 +528,24 @@ class SchoolFeeViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-class NotificationViewSet(viewsets.ModelViewSet):
-    """ViewSet for Notification operations"""
+class NotificationView(viewsets.ModelViewSet):
+    """ViewSet for managing notifications"""
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['message', 'target_group']
     ordering_fields = ['created_at']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        target_group = self.request.query_params.get('target_group', None)
+        if target_group:
+            queryset = queryset.filter(target_group=target_group)
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
 class StudentListView(APIView):
     """Handles listing and creating students."""
@@ -770,3 +780,54 @@ class InitiateFeesPaymentView(APIView):
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class DocumentUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        serializer = DocumentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(uploaded_by=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class FeePaymentView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def initiate_payment(self, request):
+        data = request.data.copy()
+        if 'payment_date' not in data:
+            data['payment_date'] = timezone.now().date()
+            
+        serializer = SchoolFeeSerializer(data=data)
+        if serializer.is_valid():
+            fee = serializer.save()
+            return Response({
+                'transaction_id': str(fee.transaction_id),
+                'status': 'pending'
+            })
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def confirm_payment(self, request):
+        transaction_id = request.data.get('transaction_id')
+        try:
+            fee = SchoolFee.objects.get(transaction_id=transaction_id)
+            fee.status = 'completed'
+            fee.save()
+            return Response({'status': 'completed'})
+        except SchoolFee.DoesNotExist:
+            return Response(
+                {'error': 'Payment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class ExamResultView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ExamResultSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
