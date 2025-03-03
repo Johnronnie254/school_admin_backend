@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -74,7 +74,8 @@ class NotificationSerializer(serializers.ModelSerializer):
     """Serializer for Notifications"""
     class Meta:
         model = Notification
-        fields = '__all__'
+        fields = ['id', 'message', 'target_group', 'created_at', 'created_by']
+        read_only_fields = ['created_by']
 
 class ParentSerializer(serializers.ModelSerializer):
     """Serializer for Parent model"""
@@ -116,3 +117,12 @@ class StudentDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = '__all__'
+
+class DocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document
+        fields = [
+            'id', 'title', 'file', 'document_type', 
+            'uploaded_by', 'student', 'created_at'
+        ]
+        read_only_fields = ['uploaded_by', 'created_at']

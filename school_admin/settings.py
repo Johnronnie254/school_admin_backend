@@ -27,6 +27,10 @@ CORS_ALLOW_HEADERS = [
 
 # Application definition
 INSTALLED_APPS = [
+    # Your apps first
+    'admin_interface',
+
+    # Django apps after
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,10 +43,6 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-
-    # Your apps
-    'admin_interface',
-    'school_admin',
 ]
 
 MIDDLEWARE = [
@@ -104,6 +104,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
     'DEFAULT_FILTER_BACKENDS': (
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
@@ -134,7 +139,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
+# STATICFILES_DIRS = [BASE_DIR / "static"]  # Comment out or remove this line
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Media files (User uploads)
