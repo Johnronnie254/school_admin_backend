@@ -80,11 +80,14 @@ WSGI_APPLICATION = 'school_admin.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+        'NAME': 'edusphere',          # Your database name
+        'USER': 'postgres',           # Usually 'postgres' by default
+        'PASSWORD': '0000',  # The password you set for postgres
+        'HOST': 'localhost',
+        'PORT': '5432',
+        'TEST': {
+            'NAME': 'test_edusphere',
+        },
     }
 }
 

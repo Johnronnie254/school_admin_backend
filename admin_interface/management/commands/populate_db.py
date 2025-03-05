@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from faker import Faker
-from admin_interface.models import Teacher, Student, Parent, ExamResult, SchoolFee, Notification
+from admin_interface.models import Teacher, Student, Parent, ExamResult, SchoolFee, Notification, User, Role
 from django.contrib.auth.hashers import make_password
 import random
 from datetime import datetime, timedelta
@@ -16,40 +16,53 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         fake = Faker()
 
-        # Create 10 Parents
-        parents = []
+        # First create parent users
+        parent_users = []
         for _ in range(10):
-            parent = Parent.objects.create(
-                name=fake.name(),
+            parent_user = User.objects.create_user(
                 email=fake.unique.email(),
-                phone_number=self.generate_phone(),  # Using custom phone generator
+                password='password123',
+                first_name=fake.name(),
+                role=Role.PARENT
+            )
+            parent_users.append(parent_user)
+            self.stdout.write(f"Created parent user: {parent_user.email}")
+
+        # Create parent profiles
+        parents = []
+        for parent_user in parent_users:
+            parent = Parent.objects.create(
+                name=parent_user.first_name,
+                email=parent_user.email,
+                phone_number=self.generate_phone(),
                 password=make_password('password123')
             )
             parents.append(parent)
-            self.stdout.write(f"Created parent: {parent.name}")
+            self.stdout.write(f"Created parent profile: {parent.name}")
 
-        # Create 10 Teachers
+        # Create teachers
         subjects = ['Mathematics', 'English', 'Science', 'History', 'Geography']
         for _ in range(10):
             teacher = Teacher.objects.create(
                 name=fake.name(),
                 email=fake.unique.email(),
-                phone_number=self.generate_phone(),  # Using custom phone generator
+                phone_number=self.generate_phone(),
                 class_assigned=f"Grade {random.randint(1, 12)}",
                 subjects=random.sample(subjects, random.randint(1, 3))
             )
             self.stdout.write(f"Created teacher: {teacher.name}")
 
-        # Create 20 Students
+        # Create students - now linking to parent users instead of parent profiles
         students = []
         for _ in range(20):
+            parent_user = random.choice(parent_users)  # Select a random parent user
             student = Student.objects.create(
                 name=fake.name(),
-                guardian=fake.name(),
-                contact=self.generate_phone(),  # Using custom phone generator
+                guardian=parent_user.first_name,
+                contact=self.generate_phone(),
                 grade=random.randint(1, 12),
                 class_assigned=f"{random.randint(1, 12)}-{random.choice(['A', 'B', 'C'])}",
-                parent=random.choice(parents)
+                parent=parent_user  # Link to User model instead of Parent model
             )
             students.append(student)
             self.stdout.write(f"Created student: {student.name}")

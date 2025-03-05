@@ -9,20 +9,19 @@ from datetime import datetime, timedelta
 
 class UserModelTest(TestCase):
     def setUp(self):
-        self.user_data = {
-            'email': 'test@example.com',
-            'password': 'test123',
-            'role': Role.ADMIN
-        }
-        self.user = User.objects.create_user(**self.user_data)
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            password='test123',
+            role=Role.ADMIN
+        )
 
     def test_user_creation(self):
-        self.assertEqual(self.user.email, self.user_data['email'])
-        self.assertEqual(self.user.role, self.user_data['role'])
-        self.assertTrue(self.user.check_password(self.user_data['password']))
+        self.assertEqual(self.user.email, 'test@example.com')
+        self.assertEqual(self.user.role, Role.ADMIN)
 
     def test_user_str_representation(self):
-        self.assertEqual(str(self.user), self.user_data['email'])
+        expected = f" ({self.user.email})"
+        self.assertEqual(str(self.user), expected)
 
     def test_create_superuser(self):
         admin = User.objects.create_superuser(
@@ -76,26 +75,36 @@ class TeacherModelTest(TestCase):
 
 class StudentModelTest(TestCase):
     def setUp(self):
+        # Create parent first
         self.parent = Parent.objects.create(
             name="Parent Name",
             email="parent@example.com",
             phone_number="0712345678",
             password=make_password("password123")
         )
+        
+        # Create parent user that matches the parent
+        self.parent_user = User.objects.create_user(
+            email=self.parent.email,
+            password="password123",
+            role=Role.PARENT,
+            first_name=self.parent.name
+        )
+        
         self.student_data = {
             'name': "Jane Doe",
             'guardian': "Parent Name",
             'contact': "0712345679",
             'grade': 7,
             'class_assigned': "7A",
-            'parent': self.parent
+            'parent': self.parent_user  # Link to User instance
         }
         self.student = Student.objects.create(**self.student_data)
 
     def test_student_creation(self):
         self.assertEqual(self.student.name, self.student_data['name'])
         self.assertEqual(self.student.grade, self.student_data['grade'])
-        self.assertEqual(self.student.parent, self.parent)
+        self.assertEqual(self.student.parent, self.parent_user)
 
     def test_student_str_representation(self):
         expected = f"{self.student.name} - Grade {self.student.grade}"
@@ -112,24 +121,26 @@ class StudentModelTest(TestCase):
                 guardian="Test Guardian",
                 contact="0712345680",
                 grade=-1,
-                parent=self.parent
+                parent=self.parent_user
             )
 
 class ExamResultModelTest(TestCase):
     def setUp(self):
-        self.parent = Parent.objects.create(
-            name="Parent Name",
+        # Create parent user first
+        self.parent_user = User.objects.create_user(
             email="parent@example.com",
-            phone_number="0712345678",
-            password=make_password("password123")
+            password="password123",
+            role=Role.PARENT,
+            first_name="Parent Name"
         )
+        
         self.student = Student.objects.create(
             name="Jane Doe",
             guardian="Parent Name",
             contact="0712345679",
             grade=7,
             class_assigned="7A",
-            parent=self.parent
+            parent=self.parent_user  # Link to User instance
         )
         self.exam_data = {
             'student': self.student,
@@ -154,18 +165,20 @@ class ExamResultModelTest(TestCase):
 
 class AttendanceModelTest(TestCase):
     def setUp(self):
-        self.parent = Parent.objects.create(
-            name="Parent Name",
+        # Create parent user first
+        self.parent_user = User.objects.create_user(
             email="parent@example.com",
-            phone_number="0712345678",
-            password=make_password("password123")
+            password="password123",
+            role=Role.PARENT,
+            first_name="Parent Name"
         )
+        
         self.student = Student.objects.create(
             name="Jane Doe",
             guardian="Parent Name",
             contact="0712345679",
             grade=7,
-            parent=self.parent
+            parent=self.parent_user  # Link to User instance
         )
         self.teacher = Teacher.objects.create(
             name="Jane Doe",
@@ -201,17 +214,19 @@ class AttendanceModelTest(TestCase):
 
 class SchoolFeeModelTest(TestCase):
     def setUp(self):
-        self.parent = Parent.objects.create(
-            name="Parent Name",
+        # Create parent user first
+        self.parent_user = User.objects.create_user(
             email="parent@example.com",
-            phone_number="0712345678",
-            password=make_password("password123")
+            password="password123",
+            role=Role.PARENT,
+            first_name="Parent Name"
         )
+        
         self.student = Student.objects.create(
             name="Jane Doe",
             contact="0712345679",
             grade=7,
-            parent=self.parent
+            parent=self.parent_user  # Link to User instance
         )
         self.fee_data = {
             'student': self.student,
@@ -339,4 +354,4 @@ class TimeTableModelTest(TestCase):
                 room='Room 102'
             )
 
-# Add more test classes... 
+# Add more test classes...

@@ -155,6 +155,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
     """ViewSet for Teacher operations"""
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
+    permission_classes = [IsAdminUser]  # Only allow admins to create/edit teachers
 
     def get_permissions(self):
         if self.action in ['create']:
