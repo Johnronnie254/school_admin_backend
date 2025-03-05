@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
@@ -20,33 +20,50 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from django.db import transaction
 from django.db import models
-from .permissions import IsAdmin, IsTeacher, IsParent
+from .permissions import IsAdmin, IsTeacher, IsParent, IsAdminOrTeacherOrParent, IsAdminOrTeacher
 from django.http import HttpResponse
 import uuid
+from rest_framework import serializers
 
 class RegisterView(APIView):
     """Handles user registration."""
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
+    serializer_class = RegisterSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'user': {
+                    'id': user.id,
+                    'name': user.first_name,
+                    'email': user.email,
+                    'role': user.role
+                },
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
     """Handles user login and returns JWT tokens."""
     permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = serializer.validated_data.get("user")
-        refresh = serializer.validated_data.get("refresh")
-        access = serializer.validated_data.get("access")
-
-        return Response({
-            "refresh": refresh,
-            "access": access,
-            "user": UserSerializer(user).data
-        }, status=status.HTTP_200_OK)
+        serializer = self.serializer_class(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        except serializers.ValidationError:
+            return Response({
+                "status": "error",
+                "message": "Invalid email or password."
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
 class LogoutView(APIView):
     """Handles user logout."""
@@ -138,15 +155,15 @@ class TeacherViewSet(viewsets.ModelViewSet):
     """ViewSet for Teacher operations"""
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'email', 'class_assigned']
-    ordering_fields = ['name', 'created_at']
-    parser_classes = (JSONParser, FormParser, MultiPartParser)
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['create']:
+            # Allow teacher self-registration
+            return [AllowAny()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            # Only admin can modify/delete teachers
             return [IsAdmin()]
+        # Authenticated users can view teachers
         return [IsAuthenticated()]
 
     @action(detail=False, methods=['post'])
@@ -195,14 +212,31 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[IsTeacher])
     def add_feedback(self, request):
-        student_id = request.data.get('student_id')
-        exam_id = request.data.get('exam_id')
-        feedback = request.data.get('feedback')
-        
         try:
+            student_id = request.data.get('student_id')
+            exam_id = request.data.get('exam_id')
+            feedback = request.data.get('feedback')
+            
+            if not all([student_id, exam_id, feedback]):
+                return Response(
+                    {'error': 'student_id, exam_id and feedback are required'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                # Validate UUIDs
+                uuid.UUID(str(exam_id))
+                uuid.UUID(str(student_id))
+            except ValueError:
+                return Response(
+                    {'error': 'Invalid UUID format'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             result = ExamResult.objects.get(id=exam_id, student_id=student_id)
             result.remarks = feedback
             result.save()
+            
             return Response({
                 'message': 'Feedback added successfully',
                 'student': result.student.name,
@@ -243,9 +277,10 @@ class TeacherViewSet(viewsets.ModelViewSet):
     def update_class_assignment(self, request):
         """Update class assignments for multiple students"""
         try:
-            student_ids = request.data.get('student_ids', [])
-            new_class = request.data.get('new_class')
+            student_ids = request.data.get('student_ids', [])  # Get list of student IDs
+            new_class = request.data.get('new_class')         # Get new class name
             
+            # Update all specified students to the new class
             students = Student.objects.filter(id__in=student_ids)
             students.update(class_assigned=new_class)
             
@@ -287,12 +322,32 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
 class StudentViewSet(viewsets.ModelViewSet):
     """ViewSet for Student operations"""
-    queryset = Student.objects.all()
-    serializer_class = StudentDetailSerializer
+    serializer_class = StudentSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'grade', 'class_assigned']
-    ordering_fields = ['name', 'grade', 'created_at']
+    queryset = Student.objects.none()
+    pagination_class = None
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == Role.ADMIN or user.role == Role.TEACHER:
+            return Student.objects.all()
+        elif user.role == Role.PARENT:
+            return Student.objects.filter(parent=user)
+        return Student.objects.none()
+
+    def get_permissions(self):
+        if self.action in ['create']:
+            return [IsAuthenticated(), IsAdminOrTeacherOrParent()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsAdminOrTeacher()]
+        return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        if self.request.user.role == Role.PARENT:
+            # If parent is creating, automatically set parent field
+            serializer.save(parent=self.request.user)
+        else:
+            serializer.save()
 
     @action(detail=True, methods=['get'])
     def exam_results(self, request, pk=None):
@@ -365,6 +420,14 @@ class StudentViewSet(viewsets.ModelViewSet):
             })
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(
+            {"message": "Student deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 class ParentViewSet(viewsets.ModelViewSet):
     """ViewSet for Parent operations"""
@@ -546,19 +609,6 @@ class NotificationView(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
-
-class StudentListView(APIView):
-    """Handles listing and creating students."""
-    queryset = Student.objects.all()
-    serializer_class = StudentSerializer
-    permission_classes = [IsAuthenticated]
-
-    def create(self, request, *args, **kwargs):
-        """Ensure contact uniqueness before creating a student."""
-        contact = request.data.get("contact")
-        if Student.objects.filter(contact=contact).exists():
-            return Response({"error": "A student with this contact already exists."}, status=status.HTTP_400_BAD_REQUEST)
-        return super().create(request, *args, **kwargs)
 
 class StudentDetailView(APIView):
     """Handles retrieving, updating, and deleting a student."""

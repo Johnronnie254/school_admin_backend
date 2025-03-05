@@ -12,21 +12,54 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Serializer for registering Users"""
+    name = serializers.CharField(max_length=255)
+    password_confirmation = serializers.CharField(write_only=True)
+    
     class Meta:
         model = User
-        fields = ('id', 'email', 'password', 'role')
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ('id', 'name', 'email', 'password', 'password_confirmation', 'role')
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'role': {'default': Role.PARENT}
+        }
+
+    def validate(self, data):
+        """
+        Check that the passwords match
+        """
+        if data['password'] != data['password_confirmation']:
+            raise serializers.ValidationError({
+                "password": "Password fields didn't match."
+            })
+        
+        # Validate role
+        if data['role'] not in [Role.ADMIN, Role.TEACHER, Role.PARENT]:
+            raise serializers.ValidationError({
+                "role": "Invalid role. Must be admin, teacher, or parent."
+            })
+            
+        return data
 
     def create(self, validated_data):
+        # Remove password_confirmation from the data
+        validated_data.pop('password_confirmation')
+        # Get the name from validated data
+        name = validated_data.pop('name')
+
         user = User.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
-            role=validated_data.get('role', Role.PARENT)
+            role=validated_data.get('role')  # Get role from validated_data
         )
+        
+        # Set the first_name field with the provided name
+        user.first_name = name
+        user.save()
+        
         return user
 
 class LoginSerializer(serializers.Serializer):
-    """Serializer for Admin User Login"""
+    """Serializer for User Login"""
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
@@ -37,13 +70,22 @@ class LoginSerializer(serializers.Serializer):
 
         user = authenticate(username=email, password=password)
         if not user:
-            raise serializers.ValidationError("Invalid email or password.")
+            raise serializers.ValidationError("Invalid email or password.")  # Simple error message
 
         refresh = RefreshToken.for_user(user)
         return {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user': UserSerializer(user).data
+            "status": "success",
+            "message": "Login successful",
+            "user": {
+                'id': user.id,
+                'name': user.first_name,
+                'email': user.email,
+                'role': user.role
+            },
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token)
+            }
         }
 
 class TeacherSerializer(serializers.ModelSerializer):
@@ -63,12 +105,27 @@ class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = '__all__'
+        extra_kwargs = {
+            'guardian': {'required': False},  # Make guardian optional
+            'contact': {'required': False},   # Make contact optional
+            'grade': {'required': False},     # Make grade optional
+            'class_assigned': {'required': False},  # Make class_assigned optional
+            'parent': {'required': False}     # Make parent optional
+        }
 
     def validate_contact(self, value):
         """Ensure contact is unique"""
-        if Student.objects.filter(contact=value).exists():
+        instance = getattr(self, 'instance', None)
+        if Student.objects.filter(contact=value).exclude(id=instance.id if instance else None).exists():
             raise serializers.ValidationError("A student with this contact already exists.")
         return value
+
+    def update(self, instance, validated_data):
+        """Allow partial updates"""
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 class NotificationSerializer(serializers.ModelSerializer):
     """Serializer for Notifications"""
@@ -126,3 +183,35 @@ class DocumentSerializer(serializers.ModelSerializer):
             'uploaded_by', 'student', 'created_at'
         ]
         read_only_fields = ['uploaded_by', 'created_at']
+
+class StudentRegistrationSerializer(serializers.ModelSerializer):
+    """Serializer for student self-registration"""
+    password = serializers.CharField(write_only=True)
+    password_confirmation = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Student
+        fields = ['name', 'guardian', 'contact', 'grade', 'password', 'password_confirmation']
+
+    def validate(self, data):
+        if data['password'] != data['password_confirmation']:
+            raise serializers.ValidationError({
+                "password": "Password fields didn't match."
+            })
+        return data
+
+class TeacherRegistrationSerializer(serializers.ModelSerializer):
+    """Serializer for teacher self-registration"""
+    password = serializers.CharField(write_only=True)
+    password_confirmation = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Teacher
+        fields = ['name', 'email', 'phone_number', 'subjects', 'password', 'password_confirmation']
+
+    def validate(self, data):
+        if data['password'] != data['password_confirmation']:
+            raise serializers.ValidationError({
+                "password": "Password fields didn't match."
+            })
+        return data
