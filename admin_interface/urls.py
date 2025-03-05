@@ -8,13 +8,14 @@ from .views import (
     ParentRegistrationView, ParentLoginView,
     ParentChildrenView, StudentExamResultsView,
     StudentFeeRecordsView, TeachersBySubjectView,
-    SchoolStatisticsView, AdminViewSet
+    SchoolStatisticsView, AdminViewSet,
+    InitiateFeesPaymentView
 )
 
 router = DefaultRouter()
 router.register(r'admin', AdminViewSet, basename='admin')
 router.register(r'teachers', TeacherViewSet)
-router.register(r'students', StudentViewSet)
+router.register(r'students', StudentViewSet, basename='student')
 router.register(r'notifications', NotificationView, basename='notification')
 
 urlpatterns = [
@@ -43,6 +44,9 @@ urlpatterns = [
     # Students
     path('students/<uuid:student_id>/exam-results/', StudentExamResultsView.as_view(), name='student-exam-results'),
     path('students/<uuid:student_id>/fee-records/', StudentFeeRecordsView.as_view(), name='student-fee-records'),
+    path('students/<uuid:student_id>/initiate_payment/', 
+         InitiateFeesPaymentView.as_view(), 
+         name='initiate-payment'),
 
     # Teachers
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),

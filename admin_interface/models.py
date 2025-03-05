@@ -8,6 +8,7 @@ class Role(models.TextChoices):
     ADMIN = 'admin', 'Administrator'
     TEACHER = 'teacher', 'Teacher'
     PARENT = 'parent', 'Parent'
+    STUDENT = 'student', 'Student'
 
 # Custom User Manager
 class UserManager(BaseUserManager):
@@ -30,9 +31,10 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     """Custom user model with role-based access"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    username = None  # Remove username field (authentication is via email)
+    username = None  # Remove username field
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PARENT)
+    # first_name will be used for the name field
     
     objects = UserManager()
 
@@ -40,7 +42,7 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ["role"]
 
     def __str__(self):
-        return self.email
+        return f"{self.first_name} ({self.email})"
 
 
 class Teacher(models.Model):
@@ -111,7 +113,7 @@ class Student(models.Model):
     contact = models.CharField(max_length=15, unique=True)
     grade = models.PositiveIntegerField(db_index=True)
     class_assigned = models.CharField(max_length=255, blank=True, null=True, db_index=True)
-    parent = models.ForeignKey(Parent, on_delete=models.SET_NULL, null=True, related_name='children')
+    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='children', null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -129,13 +131,14 @@ class Notification(models.Model):
     """Model for storing notifications sent to teachers or students."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     TARGET_CHOICES = [
-        ("teachers", "Teachers"),
-        ("students", "Students"),
-        ("both", "Both"),
+        ('all', 'All'),
+        ('teachers', 'Teachers'),
+        ('students', 'Students'),
+        ('parents', 'Parents')
     ]
 
-    message = models.TextField()
-    target_group = models.CharField(max_length=10, choices=TARGET_CHOICES, default="both")
+    message = models.CharField(max_length=500)
+    target_group = models.CharField(max_length=10, choices=TARGET_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 

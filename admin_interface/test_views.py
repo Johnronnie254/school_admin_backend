@@ -20,20 +20,52 @@ class AuthenticationTest(APITestCase):
         self.login_url = reverse('token_obtain_pair')
 
     def test_successful_login(self):
-        response = self.client.post(self.login_url, {
+        url = reverse('login')
+        response = self.client.post(url, {
             'email': 'test@example.com',
             'password': 'test123'
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('access', response.data)
-        self.assertIn('refresh', response.data)
+        self.assertIn('user', response.data)
+        self.assertIn('tokens', response.data)
+        self.assertEqual(response.data['user']['email'], 'test@example.com')
 
     def test_failed_login(self):
-        response = self.client.post(self.login_url, {
+        url = reverse('login')
+        response = self.client.post(url, {
             'email': 'test@example.com',
             'password': 'wrongpassword'
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['status'], 'error')
+        self.assertEqual(response.data['message'], 'Invalid email or password.')
+
+    def test_register_user(self):
+        url = reverse('register')
+        data = {
+            'name': 'Test User',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'password_confirmation': 'password123',
+            'role': Role.TEACHER
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('user', response.data)
+        self.assertIn('tokens', response.data)
+        self.assertEqual(response.data['user']['name'], 'Test User')
+
+    def test_register_with_mismatched_passwords(self):
+        url = reverse('register')
+        data = {
+            'name': 'Test User',
+            'email': 'test@example.com',
+            'password': 'password123',
+            'password_confirmation': 'different_password',
+            'role': Role.TEACHER
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 class TeacherViewSetTest(APITestCase):
     def setUp(self):
