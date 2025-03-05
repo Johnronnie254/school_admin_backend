@@ -1,4 +1,4 @@
-# **EduSphere - School Management System Backend**
+# **EduSphere - School Management System Backend.**
 
 ## **Overview**
 EduSphere is a comprehensive **school management system** built with **Django REST Framework**. It provides a **robust API** for managing various aspects of school administration, including **students, teachers, parents, exam results, fee payments, and more**.
