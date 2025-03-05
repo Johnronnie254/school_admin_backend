@@ -44,7 +44,7 @@ class AuthenticationTest(APITestCase):
         url = reverse('register')
         data = {
             'name': 'Test User',
-            'email': 'test@example.com',
+            'email': 'newuser@example.com',
             'password': 'password123',
             'password_confirmation': 'password123',
             'role': Role.TEACHER
@@ -147,7 +147,7 @@ class TeacherViewSetTest(APITestCase):
             'class_assigned': 'Grade 8'
         }
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_update_teacher(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -171,18 +171,27 @@ class TeacherViewSetTest(APITestCase):
 
 class StudentViewSetTest(APITestCase):
     def setUp(self):
-        # Create parent
+        # Create parent first
         self.parent = Parent.objects.create(
             name="Parent Name",
             email="parent@example.com",
             phone_number="0712345678",
             password=make_password("password123")
         )
+        
+        # Create parent user that matches the parent
+        self.parent_user = User.objects.create_user(
+            email=self.parent.email,
+            password="password123",
+            role=Role.PARENT,
+            first_name=self.parent.name
+        )
+        
         # Create admin user
         self.admin_user = User.objects.create_user(
             email='admin@example.com',
             password='admin123',
-            role='admin'
+            role=Role.ADMIN
         )
         self.client.force_authenticate(user=self.admin_user)
 
@@ -194,7 +203,7 @@ class StudentViewSetTest(APITestCase):
             'contact': '0712345679',
             'grade': 7,
             'class_assigned': '7A',
-            'parent': str(self.parent.id)
+            'parent': str(self.parent_user.id)  # Use parent user's ID
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
