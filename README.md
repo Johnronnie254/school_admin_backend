@@ -125,7 +125,7 @@ The API will now be accessible at `http://127.0.0.1:8000/`.
 ### **School Fees**
 - `POST /api/fees/initiate/` → Initiate fee payment  
 - `POST /api/fees/confirm/` → Confirm fee payment  
-- `GET /api/students/{id}/fees/` → Retrieve a student’s fee records  
+- `GET /api/students/{id}/fees/` → Retrieve a student's fee records  
 
 ### **Notifications**
 - `GET /api/notifications/` → List all notifications  
@@ -138,6 +138,36 @@ The API will now be accessible at `http://127.0.0.1:8000/`.
 To run unit tests, use:  
 ```bash
 python manage.py test admin_interface
+```
+
+## **Deployment**
+
+### **Running with Gunicorn**
+For production deployment, use Gunicorn:
+
+```bash
+# Install Gunicorn
+pip install gunicorn
+
+# Basic run
+gunicorn school_admin.wsgi:application
+
+# Production configuration
+gunicorn school_admin.wsgi:application \
+    --workers 3 \
+    --bind 0.0.0.0:8000 \
+    --daemon \
+    --access-logfile /var/log/gunicorn/access.log \
+    --error-logfile /var/log/gunicorn/error.log
+```
+
+### **Environment Variables for Production**
+Make sure to set these environment variables in production:
+```bash
+DEBUG=False
+ALLOWED_HOSTS=your-domain.com,www.your-domain.com
+DATABASE_URL=postgres://user:password@localhost:5432/dbname
+SECRET_KEY=your-secret-key
 ```
 
 ---
