@@ -1,5 +1,5 @@
 from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -884,9 +884,27 @@ class ExamResultView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])  # Make this endpoint public
 def api_root(request):
+    """
+    API root view that lists all available endpoints.
+    """
     return Response({
         'status': 'ok',
         'message': 'EduSphere API is running',
-        'version': '1.0.0'
+        'version': '1.0.0',
+        'endpoints': {
+            'auth': {
+                'register': request.build_absolute_uri('/api/register/'),
+                'login': request.build_absolute_uri('/api/login/'),
+                'logout': request.build_absolute_uri('/api/logout/'),
+            },
+            'users': request.build_absolute_uri('/api/users/'),
+            'teachers': request.build_absolute_uri('/api/teachers/'),
+            'students': request.build_absolute_uri('/api/students/'),
+            'parents': request.build_absolute_uri('/api/parents/'),
+            'exam_results': request.build_absolute_uri('/api/exam-results/'),
+            'school_fees': request.build_absolute_uri('/api/school-fees/'),
+            'notifications': request.build_absolute_uri('/api/notifications/'),
+        }
     })

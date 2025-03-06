@@ -1,4 +1,14 @@
-# **EduSphere - School Management System Backend.**
+# **EduSphere - School Management System Backend**
+
+## **Live Demo**
+The API is live at: https://school-admin-backend-x5e5.onrender.com/
+
+You can test the API endpoints using this base URL. For example:
+- View API documentation: https://school-admin-backend-x5e5.onrender.com/
+- Register: https://school-admin-backend-x5e5.onrender.com/api/register/
+- Login: https://school-admin-backend-x5e5.onrender.com/api/login/
+
+Note: The live demo is hosted on Render's free tier, so the first request might take a few seconds to wake up the server.
 
 ## **Overview**
 EduSphere is a comprehensive **school management system** built with **Django REST Framework**. It provides a **robust API** for managing various aspects of school administration, including **students, teachers, parents, exam results, fee payments, and more**.
@@ -125,7 +135,7 @@ The API will now be accessible at `http://127.0.0.1:8000/`.
 ### **School Fees**
 - `POST /api/fees/initiate/` → Initiate fee payment  
 - `POST /api/fees/confirm/` → Confirm fee payment  
-- `GET /api/students/{id}/fees/` → Retrieve a student’s fee records  
+- `GET /api/students/{id}/fees/` → Retrieve a student's fee records  
 
 ### **Notifications**
 - `GET /api/notifications/` → List all notifications  
@@ -139,5 +149,32 @@ To run unit tests, use:
 ```bash
 python manage.py test admin_interface
 ```
+
+---
+
+## **Environment Variables**
+The application uses the following environment variables:
+```bash
+# Django configuration
+DEBUG=False  # Set to False in production
+DJANGO_SECRET_KEY=your_secret_key
+ALLOWED_HOSTS=localhost,127.0.0.1,school-admin-backend-x5e5.onrender.com
+
+# Database configuration
+DATABASE_URL=your_database_url
+
+# CORS settings
+CORS_ALLOWED_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
+```
+
+## **Deployment**
+The application is currently deployed on Render. For local deployment, follow the installation steps above.
+
+### **Production Deployment**
+1. Create an account on [Render](https://render.com)
+2. Connect your GitHub repository
+3. Create a new Web Service
+4. Configure the environment variables
+5. Deploy!
 
 ---
