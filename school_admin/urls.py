@@ -6,7 +6,7 @@ from rest_framework.routers import DefaultRouter
 from admin_interface.views import (
     TeacherViewSet, StudentViewSet, ParentViewSet,
     ExamResultViewSet, SchoolFeeViewSet, NotificationView,
-    AdminViewSet
+    AdminViewSet, api_root
 )
 
 # Create a router and register our viewsets with it
@@ -20,6 +20,7 @@ router.register(r'school-fees', SchoolFeeViewSet)
 router.register(r'notifications', NotificationView, basename='notification')
 
 urlpatterns = [
+    path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     path('api/', include('admin_interface.urls')),  # This should include all URLs including the router URLs
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
