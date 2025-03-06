@@ -883,8 +883,8 @@ class ExamResultView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET'])
-@permission_classes([AllowAny])  # Make this endpoint public
+@api_view(['GET', 'HEAD'])  # Add HEAD to allowed methods
+@permission_classes([AllowAny])
 def api_root(request):
     """
     API root view that lists all available endpoints.
