@@ -893,18 +893,4 @@ def api_root(request):
         'status': 'ok',
         'message': 'EduSphere API is running',
         'version': '1.0.0',
-        'endpoints': {
-            'auth': {
-                'register': request.build_absolute_uri('/api/register/'),
-                'login': request.build_absolute_uri('/api/login/'),
-                'logout': request.build_absolute_uri('/api/logout/'),
-            },
-            'users': request.build_absolute_uri('/api/users/'),
-            'teachers': request.build_absolute_uri('/api/teachers/'),
-            'students': request.build_absolute_uri('/api/students/'),
-            'parents': request.build_absolute_uri('/api/parents/'),
-            'exam_results': request.build_absolute_uri('/api/exam-results/'),
-            'school_fees': request.build_absolute_uri('/api/school-fees/'),
-            'notifications': request.build_absolute_uri('/api/notifications/'),
-        }
     })
