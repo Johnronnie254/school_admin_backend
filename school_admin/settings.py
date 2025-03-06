@@ -2,6 +2,12 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+import environ  # Add this import
+import sys  # Add this import
+
+# Initialize environ
+env = environ.Env()
+environ.Env.read_env()
 
 # Load environment variables from .env file
 load_dotenv()
@@ -78,18 +84,19 @@ WSGI_APPLICATION = 'school_admin.wsgi.application'
 
 # Database Configuration
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'edusphere',          # Your database name
-        'USER': 'postgres',           # Usually 'postgres' by default
-        'PASSWORD': '0000',  # The password you set for postgres
-        'HOST': 'localhost',
-        'PORT': '5432',
-        'TEST': {
-            'NAME': 'test_edusphere',
-        },
-    }
+    'default': env.db()  # This will read DATABASE_URL from .env
 }
+
+# Test Database Configuration
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'test_edusphere',
+        'USER': env('DB_USER', default='postgres'),
+        'PASSWORD': env('DB_PASSWORD', default='0000'),
+        'HOST': env('DB_HOST', default='localhost'),
+        'PORT': env('DB_PORT', default='5432'),
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -151,3 +158,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'edusphere',          # Your database name
+#         'USER': 'postgres',           # Usually 'postgres' by default
+#         'PASSWORD': '0000',  # The password you set for postgres
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#         'TEST': {
+#             'NAME': 'test_edusphere',
+#         },
+#     }
+# }
