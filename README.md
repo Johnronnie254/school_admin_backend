@@ -3,11 +3,6 @@
 ## **Live Demo**
 The API is live at: https://school-admin-backend-x5e5.onrender.com/
 
-You can test the API endpoints using this base URL. For example:
-- View API documentation: https://school-admin-backend-x5e5.onrender.com/
-- Register: https://school-admin-backend-x5e5.onrender.com/api/register/
-- Login: https://school-admin-backend-x5e5.onrender.com/api/login/
-
 Note: The live demo is hosted on Render's free tier, so the first request might take a few seconds to wake up the server.
 
 ## **Overview**
