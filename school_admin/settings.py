@@ -24,17 +24,22 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'school-admin-backend-x5e5.onrender.com'
+    'school-admin-backend-x5e5.onrender.com',
+    'server1.educite.co.ke',
+    '78.111.67.196'
 ]
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
-    'https://your-frontend-domain.com'
+    'http://www.educite.co.ke',
+    'https://www.educite.co.ke',
+    'http://educite.co.ke',
+    'https://educite.co.ke'
 ]
 
-# Or to allow all origins (not recommended for production)
-CORS_ALLOW_ALL_ORIGINS = True
+# Comment out or remove this line in production
+# CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
