@@ -96,7 +96,14 @@ WSGI_APPLICATION = 'school_admin.wsgi.application'
 
 # Database Configuration
 DATABASES = {
-    'default': env.db()  # This will read DATABASE_URL from .env
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'educite',
+        'USER': 'educite',
+        'PASSWORD': 'educite.co.ke',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
 }
 
 # Test Database Configuration
