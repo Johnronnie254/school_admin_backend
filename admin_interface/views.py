@@ -7,13 +7,13 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
     ExamResultSerializer, SchoolFeeSerializer, 
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
-    UserSerializer, DocumentSerializer
+    UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, TimeTableSerializer, ProductSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -24,6 +24,7 @@ from .permissions import IsAdmin, IsTeacher, IsParent, IsAdminOrTeacherOrParent,
 from django.http import HttpResponse
 import uuid
 from rest_framework import serializers
+from django.shortcuts import get_object_or_404
 
 class RegisterView(APIView):
     """Handles user registration."""
@@ -882,6 +883,64 @@ class ExamResultView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class MessageViewSet(viewsets.ModelViewSet):
+    """ViewSet for chat messages"""
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Message.objects.filter(
+            models.Q(sender=user) | models.Q(receiver=user)
+        )
+
+    @action(detail=False, methods=['get'])
+    def get_chat_history(self, request, user_id):
+        """Get chat history with a specific user"""
+        other_user = get_object_or_404(User, id=user_id)
+        messages = Message.objects.filter(
+            (models.Q(sender=request.user) & models.Q(receiver=other_user)) |
+            (models.Q(sender=other_user) & models.Q(receiver=request.user))
+        ).order_by('created_at')
+        serializer = self.get_serializer(messages, many=True)
+        return Response(serializer.data)
+
+class LeaveApplicationViewSet(viewsets.ModelViewSet):
+    """ViewSet for teacher leave applications"""
+    serializer_class = LeaveApplicationSerializer
+    permission_classes = [IsTeacher]
+
+    def get_queryset(self):
+        if self.request.user.role == Role.TEACHER:
+            return LeaveApplication.objects.filter(teacher=self.request.user)
+        return LeaveApplication.objects.all()
+
+class TeacherScheduleView(APIView):
+    """View for teacher's daily schedule"""
+    permission_classes = [IsTeacher]
+
+    def get(self, request):
+        teacher = request.user
+        today = timezone.now().date()
+        schedule = TimeTable.objects.filter(
+            teacher=teacher,
+            day=today.strftime('%A')
+        ).order_by('period')
+        return Response({
+            'schedule': TimeTableSerializer(schedule, many=True).data,
+            'exams': ExamResult.objects.filter(
+                created_at__date=today
+            ).values('exam_name', 'subject', 'student__class_assigned')
+        })
+
+class ProductViewSet(viewsets.ModelViewSet):
+    """ViewSet for school shop products"""
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'description']
 
 @api_view(['GET', 'HEAD'])  # Add HEAD to allowed methods
 @permission_classes([AllowAny])

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -215,3 +215,18 @@ class TeacherRegistrationSerializer(serializers.ModelSerializer):
                 "password": "Password fields didn't match."
             })
         return data
+
+class MessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message
+        fields = '__all__'
+
+class LeaveApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeaveApplication
+        fields = '__all__'
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'

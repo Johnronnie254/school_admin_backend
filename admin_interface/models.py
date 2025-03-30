@@ -280,3 +280,47 @@ class SchoolEvent(models.Model):
         ('parents', 'Parents')
     ])
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+
+class Message(models.Model):
+    """Model for chat messages between teachers and parents"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    content = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class LeaveApplication(models.Model):
+    """Model for teacher leave applications"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
+    leave_type = models.CharField(max_length=50, choices=[
+        ('sick', 'Sick Leave'),
+        ('casual', 'Casual Leave'),
+        ('emergency', 'Emergency Leave')
+    ])
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.TextField()
+    status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected')
+    ], default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Product(models.Model):
+    """Model for school shop products"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    image = models.ImageField(upload_to='products/')
+    stock = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)

@@ -9,7 +9,9 @@ from .views import (
     ParentChildrenView, StudentExamResultsView,
     StudentFeeRecordsView, TeachersBySubjectView,
     SchoolStatisticsView, AdminViewSet,
-    InitiateFeesPaymentView
+    InitiateFeesPaymentView,
+    MessageViewSet, LeaveApplicationViewSet,
+    ProductViewSet, TeacherScheduleView
 )
 
 router = DefaultRouter()
@@ -64,6 +66,44 @@ urlpatterns = [
         'put': 'update',
         'delete': 'destroy'
     }), name='notification-detail'),
+
+    # Messaging
+    path('messages/', MessageViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    }), name='message-list'),
+    path('messages/<uuid:pk>/', MessageViewSet.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy'
+    }), name='message-detail'),
+    path('messages/chat/<uuid:user_id>/', MessageViewSet.as_view({
+        'get': 'get_chat_history'
+    }), name='chat-history'),
+
+    # Leave Applications
+    path('leave-applications/', LeaveApplicationViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    }), name='leave-application-list'),
+    path('leave-applications/<uuid:pk>/', LeaveApplicationViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'delete': 'destroy'
+    }), name='leave-application-detail'),
+
+    # Teacher Schedule
+    path('teacher/schedule/', TeacherScheduleView.as_view(), name='teacher-schedule'),
+
+    # School Shop
+    path('products/', ProductViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    }), name='product-list'),
+    path('products/<uuid:pk>/', ProductViewSet.as_view({
+        'get': 'retrieve',
+        'put': 'update',
+        'delete': 'destroy'
+    }), name='product-detail'),
 
     # Include the router URLs
     path('', include(router.urls)),

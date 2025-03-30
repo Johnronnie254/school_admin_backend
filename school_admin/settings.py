@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -186,16 +187,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Static files configuration
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'edusphere',          # Your database name
-#         'USER': 'postgres',           # Usually 'postgres' by default
-#         'PASSWORD': '0000',  # The password you set for postgres
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#         'TEST': {
-#             'NAME': 'test_edusphere',
-#         },
-#     }
-# }
+# Add Channel Layers configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(os.getenv('REDIS_HOST', '127.0.0.1'),
+                      int(os.getenv('REDIS_PORT', 6379)))],
+        },
+    },
+}
+
+# Update ASGI application
+ASGI_APPLICATION = 'school_admin.asgi.application'
