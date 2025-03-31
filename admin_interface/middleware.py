@@ -19,7 +19,10 @@ class WebSocketJWTAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
         # Get the token from query string
         query_string = scope.get('query_string', b'').decode()
-        token = dict(param.split('=') for param in query_string.split('&')).get('token', None)
+        token = None
+        if query_string:
+            query_params = dict(param.split('=') for param in query_string.split('&'))
+            token = query_params.get('token', None)
 
         if token:
             scope['user'] = await get_user(token)

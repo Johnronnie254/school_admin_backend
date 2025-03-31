@@ -49,6 +49,7 @@ CORS_ALLOW_HEADERS = [
 
 # Application definition
 INSTALLED_APPS = [
+    "daphne",
     # Your apps first
     'admin_interface',
 
