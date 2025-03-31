@@ -29,13 +29,27 @@ ALLOWED_HOSTS = [
     '78.111.67.196'
 ]
 
-# CORS settings
+# Add CSRF_TRUSTED_ORIGINS
+CSRF_TRUSTED_ORIGINS = [
+    "http://server1.educite.co.ke",
+    "http://78.111.67.196",
+    "http://127.0.0.1",
+    "http://localhost",
+    "https://server1.educite.co.ke",
+    "https://78.111.67.196",
+]
+
+# Update CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://www.educite.co.ke',
     'https://www.educite.co.ke',
     'http://educite.co.ke',
-    'https://educite.co.ke'
+    'https://educite.co.ke',
+    'http://server1.educite.co.ke',
+    'https://server1.educite.co.ke',
+    'http://78.111.67.196',
+    'https://78.111.67.196'
 ]
 
 # Comment out or remove this line in production
@@ -195,9 +209,16 @@ CHANNEL_LAYERS = {
         "CONFIG": {
             "hosts": [(os.getenv('REDIS_HOST', '127.0.0.1'),
                       int(os.getenv('REDIS_PORT', 6379)))],
+            "capacity": 1500,  # Maximum number of messages that can be in a channel
+            "expiry": 10,  # Message expiry in seconds
         },
     },
 }
 
 # Update ASGI application
 ASGI_APPLICATION = 'school_admin.asgi.application'
+
+# Add Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
