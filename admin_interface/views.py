@@ -13,7 +13,7 @@ from .serializers import (
     ParentSerializer, ParentRegistrationSerializer, 
     ExamResultSerializer, SchoolFeeSerializer, 
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
-    UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, TimeTableSerializer, ProductSerializer
+    UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
