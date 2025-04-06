@@ -11,7 +11,7 @@ from .views import (
     SchoolStatisticsView, AdminViewSet,
     InitiateFeesPaymentView,
     MessageViewSet, LeaveApplicationViewSet,
-    ProductViewSet, TeacherScheduleView
+    ProductViewSet, TeacherScheduleView, TeacherProfilePicView
 )
 
 router = DefaultRouter()
@@ -52,6 +52,7 @@ urlpatterns = [
 
     # Teachers
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),
+    path('teacher/profile_pic/', TeacherProfilePicView.as_view(), name='teacher-profile-pic'),
 
     # Statistics
     path('statistics/', SchoolStatisticsView.as_view(), name='school-statistics'),

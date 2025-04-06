@@ -934,6 +934,56 @@ class TeacherScheduleView(APIView):
             ).values('exam_name', 'subject', 'student__class_assigned')
         })
 
+class TeacherProfilePicView(APIView):
+    """View for handling teacher profile pictures"""
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get the profile picture of the authenticated teacher"""
+        try:
+            if request.user.role != Role.TEACHER:
+                return Response({"error": "Only teachers can access this endpoint"}, status=status.HTTP_403_FORBIDDEN)
+                
+            teacher = Teacher.objects.get(email=request.user.email)
+            if teacher.profile_pic:
+                return Response({
+                    "profile_pic": request.build_absolute_uri(teacher.profile_pic.url)
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "No profile picture found"}, status=status.HTTP_404_NOT_FOUND)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request):
+        """Upload a new profile picture for the authenticated teacher"""
+        try:
+            if request.user.role != Role.TEACHER:
+                return Response({"error": "Only teachers can update their profile pictures"}, status=status.HTTP_403_FORBIDDEN)
+                
+            teacher = Teacher.objects.get(email=request.user.email)
+            
+            if 'profile_pic' not in request.FILES:
+                return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+                
+            # Delete old profile pic if it exists
+            if teacher.profile_pic:
+                teacher.profile_pic.delete(save=False)
+                
+            teacher.profile_pic = request.FILES['profile_pic']
+            teacher.save()
+            
+            return Response({
+                "message": "Profile picture updated successfully",
+                "profile_pic": request.build_absolute_uri(teacher.profile_pic.url)
+            }, status=status.HTTP_200_OK)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+    def put(self, request):
+        """Update existing profile picture (same as POST)"""
+        return self.post(request)
+
 class ProductViewSet(viewsets.ModelViewSet):
     """ViewSet for school shop products"""
     queryset = Product.objects.all()

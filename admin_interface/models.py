@@ -63,6 +63,7 @@ class Teacher(models.Model):
             'invalid': "Phone number must be in format '07XXXXXXXX'"
         }
     )
+    profile_pic = models.ImageField(upload_to='teacher_profile_pics/', null=True, blank=True)
     class_assigned = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     subjects = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
