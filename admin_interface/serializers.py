@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -230,3 +230,22 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
+
+class ExamPDFSerializer(serializers.ModelSerializer):
+    download_url = serializers.SerializerMethodField()
+    teacher_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ExamPDF
+        fields = ['id', 'teacher', 'teacher_name', 'exam_name', 'subject', 'class_assigned', 
+                  'exam_date', 'file', 'download_url', 'created_at']
+        read_only_fields = ['teacher', 'created_at']
+        
+    def get_download_url(self, obj):
+        request = self.context.get('request')
+        if obj.file and request:
+            return request.build_absolute_uri(obj.file.url)
+        return None
+        
+    def get_teacher_name(self, obj):
+        return obj.teacher.name if obj.teacher else None

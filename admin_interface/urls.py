@@ -11,7 +11,8 @@ from .views import (
     SchoolStatisticsView, AdminViewSet,
     InitiateFeesPaymentView,
     MessageViewSet, LeaveApplicationViewSet,
-    ProductViewSet, TeacherScheduleView, TeacherProfilePicView
+    ProductViewSet, TeacherScheduleView, TeacherProfilePicView,
+    TeacherExamViewSet
 )
 
 router = DefaultRouter()
@@ -19,6 +20,7 @@ router.register(r'admin', AdminViewSet, basename='admin')
 router.register(r'teachers', TeacherViewSet)
 router.register(r'students', StudentViewSet, basename='student')
 router.register(r'notifications', NotificationView, basename='notification')
+router.register(r'teacher/exams', TeacherExamViewSet, basename='teacher-exams')
 
 urlpatterns = [
     # Authentication

@@ -296,6 +296,24 @@ class Message(models.Model):
         ordering = ['-created_at']
 
 
+class ExamPDF(models.Model):
+    """Model for storing exam PDFs uploaded by teachers"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='exam_pdfs')
+    exam_name = models.CharField(max_length=100)
+    subject = models.CharField(max_length=100)
+    class_assigned = models.CharField(max_length=50)
+    exam_date = models.DateField()
+    file = models.FileField(upload_to='exam_pdfs/')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f"{self.exam_name} - {self.subject} - {self.class_assigned}"
+
+
 class LeaveApplication(models.Model):
     """Model for teacher leave applications"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

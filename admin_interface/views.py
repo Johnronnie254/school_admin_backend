@@ -7,13 +7,14 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
     ExamResultSerializer, SchoolFeeSerializer, 
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
-    UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer
+    UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
+    ExamPDFSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -991,6 +992,46 @@ class ProductViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']
+
+class TeacherExamViewSet(viewsets.ModelViewSet):
+    """ViewSet for teacher exam PDFs"""
+    serializer_class = ExamPDFSerializer
+    permission_classes = [IsTeacher]
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def get_queryset(self):
+        """Only return exam PDFs uploaded by the requesting teacher"""
+        try:
+            # Try to find the teacher object that matches the authenticated user
+            teacher = Teacher.objects.get(email=self.request.user.email)
+            return ExamPDF.objects.filter(teacher=teacher)
+        except Teacher.DoesNotExist:
+            return ExamPDF.objects.none()
+    
+    def perform_create(self, serializer):
+        """Set the teacher as the authenticated user before saving"""
+        try:
+            teacher = Teacher.objects.get(email=self.request.user.email)
+            serializer.save(teacher=teacher)
+        except Teacher.DoesNotExist:
+            raise serializers.ValidationError({"error": "Teacher profile not found for this user"})
+    
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        """Download the exam PDF file"""
+        exam_pdf = self.get_object()
+        if exam_pdf.file:
+            return Response({
+                "download_url": request.build_absolute_uri(exam_pdf.file.url)
+            })
+        return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=False, methods=['get'])
+    def recent(self, request):
+        """Get recent exam PDFs uploaded by the teacher"""
+        queryset = self.get_queryset().order_by('-created_at')[:10]  # Last 10 exams
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 @api_view(['GET', 'HEAD'])  # Add HEAD to allowed methods
 @permission_classes([AllowAny])
