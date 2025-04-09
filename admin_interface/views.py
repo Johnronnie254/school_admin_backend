@@ -914,8 +914,21 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.role == Role.TEACHER:
-            return LeaveApplication.objects.filter(teacher=self.request.user)
+            try:
+                # Find the teacher instance corresponding to the authenticated user
+                teacher = Teacher.objects.get(email=self.request.user.email)
+                return LeaveApplication.objects.filter(teacher=teacher)
+            except Teacher.DoesNotExist:
+                return LeaveApplication.objects.none()
         return LeaveApplication.objects.all()
+        
+    def perform_create(self, serializer):
+        """Set the teacher before saving"""
+        try:
+            teacher = Teacher.objects.get(email=self.request.user.email)
+            serializer.save(teacher=teacher)
+        except Teacher.DoesNotExist:
+            raise serializers.ValidationError({"error": "Teacher profile not found for this user"})
 
 class TeacherScheduleView(APIView):
     """View for teacher's daily schedule"""
