@@ -928,7 +928,31 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
             teacher = Teacher.objects.get(email=self.request.user.email)
             serializer.save(teacher=teacher)
         except Teacher.DoesNotExist:
-            raise serializers.ValidationError({"error": "Teacher profile not found for this user"})
+            raise serializers.ValidationError({"error": "Your teacher profile could not be found. Please contact an administrator."})
+            
+    def update(self, request, *args, **kwargs):
+        """Ensure updates maintain the same teacher"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        
+        # Get the teacher from the authenticated user
+        try:
+            teacher = Teacher.objects.get(email=self.request.user.email)
+            # Ensure the user can only update their own leave applications
+            if instance.teacher.id != teacher.id:
+                return Response(
+                    {"detail": "You do not have permission to update this leave application."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            self.perform_update(serializer)
+            return Response(serializer.data)
+        except Teacher.DoesNotExist:
+            return Response(
+                {"error": "Your teacher profile could not be found."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class TeacherScheduleView(APIView):
     """View for teacher's daily schedule"""

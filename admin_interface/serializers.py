@@ -225,6 +225,7 @@ class LeaveApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeaveApplication
         fields = '__all__'
+        read_only_fields = ['teacher']
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
