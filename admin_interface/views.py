@@ -7,14 +7,14 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
     ExamResultSerializer, SchoolFeeSerializer, 
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
-    ExamPDFSerializer
+    ExamPDFSerializer, SchoolEventSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -26,6 +26,7 @@ from django.http import HttpResponse
 import uuid
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
+from django.urls import path
 
 class RegisterView(APIView):
     """Handles user registration."""
@@ -1070,6 +1071,44 @@ class TeacherExamViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+class SchoolEventViewSet(viewsets.ModelViewSet):
+    """ViewSet for school events and calendar"""
+    queryset = SchoolEvent.objects.all()
+    serializer_class = SchoolEventSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'description', 'event_type']
+    ordering_fields = ['start_date', 'end_date', 'created_at']
+
+    def get_queryset(self):
+        # Filter events based on user role
+        user = self.request.user
+        queryset = SchoolEvent.objects.all()
+        
+        # Filter by date range if provided
+        start = self.request.query_params.get('start', None)
+        end = self.request.query_params.get('end', None)
+        if start:
+            queryset = queryset.filter(start_date__gte=start)
+        if end:
+            queryset = queryset.filter(end_date__lte=end)
+            
+        # Filter by event type if provided
+        event_type = self.request.query_params.get('type', None)
+        if event_type:
+            queryset = queryset.filter(event_type=event_type)
+            
+        # If not admin, only show events relevant to the user's role
+        if user.role != Role.ADMIN:
+            queryset = queryset.filter(
+                models.Q(participants='all') | models.Q(participants=user.role)
+            )
+            
+        return queryset
+        
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
 @api_view(['GET', 'HEAD'])  # Add HEAD to allowed methods
 @permission_classes([AllowAny])
 def api_root(request):
@@ -1078,6 +1117,6 @@ def api_root(request):
     """
     return Response({
         'status': 'ok',
-        'message': 'EduSphere API is running',
+        'message': 'EduCite API is running',
         'version': '1.0.0',
     })
