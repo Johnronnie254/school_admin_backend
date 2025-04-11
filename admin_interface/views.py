@@ -158,17 +158,31 @@ class TeacherViewSet(viewsets.ModelViewSet):
     """ViewSet for Teacher operations"""
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
-    permission_classes = [IsAdminUser]  # Only allow admins to create/edit teachers
+    permission_classes = [IsAuthenticated]  # Changed from IsAdminUser to IsAuthenticated
 
     def get_permissions(self):
         if self.action in ['create']:
-            # Allow teacher self-registration
-            return [AllowAny()]
+            # Allow teacher self-registration or admin to create teachers
+            return [IsAuthenticated()]
         elif self.action in ['update', 'partial_update', 'destroy']:
             # Only admin can modify/delete teachers
             return [IsAdmin()]
         # Authenticated users can view teachers
         return [IsAuthenticated()]
+        
+    def perform_create(self, serializer):
+        """Ensure teacher can only create profile with their own email"""
+        user = self.request.user
+        email = self.request.data.get('email')
+        
+        # Admin can create any teacher profile
+        if user.role == Role.ADMIN:
+            serializer.save()
+        # Teacher can only create their own profile
+        elif user.role == Role.TEACHER and user.email == email:
+            serializer.save()
+        else:
+            raise serializers.ValidationError({"error": "You can only create a teacher profile with your own email address"})
 
     @action(detail=False, methods=['post'])
     def bulk_upload(self, request):
