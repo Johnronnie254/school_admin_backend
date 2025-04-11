@@ -162,7 +162,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create']:
-            # Allow teacher self-registration or admin to create teachers
+            # Allow any authenticated user to create a teacher profile
             return [IsAuthenticated()]
         elif self.action in ['update', 'partial_update', 'destroy']:
             # Only admin can modify/delete teachers
