@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -250,3 +250,9 @@ class ExamPDFSerializer(serializers.ModelSerializer):
         
     def get_teacher_name(self, obj):
         return obj.teacher.name if obj.teacher else None
+
+class SchoolEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SchoolEvent
+        fields = '__all__'
+        read_only_fields = ['created_by']
