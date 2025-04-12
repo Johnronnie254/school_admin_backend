@@ -256,3 +256,20 @@ class SchoolEventSerializer(serializers.ModelSerializer):
         model = SchoolEvent
         fields = '__all__'
         read_only_fields = ['created_by']
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Serializer for password reset request"""
+    email = serializers.EmailField()
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer for password reset confirmation"""
+    token = serializers.UUIDField()
+    password = serializers.CharField(write_only=True)
+    password_confirmation = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        if data['password'] != data['password_confirmation']:
+            raise serializers.ValidationError({
+                "password": "Password fields didn't match."
+            })
+        return data

@@ -7,14 +7,14 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
     ExamResultSerializer, SchoolFeeSerializer, 
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
-    ExamPDFSerializer, SchoolEventSerializer
+    ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -27,6 +27,8 @@ import uuid
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from django.urls import path
+from django.core.mail import send_mail
+from django.conf import settings
 
 class RegisterView(APIView):
     """Handles user registration."""
@@ -1134,3 +1136,97 @@ def api_root(request):
         'message': 'EduCite API is running',
         'version': '1.0.0',
     })
+
+class PasswordResetRequestView(APIView):
+    """Handle password reset requests"""
+    permission_classes = [AllowAny]
+    serializer_class = PasswordResetRequestSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        try:
+            user = User.objects.get(email=email)
+            # Create reset token that expires in 1 hour
+            reset_token = PasswordResetToken.objects.create(
+                user=user,
+                expires_at=timezone.now() + timezone.timedelta(hours=1)
+            )
+
+            # Send email with reset link
+            reset_url = f"{settings.FRONTEND_URL}/reset-password/{reset_token.token}"
+            subject = "Password Reset Request"
+            message = f"""
+            Hello {user.first_name},
+
+            You have requested to reset your password. Please click the link below to reset your password:
+
+            {reset_url}
+
+            This link will expire in 1 hour.
+
+            If you did not request this password reset, please ignore this email.
+
+            Best regards,
+            School Admin Team
+            """
+            
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+
+            return Response({
+                "message": "Password reset link has been sent to your email"
+            })
+
+        except User.DoesNotExist:
+            # We don't want to reveal if the email exists or not
+            return Response({
+                "message": "If an account exists with this email, a password reset link will be sent"
+            })
+
+class PasswordResetConfirmView(APIView):
+    """Handle password reset confirmation"""
+    permission_classes = [AllowAny]
+    serializer_class = PasswordResetConfirmSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            reset_token = PasswordResetToken.objects.get(
+                token=serializer.validated_data['token'],
+                used=False
+            )
+
+            if not reset_token.is_valid():
+                return Response(
+                    {"error": "Reset token has expired"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Update password
+            user = reset_token.user
+            user.set_password(serializer.validated_data['password'])
+            user.save()
+
+            # Mark token as used
+            reset_token.used = True
+            reset_token.save()
+
+            return Response({
+                "message": "Password has been reset successfully"
+            })
+
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {"error": "Invalid reset token"},
+                status=status.HTTP_400_BAD_REQUEST
+            )

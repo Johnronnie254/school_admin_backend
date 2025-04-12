@@ -12,7 +12,8 @@ from .views import (
     InitiateFeesPaymentView,
     MessageViewSet, LeaveApplicationViewSet,
     ProductViewSet, TeacherScheduleView, TeacherProfilePicView,
-    TeacherExamViewSet
+    TeacherExamViewSet, PasswordResetRequestView,
+    PasswordResetConfirmView
 )
 
 router = DefaultRouter()
@@ -29,6 +30,8 @@ urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/login/', LoginView.as_view(), name='login'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
+    path('auth/password/reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
+    path('auth/password/reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
 
     # Documents
     path('documents/upload/', DocumentUploadView.as_view(), name='document-upload'),
