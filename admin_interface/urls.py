@@ -46,7 +46,8 @@ urlpatterns = [
     # Parents
     path('parents/register/', ParentRegistrationView.as_view(), name='parent-register'),
     path('parents/login/', ParentLoginView.as_view(), name='parent-login'),
-    path('parents/<uuid:parent_id>/children/', ParentChildrenView.as_view(), name='parent-children'),
+    path('parents/children/', ParentChildrenView.as_view(), name='parent-children'),
+    path('parents/<uuid:parent_id>/children/', ParentChildrenView.as_view(), name='parent-specific-children'),
 
     # Students
     path('students/<uuid:student_id>/exam-results/', StudentExamResultsView.as_view(), name='student-exam-results'),

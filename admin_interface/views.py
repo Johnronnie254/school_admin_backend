@@ -356,11 +356,52 @@ class StudentViewSet(viewsets.ModelViewSet):
         return Student.objects.none()
 
     def get_permissions(self):
-        if self.action in ['create']:
+        if self.action in ['create', 'create_student']:
             return [IsAuthenticated(), IsAdminOrTeacherOrParent()]
         elif self.action in ['update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), IsAdminOrTeacher()]
         return [IsAuthenticated()]
+
+    @action(detail=False, methods=['post'])
+    def create_student(self, request):
+        """Create a student associated with a parent"""
+        try:
+            # If parent is creating, use their ID
+            if request.user.role == Role.PARENT:
+                parent_id = request.user.id
+            else:
+                # For admin/teacher creating student, parent_id should be provided
+                parent_id = request.data.get('parent_id')
+                if not parent_id:
+                    return Response(
+                        {'error': 'parent_id is required'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            # Verify parent exists
+            try:
+                parent = User.objects.get(id=parent_id, role=Role.PARENT)
+            except User.DoesNotExist:
+                return Response(
+                    {'error': 'Parent not found'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Create student with parent association
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(parent=parent)
+
+            return Response({
+                'message': 'Student created successfully',
+                'student': serializer.data
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     def perform_create(self, serializer):
         if self.request.user.role == Role.PARENT:
@@ -768,10 +809,46 @@ class ParentChildrenView(APIView):
     serializer_class = StudentDetailSerializer
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, parent_id):
-        children = Student.objects.filter(parent_id=parent_id)
-        serializer = self.serializer_class(children, many=True)
-        return Response(serializer.data)
+    def get(self, request, parent_id=None):
+        try:
+            # If no parent_id is provided, use the authenticated user's ID
+            if not parent_id:
+                parent_id = request.user.id
+
+            # If user is not admin and trying to access other parent's children
+            if request.user.role != Role.ADMIN and str(request.user.id) != str(parent_id):
+                return Response(
+                    {"error": "You do not have permission to view these students"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Verify parent exists and is a parent
+            try:
+                parent = User.objects.get(id=parent_id, role=Role.PARENT)
+            except User.DoesNotExist:
+                return Response(
+                    {"error": "Parent not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Get all children for the parent
+            children = Student.objects.filter(parent=parent).order_by('name')
+            serializer = self.serializer_class(children, many=True)
+
+            return Response({
+                "parent": {
+                    "id": parent.id,
+                    "name": parent.first_name,
+                    "email": parent.email
+                },
+                "children": serializer.data
+            })
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class StudentExamResultsView(APIView):
     """Get exam results for a student"""
