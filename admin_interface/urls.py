@@ -44,10 +44,9 @@ urlpatterns = [
     path('exams/record/', ExamResultView.as_view(), name='record-exam-result'),
 
     # Parents
-    path('parents/register/', ParentRegistrationView.as_view(), name='parent-register'),
-    path('parents/login/', ParentLoginView.as_view(), name='parent-login'),
     path('parents/children/', ParentChildrenView.as_view(), name='parent-children'),
     path('parents/<uuid:parent_id>/children/', ParentChildrenView.as_view(), name='parent-specific-children'),
+    path('parents/children/<uuid:student_id>/', ParentChildrenView.as_view(), name='parent-manage-child'),
 
     # Students
     path('students/<uuid:student_id>/exam-results/', StudentExamResultsView.as_view(), name='student-exam-results'),

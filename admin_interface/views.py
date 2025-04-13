@@ -29,6 +29,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import path
 from django.core.mail import send_mail
 from django.conf import settings
+from rest_framework.exceptions import PermissionDenied
 
 class RegisterView(APIView):
     """Handles user registration."""
@@ -359,8 +360,39 @@ class StudentViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'create_student']:
             return [IsAuthenticated(), IsAdminOrTeacherOrParent()]
         elif self.action in ['update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), IsAdminOrTeacher()]
+            # Allow both admin/teacher and parent to modify students
+            return [IsAuthenticated()]
         return [IsAuthenticated()]
+
+    def perform_update(self, serializer):
+        """Ensure users can only update students they have permission for"""
+        instance = self.get_object()
+        user = self.request.user
+        
+        # Check if user has permission to update this student
+        if user.role == Role.PARENT and instance.parent != user:
+            raise PermissionDenied("You can only update your own children's records")
+        elif user.role not in [Role.ADMIN, Role.TEACHER, Role.PARENT]:
+            raise PermissionDenied("You do not have permission to update student records")
+            
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        """Ensure users can only delete students they have permission for"""
+        instance = self.get_object()
+        user = request.user
+
+        # Check if user has permission to delete this student
+        if user.role == Role.PARENT and instance.parent != user:
+            raise PermissionDenied("You can only delete your own children's records")
+        elif user.role not in [Role.ADMIN, Role.TEACHER, Role.PARENT]:
+            raise PermissionDenied("You do not have permission to delete student records")
+
+        self.perform_destroy(instance)
+        return Response(
+            {"message": "Student deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
     @action(detail=False, methods=['post'])
     def create_student(self, request):
@@ -481,14 +513,6 @@ class StudentViewSet(viewsets.ModelViewSet):
             })
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(
-            {"message": "Student deleted successfully"},
-            status=status.HTTP_204_NO_CONTENT
-        )
 
 class ParentViewSet(viewsets.ModelViewSet):
     """ViewSet for Parent operations"""
@@ -805,7 +829,7 @@ class ParentLoginView(APIView):
             )
 
 class ParentChildrenView(APIView):
-    """Get all children for a parent"""
+    """Get, Update and Delete children for a parent"""
     serializer_class = StudentDetailSerializer
     permission_classes = [IsAuthenticated]
 
@@ -843,6 +867,73 @@ class ParentChildrenView(APIView):
                 },
                 "children": serializer.data
             })
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def put(self, request, student_id):
+        """Update a specific student"""
+        try:
+            # Get the student and verify ownership
+            try:
+                student = Student.objects.get(id=student_id)
+            except Student.DoesNotExist:
+                return Response(
+                    {"error": "Student not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check if the authenticated user is the parent of this student
+            if request.user.role != Role.ADMIN and student.parent != request.user:
+                return Response(
+                    {"error": "You can only update your own children's records"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Update the student
+            serializer = StudentSerializer(student, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    "message": "Student updated successfully",
+                    "student": serializer.data
+                })
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def delete(self, request, student_id):
+        """Delete a specific student"""
+        try:
+            # Get the student and verify ownership
+            try:
+                student = Student.objects.get(id=student_id)
+            except Student.DoesNotExist:
+                return Response(
+                    {"error": "Student not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check if the authenticated user is the parent of this student
+            if request.user.role != Role.ADMIN and student.parent != request.user:
+                return Response(
+                    {"error": "You can only delete your own children's records"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Delete the student
+            student.delete()
+            return Response(
+                {"message": "Student deleted successfully"},
+                status=status.HTTP_204_NO_CONTENT
+            )
 
         except Exception as e:
             return Response(
