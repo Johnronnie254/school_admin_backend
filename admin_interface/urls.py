@@ -5,7 +5,6 @@ from .views import (
     TeacherViewSet, StudentViewSet, DocumentUploadView,
     FeePaymentView, ExamResultView, NotificationView,
     RegisterView, LoginView, LogoutView,
-    ParentRegistrationView, ParentLoginView,
     ParentChildrenView, StudentExamResultsView,
     StudentFeeRecordsView, TeachersBySubjectView,
     SchoolStatisticsView, AdminViewSet,

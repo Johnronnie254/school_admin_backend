@@ -220,6 +220,7 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = '__all__'
+        read_only_fields = ['sender', 'created_at']
 
 class LeaveApplicationSerializer(serializers.ModelSerializer):
     class Meta:
