@@ -1081,6 +1081,9 @@ class MessageViewSet(viewsets.ModelViewSet):
             models.Q(sender=user) | models.Q(receiver=user)
         )
 
+    def perform_create(self, serializer):
+        serializer.save(sender=self.request.user)
+
     @action(detail=False, methods=['get'])
     def get_chat_history(self, request, user_id):
         """Get chat history with a specific user"""
