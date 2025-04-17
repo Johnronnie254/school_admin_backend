@@ -7,14 +7,15 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
     ExamResultSerializer, SchoolFeeSerializer, 
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
-    ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+    ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
+    TeacherParentAssociationSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -1072,14 +1073,13 @@ class ExamResultView(APIView):
 
 class MessageViewSet(viewsets.ModelViewSet):
     """ViewSet for chat messages"""
+    queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        return Message.objects.filter(
-            models.Q(sender=user) | models.Q(receiver=user)
-        )
+        return Message.objects.filter(Q(sender=user) | Q(receiver=user))
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
@@ -1089,11 +1089,38 @@ class MessageViewSet(viewsets.ModelViewSet):
         """Get chat history with a specific user"""
         other_user = get_object_or_404(User, id=user_id)
         messages = Message.objects.filter(
-            (models.Q(sender=request.user) & models.Q(receiver=other_user)) |
-            (models.Q(sender=other_user) & models.Q(receiver=request.user))
+            (Q(sender=request.user) & Q(receiver=other_user)) |
+            (Q(sender=other_user) & Q(receiver=request.user))
         ).order_by('created_at')
         serializer = self.get_serializer(messages, many=True)
         return Response(serializer.data)
+
+class TeacherParentAssociationViewSet(viewsets.ModelViewSet):
+    queryset = TeacherParentAssociation.objects.all()
+    serializer_class = TeacherParentAssociationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == Role.TEACHER:
+            return TeacherParentAssociation.objects.filter(teacher=user.teacher)
+        elif user.role == Role.PARENT:
+            return TeacherParentAssociation.objects.filter(parent=user)
+        return TeacherParentAssociation.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role == Role.TEACHER:
+            serializer.save(teacher=user.teacher)
+        elif user.role == Role.PARENT:
+            serializer.save(parent=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if user.role == Role.TEACHER:
+            serializer.save(teacher=user.teacher)
+        elif user.role == Role.PARENT:
+            serializer.save(parent=user)
 
 class LeaveApplicationViewSet(viewsets.ModelViewSet):
     """ViewSet for teacher leave applications"""

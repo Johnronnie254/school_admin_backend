@@ -297,6 +297,22 @@ class Message(models.Model):
         ordering = ['-created_at']
 
 
+class TeacherParentAssociation(models.Model):
+    """Model for associating teachers with parents"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='parent_associations')
+    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='teacher_associations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ['teacher', 'parent']
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.teacher.name} - {self.parent.first_name}"
+
+
 class ExamPDF(models.Model):
     """Model for storing exam PDFs uploaded by teachers"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

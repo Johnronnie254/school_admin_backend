@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -221,6 +221,36 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = '__all__'
         read_only_fields = ['sender', 'created_at']
+
+class TeacherParentAssociationSerializer(serializers.ModelSerializer):
+    teacher_name = serializers.CharField(source='teacher.name', read_only=True)
+    parent_name = serializers.CharField(source='parent.first_name', read_only=True)
+    teacher_email = serializers.EmailField(source='teacher.email', read_only=True)
+    parent_email = serializers.EmailField(source='parent.email', read_only=True)
+
+    class Meta:
+        model = TeacherParentAssociation
+        fields = ['id', 'teacher', 'parent', 'teacher_name', 'parent_name', 
+                 'teacher_email', 'parent_email', 'created_at', 'is_active']
+        read_only_fields = ['created_at']
+
+    def validate(self, data):
+        # Ensure teacher and parent are valid
+        teacher = data.get('teacher')
+        parent = data.get('parent')
+
+        if not teacher or not parent:
+            raise serializers.ValidationError("Both teacher and parent are required")
+
+        # Check if parent is actually a parent
+        if parent.role != Role.PARENT:
+            raise serializers.ValidationError("The specified user is not a parent")
+
+        # Check if teacher exists
+        if not Teacher.objects.filter(id=teacher.id).exists():
+            raise serializers.ValidationError("The specified teacher does not exist")
+
+        return data
 
 class LeaveApplicationSerializer(serializers.ModelSerializer):
     class Meta:
