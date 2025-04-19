@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -9,6 +9,21 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'email')
+
+class SchoolSerializer(serializers.ModelSerializer):
+    """Serializer for School model"""
+    class Meta:
+        model = School
+        fields = ['id', 'name', 'address', 'phone_number', 'email', 
+                 'website', 'logo', 'registration_number', 
+                 'created_at', 'updated_at', 'is_active']
+        read_only_fields = ['created_at', 'updated_at']
+
+    def validate_registration_number(self, value):
+        """Ensure registration number is unique"""
+        if School.objects.filter(registration_number=value).exists():
+            raise serializers.ValidationError("A school with this registration number already exists.")
+        return value
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Serializer for registering Users"""

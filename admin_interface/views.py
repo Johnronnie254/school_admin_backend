@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
@@ -15,7 +15,7 @@ from .serializers import (
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
     ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
-    TeacherParentAssociationSerializer
+    TeacherParentAssociationSerializer, SchoolSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -157,6 +157,50 @@ class AdminViewSet(viewsets.ViewSet):
             })
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class SchoolViewSet(viewsets.ModelViewSet):
+    """ViewSet for School operations"""
+    queryset = School.objects.all()
+    serializer_class = SchoolSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'registration_number', 'email']
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdmin()]
+        return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    @action(detail=True, methods=['get'])
+    def statistics(self, request, pk=None):
+        """Get school statistics"""
+        school = self.get_object()
+        stats = {
+            'total_teachers': Teacher.objects.filter(school=school).count(),
+            'total_students': Student.objects.filter(parent__school=school).count(),
+            'total_parents': User.objects.filter(school=school, role=Role.PARENT).count(),
+            'active_users': User.objects.filter(school=school, is_active=True).count()
+        }
+        return Response(stats)
+
+    @action(detail=True, methods=['get'])
+    def teachers(self, request, pk=None):
+        """Get all teachers in the school"""
+        school = self.get_object()
+        teachers = Teacher.objects.filter(school=school)
+        serializer = TeacherSerializer(teachers, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def parents(self, request, pk=None):
+        """Get all parents in the school"""
+        school = self.get_object()
+        parents = User.objects.filter(school=school, role=Role.PARENT)
+        serializer = UserSerializer(parents, many=True)
+        return Response(serializer.data)
 
 class TeacherViewSet(viewsets.ModelViewSet):
     """ViewSet for Teacher operations"""

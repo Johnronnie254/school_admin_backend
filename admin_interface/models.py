@@ -11,6 +11,30 @@ class Role(models.TextChoices):
     PARENT = 'parent', 'Parent'
     STUDENT = 'student', 'Student'
 
+class School(models.Model):
+    """Model for School"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    address = models.TextField()
+    phone_number = models.CharField(max_length=15)
+    email = models.EmailField(unique=True)
+    website = models.URLField(blank=True, null=True)
+    logo = models.ImageField(upload_to='school_logos/', blank=True, null=True)
+    registration_number = models.CharField(max_length=50, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['registration_number']),
+        ]
+
 # Custom User Manager
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -35,15 +59,22 @@ class User(AbstractUser):
     username = None  # Remove username field
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PARENT)
+    school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='users')
     # first_name will be used for the name field
     
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["role"]
+    REQUIRED_FIELDS = ["role", "school"]
 
     def __str__(self):
         return f"{self.first_name} ({self.email})"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['email', 'role']),
+            models.Index(fields=['school', 'role']),
+        ]
 
 
 class Teacher(models.Model):
@@ -51,6 +82,7 @@ class Teacher(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, db_index=True)
     email = models.EmailField(unique=True, db_index=True)
+    school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='teachers')
     phone_regex = RegexValidator(
         regex=r'^07\d{8}$',
         message="Phone number must be in format '07XXXXXXXX'"
