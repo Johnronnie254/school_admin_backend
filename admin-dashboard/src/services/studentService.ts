@@ -23,6 +23,13 @@ export interface StudentFormData {
   parent?: string;
 }
 
+export interface PaymentData {
+  amount: number;
+  term: string;
+  year: number;
+  payment_method: string;
+}
+
 export interface ApiErrorResponse {
   message?: string;
   [key: string]: string | string[] | undefined;
@@ -115,7 +122,7 @@ export const studentService = {
     }
   },
 
-  initiatePayment: async (studentId: string, paymentData: any) => {
+  initiatePayment: async (studentId: string, paymentData: PaymentData) => {
     try {
       const response = await axios.post(`${API_URL}/students/${studentId}/initiate_payment/`, paymentData);
       return response.data;
