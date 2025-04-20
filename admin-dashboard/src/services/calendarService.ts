@@ -1,4 +1,5 @@
-import api from './api';
+import api from '@/services/api';
+import { AxiosResponse } from 'axios';
 
 export interface SchoolEvent {
   id: string;
@@ -21,23 +22,23 @@ export interface CreateEventData {
 }
 
 const calendarService = {
-  getEvents: () => {
-    return api.get<SchoolEvent[]>('/api/events/');
+  getEvents: (): Promise<AxiosResponse<SchoolEvent[]>> => {
+    return api.get('/api/events/');
   },
 
-  getEvent: (id: string) => {
-    return api.get<SchoolEvent>(`/api/events/${id}/`);
+  getEvent: (id: string): Promise<AxiosResponse<SchoolEvent>> => {
+    return api.get(`/api/events/${id}/`);
   },
 
-  createEvent: (data: CreateEventData) => {
-    return api.post<SchoolEvent>('/api/events/', data);
+  createEvent: (data: CreateEventData): Promise<AxiosResponse<SchoolEvent>> => {
+    return api.post('/api/events/', data);
   },
 
-  updateEvent: (id: string, data: CreateEventData) => {
-    return api.put<SchoolEvent>(`/api/events/${id}/`, data);
+  updateEvent: (id: string, data: CreateEventData): Promise<AxiosResponse<SchoolEvent>> => {
+    return api.put(`/api/events/${id}/`, data);
   },
 
-  deleteEvent: (id: string) => {
+  deleteEvent: (id: string): Promise<AxiosResponse<void>> => {
     return api.delete(`/api/events/${id}/`);
   },
 };

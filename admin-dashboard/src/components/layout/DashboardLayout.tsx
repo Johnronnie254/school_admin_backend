@@ -30,7 +30,7 @@ const navigation = [
   { name: 'Notifications', href: '/notifications', icon: BellIcon },
   { name: 'Messages', href: '/messages', icon: ChatBubbleLeftRightIcon },
   { name: 'Leave Applications', href: '/leave-applications', icon: ClipboardDocumentListIcon },
-  { name: 'School Shop', href: '/shop', icon: ShoppingBagIcon },
+  { name: 'Shop', href: '/shop', icon: ShoppingBagIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarIcon },
 ];
 

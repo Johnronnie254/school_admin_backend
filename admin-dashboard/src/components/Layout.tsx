@@ -1,3 +1,5 @@
+'use client';
+
 import { Fragment, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import {
@@ -6,10 +8,13 @@ import {
   HomeIcon,
   AcademicCapIcon,
   UserGroupIcon,
+  UsersIcon,
   ChatBubbleLeftRightIcon,
   CalendarIcon,
   DocumentTextIcon,
-  ArrowUpIcon,
+  CurrencyDollarIcon,
+  BellIcon,
+  ClipboardDocumentListIcon,
   ShoppingBagIcon,
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
@@ -19,12 +24,16 @@ import Image from 'next/image'
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: HomeIcon },
   { name: 'Schools', href: '/schools', icon: AcademicCapIcon },
-  { name: 'Users', href: '/users', icon: UserGroupIcon },
+  { name: 'Teachers', href: '/teachers', icon: UserGroupIcon },
+  { name: 'Students', href: '/students', icon: UsersIcon },
+  { name: 'Parents', href: '/parents', icon: UsersIcon },
+  { name: 'Exam Results', href: '/exam-results', icon: DocumentTextIcon },
+  { name: 'School Fees', href: '/school-fees', icon: CurrencyDollarIcon },
+  { name: 'Notifications', href: '/notifications', icon: BellIcon },
   { name: 'Messages', href: '/messages', icon: ChatBubbleLeftRightIcon },
+  { name: 'Leave Applications', href: '/leave-applications', icon: ClipboardDocumentListIcon },
+  { name: 'Shop', href: '/shop', icon: ShoppingBagIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarIcon },
-  { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
-  { name: 'Promote Students', href: '/admin/promote-students', icon: ArrowUpIcon },
-  { name: 'School Shop', href: '/shop', icon: ShoppingBagIcon },
 ]
 
 function classNames(...classes: string[]) {

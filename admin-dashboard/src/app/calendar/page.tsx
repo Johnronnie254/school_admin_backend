@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { PlusIcon, PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import calendarService, { SchoolEvent, CreateEventData } from '@/services/calendarService';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { AxiosError } from 'axios';
 
 const eventTypes = [
@@ -45,8 +46,8 @@ export default function CalendarPage() {
       toast.success('Event created successfully');
       handleCloseModal();
     },
-    onError: (error: AxiosError) => {
-      toast.error(error.response?.data?.message || 'Failed to create event');
+    onError: (error: AxiosError<{ detail: string }>) => {
+      toast.error(error.response?.data?.detail || 'Failed to create event');
     }
   });
 
@@ -58,8 +59,8 @@ export default function CalendarPage() {
       toast.success('Event updated successfully');
       handleCloseModal();
     },
-    onError: (error: AxiosError) => {
-      toast.error(error.response?.data?.message || 'Failed to update event');
+    onError: (error: AxiosError<{ detail: string }>) => {
+      toast.error(error.response?.data?.detail || 'Failed to update event');
     }
   });
 
@@ -69,8 +70,8 @@ export default function CalendarPage() {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       toast.success('Event deleted successfully');
     },
-    onError: (error: AxiosError) => {
-      toast.error(error.response?.data?.message || 'Failed to delete event');
+    onError: (error: AxiosError<{ detail: string }>) => {
+      toast.error(error.response?.data?.detail || 'Failed to delete event');
     }
   });
 
@@ -94,6 +95,10 @@ export default function CalendarPage() {
     }
   };
 
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -107,75 +112,70 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-4">Loading events...</div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participants</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participants</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {events.map((event) => (
+              <tr key={event.id}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">{event.title}</div>
+                  <div className="text-sm text-gray-500">{event.description}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    {event.event_type}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {new Date(event.start_date).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {new Date(event.end_date).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {event.participants}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onClick={() => {
+                      setEditingEvent(event);
+                      setIsModalOpen(true);
+                    }}
+                    className="text-indigo-600 hover:text-indigo-900 mr-4"
+                  >
+                    <PencilSquareIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(event)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {events.map((event) => (
-                <tr key={event.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                    <div className="text-sm text-gray-500">{event.description}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                      {event.event_type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(event.start_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(event.end_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {event.participants}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => {
-                        setEditingEvent(event);
-                        setIsModalOpen(true);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                      <PencilSquareIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(event)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <Dialog
         open={isModalOpen}
         onClose={handleCloseModal}
-        className="fixed inset-0 z-10 overflow-y-auto"
+        className="relative z-50"
       >
-        <div className="flex items-center justify-center min-h-screen">
-          <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
-
-          <div className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
             <div className="flex justify-between items-center mb-4">
               <Dialog.Title className="text-lg font-medium">
                 {editingEvent ? 'Edit Event' : 'Add New Event'}
@@ -212,32 +212,30 @@ export default function CalendarPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Start Date</label>
-                  <input
-                    type="date"
-                    {...register('start_date', { required: 'Start date is required' })}
-                    defaultValue={editingEvent?.start_date?.split('T')[0]}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                  {errors.start_date && (
-                    <p className="mt-1 text-sm text-red-600">{errors.start_date.message}</p>
-                  )}
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                <input
+                  type="date"
+                  {...register('start_date', { required: 'Start date is required' })}
+                  defaultValue={editingEvent?.start_date?.split('T')[0]}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+                {errors.start_date && (
+                  <p className="mt-1 text-sm text-red-600">{errors.start_date.message}</p>
+                )}
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">End Date</label>
-                  <input
-                    type="date"
-                    {...register('end_date', { required: 'End date is required' })}
-                    defaultValue={editingEvent?.end_date?.split('T')[0]}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                  {errors.end_date && (
-                    <p className="mt-1 text-sm text-red-600">{errors.end_date.message}</p>
-                  )}
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">End Date</label>
+                <input
+                  type="date"
+                  {...register('end_date', { required: 'End date is required' })}
+                  defaultValue={editingEvent?.end_date?.split('T')[0]}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+                {errors.end_date && (
+                  <p className="mt-1 text-sm text-red-600">{errors.end_date.message}</p>
+                )}
               </div>
 
               <div>
@@ -294,7 +292,7 @@ export default function CalendarPage() {
                 </button>
               </div>
             </form>
-          </div>
+          </Dialog.Panel>
         </div>
       </Dialog>
     </div>

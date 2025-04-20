@@ -177,12 +177,12 @@ export default function ShopPage() {
       <Dialog
         open={isOpen}
         onClose={() => setIsOpen(false)}
-        className="fixed inset-0 z-10 overflow-y-auto"
+        className="relative z-50"
       >
-        <div className="flex min-h-screen items-center justify-center">
-          <Dialog.Overlay className="fixed inset-0 bg-black opacity-30" />
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
 
-          <div className="relative bg-white rounded-lg p-8 max-w-md w-full mx-4">
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="relative bg-white rounded-lg p-8 max-w-md w-full mx-4">
             <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
               {editingProduct ? 'Edit Product' : 'Add New Product'}
             </h3>
@@ -288,7 +288,7 @@ export default function ShopPage() {
                 </button>
               </div>
             </form>
-          </div>
+          </Dialog.Panel>
         </div>
       </Dialog>
     </div>
