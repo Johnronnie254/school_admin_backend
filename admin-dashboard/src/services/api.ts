@@ -1,7 +1,5 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-const API_URL = 'http://78.111.67.196/api';
-
 // Types
 interface RegisterData {
   username: string;
@@ -66,9 +64,14 @@ interface UpdateSchoolData extends Partial<CreateSchoolData> {
   is_active?: boolean;
 }
 
+export interface ApiError extends AxiosError {
+  message: string;
+}
+
 // Create axios instance
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

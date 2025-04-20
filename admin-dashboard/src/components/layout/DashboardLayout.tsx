@@ -30,7 +30,7 @@ const navigation = [
   { name: 'Notifications', href: '/notifications', icon: BellIcon },
   { name: 'Messages', href: '/messages', icon: ChatBubbleLeftRightIcon },
   { name: 'Leave Applications', href: '/leave-applications', icon: ClipboardDocumentListIcon },
-  { name: 'School Shop', href: '/products', icon: ShoppingBagIcon },
+  { name: 'School Shop', href: '/shop', icon: ShoppingBagIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarIcon },
 ];
 
@@ -49,7 +49,7 @@ export default function DashboardLayout({
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-blue-700">
           <div className="flex h-16 items-center justify-between px-4">
-            <div className="text-2xl font-bold text-white">EduSphere</div>
+            <div className="text-2xl font-bold text-white">Educite</div>
             <button
               type="button"
               className="text-white"
@@ -88,7 +88,7 @@ export default function DashboardLayout({
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex min-h-0 flex-1 flex-col bg-blue-700">
           <div className="flex h-16 items-center px-4">
-            <div className="text-2xl font-bold text-white">EduSphere</div>
+            <div className="text-2xl font-bold text-white">Educite</div>
           </div>
           <nav className="flex-1 space-y-1 px-2 py-4">
             {navigation.map((item) => {
@@ -144,4 +144,4 @@ export default function DashboardLayout({
       </div>
     </div>
   );
-} 
+}
