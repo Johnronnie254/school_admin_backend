@@ -1,7 +1,16 @@
 import axios from 'axios';
 import { CreateSchoolDto, School, SchoolsResponse, UpdateSchoolDto } from '../types/school';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://78.111.67.196/api';
+
+export interface SchoolStatistics {
+  total_schools: number;
+  total_teachers: number;
+  total_students: number;
+  total_parents: number;
+  fee_collection: number;
+  active_users: number;
+}
 
 export const schoolService = {
   getSchools: async (page = 1): Promise<SchoolsResponse> => {
@@ -26,5 +35,10 @@ export const schoolService = {
 
   deleteSchool: async (id: number): Promise<void> => {
     await axios.delete(`${API_URL}/schools/${id}/`);
+  },
+
+  getStatistics: async (period: string): Promise<SchoolStatistics> => {
+    const response = await axios.get(`${API_URL}/statistics/?period=${period}`);
+    return response.data;
   }
 }; 
