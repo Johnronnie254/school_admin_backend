@@ -22,8 +22,8 @@ export default function NotificationsPage() {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<NotificationFormData>();
 
-  // Fetch notifications
-  const { data: notifications = [], isLoading } = useQuery({
+  // Fetch notifications with proper typing
+  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ['notifications'],
     queryFn: notificationService.getNotifications
   });
