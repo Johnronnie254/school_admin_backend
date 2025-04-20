@@ -42,6 +42,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Update CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
+    'http://127.0.0.1:3000',
     'http://www.educite.co.ke',
     'https://www.educite.co.ke',
     'http://educite.co.ke',
@@ -52,13 +53,20 @@ CORS_ALLOWED_ORIGINS = [
     'https://78.111.67.196'
 ]
 
-# Comment out or remove this line in production
-# CORS_ALLOW_ALL_ORIGINS = True
+# For development only - remove in production
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
-    'content-type',
+    'accept',
+    'accept-encoding',
     'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 # Application definition

@@ -1,0 +1,30 @@
+import axios from 'axios';
+import { CreateSchoolDto, School, SchoolsResponse, UpdateSchoolDto } from '../types/school';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+export const schoolService = {
+  getSchools: async (page = 1): Promise<SchoolsResponse> => {
+    const response = await axios.get(`${API_URL}/schools/?page=${page}`);
+    return response.data;
+  },
+
+  getSchoolById: async (id: number): Promise<School> => {
+    const response = await axios.get(`${API_URL}/schools/${id}/`);
+    return response.data;
+  },
+
+  createSchool: async (data: CreateSchoolDto): Promise<School> => {
+    const response = await axios.post(`${API_URL}/schools/`, data);
+    return response.data;
+  },
+
+  updateSchool: async (id: number, data: UpdateSchoolDto): Promise<School> => {
+    const response = await axios.patch(`${API_URL}/schools/${id}/`, data);
+    return response.data;
+  },
+
+  deleteSchool: async (id: number): Promise<void> => {
+    await axios.delete(`${API_URL}/schools/${id}/`);
+  }
+}; 
