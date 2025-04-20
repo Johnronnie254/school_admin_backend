@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import axios, { AxiosError } from 'axios';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
 
 interface RegisterFormData {
   name: string;
@@ -15,9 +14,13 @@ interface RegisterFormData {
   password_confirmation: string;
 }
 
+interface ApiErrorResponse {
+  message?: string;
+  [key: string]: string | string[] | undefined;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>();
 
@@ -25,7 +28,6 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
       
-      // Create the request data according to the API specification
       const requestData = {
         name: data.name,
         email: data.email,
@@ -34,31 +36,24 @@ export default function RegisterPage() {
         role: 'admin'
       };
 
-      // Make the registration request
-      const response = await axios.post('http://78.111.67.196/api/auth/register/', requestData);
-
-      if (response.data) {
-        toast.success('Registration successful!');
-        router.push('/dashboard');
-      }
+      await axios.post('http://78.111.67.196/api/auth/register/', requestData);
+      toast.success('Registration successful!');
+      router.push('/dashboard');
+      
     } catch (error) {
-      const axiosError = error as AxiosError<any>;
+      const axiosError = error as AxiosError<ApiErrorResponse>;
       if (axiosError.response?.data) {
-        // Handle different types of error responses
         const errorData = axiosError.response.data;
-        if (typeof errorData === 'string') {
-          toast.error(errorData);
+        if (typeof errorData.message === 'string') {
+          toast.error(errorData.message);
         } else if (typeof errorData === 'object') {
-          // Handle field-specific errors
           Object.entries(errorData).forEach(([field, messages]) => {
             if (Array.isArray(messages)) {
               messages.forEach(message => toast.error(`${field}: ${message}`));
-            } else {
+            } else if (typeof messages === 'string') {
               toast.error(`${field}: ${messages}`);
             }
           });
-        } else {
-          toast.error('Registration failed. Please try again.');
         }
       } else {
         toast.error('Registration failed. Please try again.');

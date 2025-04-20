@@ -23,6 +23,11 @@ export interface StudentFormData {
   parent?: string;
 }
 
+export interface ApiErrorResponse {
+  message?: string;
+  [key: string]: string | string[] | undefined;
+}
+
 export const studentService = {
   // Main CRUD operations
   getStudents: async () => {

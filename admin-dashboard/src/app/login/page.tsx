@@ -23,22 +23,27 @@ export default function LoginPage() {
       const response = await authService.login(data);
       
       // Verify if the user is an admin
-      if (response.data.user.role !== 'admin') {
+      const userData = response.data;
+      if (userData.role !== 'admin') {
         toast.error('Access denied. This portal is for administrators only.');
         return;
       }
       
       // Store tokens
-      localStorage.setItem('accessToken', response.data.tokens.access);
-      localStorage.setItem('refreshToken', response.data.tokens.refresh);
+      localStorage.setItem('accessToken', userData.access_token);
+      localStorage.setItem('refreshToken', userData.refresh_token);
       
       // Store user info
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem('user', JSON.stringify(userData));
       
       toast.success('Welcome back, Administrator');
       router.push('/dashboard');
-    } catch (error) {
-      toast.error('Invalid email or password');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error('Invalid email or password');
+      }
     } finally {
       setIsLoading(false);
     }
