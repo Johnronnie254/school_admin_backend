@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { schoolService } from '@/services/api';
+import { schoolService } from '@/services/schoolService';
 import { useAuth } from '@/hooks/useAuth';
 import {
   AcademicCapIcon,
