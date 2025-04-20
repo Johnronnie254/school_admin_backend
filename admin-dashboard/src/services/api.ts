@@ -13,7 +13,18 @@ interface LoginData {
   password: string;
 }
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface AuthResponse {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
   access: string;
   refresh: string;
 }
@@ -168,4 +179,4 @@ const schoolService = {
 
 export default api;
 export { authService, schoolService };
-export type { School, CreateSchoolData, UpdateSchoolData, PaginatedResponse, ErrorResponse };
+export type { User, AuthResponse, School, CreateSchoolData, UpdateSchoolData, PaginatedResponse, ErrorResponse };

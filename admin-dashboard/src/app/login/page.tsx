@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { authService } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginForm {
   email: string;
@@ -14,35 +13,19 @@ interface LoginForm {
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+  const { login } = useAuth();
 
   const onSubmit = async (data: LoginForm) => {
     try {
       setIsLoading(true);
-      const response = await authService.login(data);
-      
-      // Verify if the user is an admin
-      const userData = response.data;
-      if (userData.role !== 'admin') {
-        toast.error('Access denied. This portal is for administrators only.');
-        return;
-      }
-      
-      // Store tokens
-      localStorage.setItem('accessToken', userData.access_token);
-      localStorage.setItem('refreshToken', userData.refresh_token);
-      
-      // Store user info
-      localStorage.setItem('user', JSON.stringify(userData));
-      
+      await login(data.email, data.password);
       toast.success('Welcome back, Administrator');
-      router.push('/dashboard');
-    } catch (err: unknown) {
+    } catch (err) {
       if (err instanceof Error) {
         toast.error(err.message);
       } else {
-        toast.error('Invalid email or password');
+        toast.error('An unexpected error occurred');
       }
     } finally {
       setIsLoading(false);
@@ -140,4 +123,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-} 
+}
