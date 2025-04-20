@@ -10,6 +10,7 @@ import {
   CalendarIcon,
   DocumentTextIcon,
   ArrowUpIcon,
+  ShoppingBagIcon,
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Calendar', href: '/calendar', icon: CalendarIcon },
   { name: 'Reports', href: '/reports', icon: DocumentTextIcon },
   { name: 'Promote Students', href: '/admin/promote-students', icon: ArrowUpIcon },
+  { name: 'School Shop', href: '/shop', icon: ShoppingBagIcon },
 ]
 
 function classNames(...classes: string[]) {

@@ -68,7 +68,7 @@ interface UpdateSchoolData extends Partial<CreateSchoolData> {
 
 // Create axios instance
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -94,30 +94,10 @@ api.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ErrorResponse>) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const refreshToken = localStorage.getItem('refreshToken');
-      
-      if (refreshToken) {
-        try {
-          const newTokens = await authService.refreshToken(refreshToken);
-          localStorage.setItem('accessToken', newTokens.access);
-          
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newTokens.access}`;
-          }
-          
-          return api(originalRequest);
-        } catch {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          window.location.href = '/login';
-        }
-      }
+    if (error.response?.status === 401) {
+      localStorage.removeItem('accessToken');
+      window.location.href = '/login';
     }
-    
     return Promise.reject(error);
   }
 );
