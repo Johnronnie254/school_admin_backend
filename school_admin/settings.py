@@ -50,7 +50,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://server1.educite.co.ke',
     'https://server1.educite.co.ke',
     'http://78.111.67.196',
-    'https://78.111.67.196'
+    'https://78.111.67.196',
+    'https://school-admin-backend-ob5i.vercel.app'
 ]
 
 # For development only - remove in production
