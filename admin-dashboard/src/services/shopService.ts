@@ -39,7 +39,13 @@ const shopService = {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined) {
-        formData.append(key, value);
+        if (value instanceof File) {
+          formData.append(key, value);
+        } else if (typeof value === 'number') {
+          formData.append(key, value.toString());
+        } else if (typeof value === 'string') {
+          formData.append(key, value);
+        }
       }
     });
     return axios.post<Product>('/api/products', formData);
@@ -51,7 +57,13 @@ const shopService = {
     const formData = new FormData();
     Object.entries(productData).forEach(([key, value]) => {
       if (value !== undefined) {
-        formData.append(key, value);
+        if (value instanceof File) {
+          formData.append(key, value);
+        } else if (typeof value === 'number') {
+          formData.append(key, value.toString());
+        } else if (typeof value === 'string') {
+          formData.append(key, value);
+        }
       }
     });
     return axios.put<Product>(`/api/products/${id}`, formData);
