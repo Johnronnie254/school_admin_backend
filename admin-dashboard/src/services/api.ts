@@ -1,4 +1,5 @@
-import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
+import { API_CONFIG } from '@/config/api';
 
 // Types
 interface RegisterData {
@@ -69,37 +70,46 @@ export interface ApiError extends AxiosError {
 }
 
 // Create axios instance
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+const api = axios.create(API_CONFIG);
 
-// Request interceptor
+// Add request interceptor for authentication
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  (config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Ensure URL doesn't have any extra slashes or spaces
+    if (config.url) {
+      config.url = config.url.replace(/\/+/g, '/').trim();
+    }
     return config;
   },
-  (error: AxiosError) => {
+  (error) => {
     return Promise.reject(error);
   }
 );
 
-// Response interceptor
+// Add response interceptor for handling token refresh
 api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  async (error: AxiosError<ErrorResponse>) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      window.location.href = '/login';
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        const response = await axios.post(`${API_CONFIG.baseURL}/auth/refresh/`, { refresh: refreshToken });
+        const { access } = response.data;
+        localStorage.setItem('accessToken', access);
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return api(originalRequest);
+      } catch (error) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
     }
     return Promise.reject(error);
   }
@@ -108,27 +118,27 @@ api.interceptors.response.use(
 // Auth service
 const authService = {
   register: async (data: RegisterData): Promise<AxiosResponse<AuthResponse>> => {
-    return api.post('/auth/register/', data);
+    return api.post('auth/register/', data);
   },
 
   login: async (data: LoginData): Promise<AxiosResponse<AuthResponse>> => {
-    return api.post('/auth/login/', data);
+    return api.post('auth/login/', data);
   },
 
   logout: async (): Promise<AxiosResponse<void>> => {
-    return api.post('/auth/logout/');
+    return api.post('auth/logout/');
   },
 
   resetPassword: async (data: ResetPasswordData): Promise<AxiosResponse<void>> => {
-    return api.post('/auth/reset-password/', data);
+    return api.post('auth/password/reset/', data);
   },
 
   confirmReset: async (data: ConfirmResetData): Promise<AxiosResponse<void>> => {
-    return api.post('/auth/confirm-reset/', data);
+    return api.post('auth/password/reset/confirm/', data);
   },
 
   refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/token/refresh/', { refresh: refreshToken });
+    const response = await api.post<AuthResponse>('auth/token/refresh/', { refresh: refreshToken });
     return response.data;
   },
 };
