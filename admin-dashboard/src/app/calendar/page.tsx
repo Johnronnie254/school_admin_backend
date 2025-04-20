@@ -173,9 +173,9 @@ export default function CalendarPage() {
         onClose={handleCloseModal}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative bg-white rounded-lg max-w-md w-full mx-4 p-6">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white rounded-lg max-w-md w-full mx-4 p-6 shadow-xl transition-all">
             <div className="flex justify-between items-center mb-4">
               <Dialog.Title className="text-lg font-medium">
                 {editingEvent ? 'Edit Event' : 'Add New Event'}

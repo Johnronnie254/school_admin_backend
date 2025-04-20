@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Dialog } from '@headlessui/react';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import shopService, { Product, CreateProductData, ApiError } from '@/services/shopService';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -179,13 +179,18 @@ export default function ShopPage() {
         onClose={() => setIsOpen(false)}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
 
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
-            </h3>
+          <Dialog.Panel className="relative transform overflow-hidden bg-white rounded-lg max-w-md w-full mx-4 p-6 shadow-xl transition-all">
+            <div className="flex justify-between items-center mb-4">
+              <Dialog.Title className="text-lg font-medium">
+                {editingProduct ? 'Edit Product' : 'Add New Product'}
+              </Dialog.Title>
+              <button onClick={() => setIsOpen(false)}>
+                <XMarkIcon className="h-6 w-6 text-gray-500" />
+              </button>
+            </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
@@ -268,13 +273,7 @@ export default function ShopPage() {
                 />
               </div>
 
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3">
-                <button
-                  type="submit"
-                  className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:text-sm"
-                >
-                  {editingProduct ? 'Update' : 'Create'}
-                </button>
+              <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -282,9 +281,15 @@ export default function ShopPage() {
                     setEditingProduct(null);
                     reset();
                   }}
-                  className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:text-sm"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                 >
                   Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+                >
+                  {editingProduct ? 'Update Product' : 'Create Product'}
                 </button>
               </div>
             </form>
