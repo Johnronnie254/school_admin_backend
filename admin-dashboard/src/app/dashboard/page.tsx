@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { schoolService } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 import {
   AcademicCapIcon,
   UserGroupIcon,
@@ -9,10 +10,12 @@ import {
   CurrencyDollarIcon,
   ChartBarIcon,
   CalendarIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
 export default function DashboardPage() {
+  const { logout } = useAuth();
   const { data: schoolStats, isLoading } = useQuery({
     queryKey: ['schoolStats'],
     queryFn: () => schoolService.getStatistics('current'),
@@ -185,6 +188,14 @@ export default function DashboardPage() {
           {/* Add recent activity content here */}
         </div>
       </div>
+
+      <button
+          onClick={logout}
+          className="flex items-center gap-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors duration-200"
+        >
+          <ArrowRightOnRectangleIcon className="h-5 w-5 text-white" aria-hidden="true" />
+          Logout
+        </button>
     </div>
   );
 }

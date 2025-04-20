@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import axios, { AxiosError } from 'axios';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 interface RegisterFormData {
   name: string;
@@ -16,22 +17,52 @@ interface RegisterFormData {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const { register, handleSubmit } = useForm<RegisterFormData>();
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>();
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setIsLoading(true);
+      
+      // Create the request data according to the API specification
       const requestData = {
-        ...data,
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        password_confirmation: data.password_confirmation,
         role: 'admin'
       };
-      await axios.post('http://78.111.67.196/api/auth/register/', requestData);
-      toast.success('Registration successful! Please login.');
-      router.push('/login');
+
+      // Make the registration request
+      const response = await axios.post('http://78.111.67.196/api/auth/register/', requestData);
+
+      if (response.data) {
+        toast.success('Registration successful!');
+        router.push('/dashboard');
+      }
     } catch (error) {
-      const axiosError = error as AxiosError;
-      toast.error(axiosError.response?.data?.message || JSON.stringify(axiosError.response?.data));
+      const axiosError = error as AxiosError<any>;
+      if (axiosError.response?.data) {
+        // Handle different types of error responses
+        const errorData = axiosError.response.data;
+        if (typeof errorData === 'string') {
+          toast.error(errorData);
+        } else if (typeof errorData === 'object') {
+          // Handle field-specific errors
+          Object.entries(errorData).forEach(([field, messages]) => {
+            if (Array.isArray(messages)) {
+              messages.forEach(message => toast.error(`${field}: ${message}`));
+            } else {
+              toast.error(`${field}: ${messages}`);
+            }
+          });
+        } else {
+          toast.error('Registration failed. Please try again.');
+        }
+      } else {
+        toast.error('Registration failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -58,10 +89,16 @@ export default function RegisterPage() {
               <input
                 id="name"
                 type="text"
-                {...register('name', { required: true })}
+                {...register('name', { 
+                  required: 'Name is required',
+                  minLength: { value: 2, message: 'Name must be at least 2 characters' }
+                })}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Full Name"
               />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              )}
             </div>
 
             <div>
@@ -69,10 +106,19 @@ export default function RegisterPage() {
               <input
                 id="email"
                 type="email"
-                {...register('email', { required: true })}
+                {...register('email', { 
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Invalid email address'
+                  }
+                })}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
               />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
             <div>
@@ -80,10 +126,16 @@ export default function RegisterPage() {
               <input
                 id="password"
                 type="password"
-                {...register('password', { required: true })}
+                {...register('password', { 
+                  required: 'Password is required',
+                  minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                })}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
               />
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
             <div>
@@ -91,10 +143,17 @@ export default function RegisterPage() {
               <input
                 id="password_confirmation"
                 type="password"
-                {...register('password_confirmation', { required: true })}
+                {...register('password_confirmation', { 
+                  required: 'Please confirm your password',
+                  validate: (value, formValues) => 
+                    value === formValues.password || 'Passwords do not match'
+                })}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Confirm Password"
               />
+              {errors.password_confirmation && (
+                <p className="mt-1 text-sm text-red-600">{errors.password_confirmation.message}</p>
+              )}
             </div>
           </div>
 
@@ -103,7 +162,7 @@ export default function RegisterPage() {
               type="submit"
               disabled={isLoading}
               className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-                isLoading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
+                isLoading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
               } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
             >
               {isLoading ? 'Creating account...' : 'Create Administrator Account'}

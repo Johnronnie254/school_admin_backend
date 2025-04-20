@@ -117,7 +117,7 @@ export default function LoginPage() {
                 href="/register"
                 className="font-medium text-blue-600 hover:text-blue-500"
               >
-                Register new school
+                Register
               </Link>
             </div>
           </div>
