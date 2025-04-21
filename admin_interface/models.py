@@ -59,13 +59,13 @@ class User(AbstractUser):
     username = None  # Remove username field
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PARENT)
-    school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='users')
+    school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='users', null=True, blank=True)
     # first_name will be used for the name field
     
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["role", "school"]
+    REQUIRED_FIELDS = ["role"]  # Removed 'school' from required fields
 
     def __str__(self):
         return f"{self.first_name} ({self.email})"
