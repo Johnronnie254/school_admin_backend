@@ -59,7 +59,7 @@ class User(AbstractUser):
     username = None  # Remove username field
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PARENT)
-    school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='users', null=True, blank=True)
+    school = models.ForeignKey('School', on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
     # first_name will be used for the name field
     
     objects = UserManager()
@@ -71,10 +71,14 @@ class User(AbstractUser):
         return f"{self.first_name} ({self.email})"
 
     class Meta:
+        verbose_name = 'user'
+        verbose_name_plural = 'users'
+        ordering = ['email']
         indexes = [
             models.Index(fields=['email', 'role']),
             models.Index(fields=['school', 'role']),
         ]
+        swappable = 'AUTH_USER_MODEL'
 
 
 class Teacher(models.Model):
@@ -82,7 +86,7 @@ class Teacher(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, db_index=True)
     email = models.EmailField(unique=True, db_index=True)
-    school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='teachers', null=True, blank=True)
+    school = models.ForeignKey('School', on_delete=models.SET_NULL, related_name='teachers', null=True, blank=True)
     phone_regex = RegexValidator(
         regex=r'^07\d{8}$',
         message="Phone number must be in format '07XXXXXXXX'"
@@ -103,11 +107,13 @@ class Teacher(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        verbose_name = 'teacher'
+        verbose_name_plural = 'teachers'
+        ordering = ['name']
         indexes = [
             models.Index(fields=['name', 'email']),
             models.Index(fields=['class_assigned']),
         ]
-        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -115,7 +121,7 @@ class Teacher(models.Model):
     def clean(self):
         super().clean()
         # Validate phone number
-        if not self.phone_regex.regex.match(str(self.phone_number)):
+        if self.phone_number and not self.phone_regex.regex.match(str(self.phone_number)):
             raise ValidationError({
                 'phone_number': self.phone_regex.message
             })
