@@ -29,6 +29,8 @@ class School(models.Model):
         return self.name
 
     class Meta:
+        verbose_name = 'school'
+        verbose_name_plural = 'schools'
         ordering = ['name']
         indexes = [
             models.Index(fields=['name']),
@@ -59,13 +61,13 @@ class User(AbstractUser):
     username = None  # Remove username field
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PARENT)
-    school = models.ForeignKey('School', on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
+    school = models.ForeignKey(School, on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
     # first_name will be used for the name field
     
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["role"]  # Removed 'school' from required fields
+    REQUIRED_FIELDS = ["role"]
 
     def __str__(self):
         return f"{self.first_name} ({self.email})"
@@ -75,8 +77,8 @@ class User(AbstractUser):
         verbose_name_plural = 'users'
         ordering = ['email']
         indexes = [
-            models.Index(fields=['email', 'role']),
-            models.Index(fields=['school', 'role']),
+            models.Index(fields=['email']),
+            models.Index(fields=['role']),
         ]
         swappable = 'AUTH_USER_MODEL'
 
@@ -86,7 +88,7 @@ class Teacher(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, db_index=True)
     email = models.EmailField(unique=True, db_index=True)
-    school = models.ForeignKey('School', on_delete=models.SET_NULL, related_name='teachers', null=True, blank=True)
+    school = models.ForeignKey(School, on_delete=models.SET_NULL, related_name='teachers', null=True, blank=True)
     phone_regex = RegexValidator(
         regex=r'^07\d{8}$',
         message="Phone number must be in format '07XXXXXXXX'"
@@ -111,7 +113,8 @@ class Teacher(models.Model):
         verbose_name_plural = 'teachers'
         ordering = ['name']
         indexes = [
-            models.Index(fields=['name', 'email']),
+            models.Index(fields=['name']),
+            models.Index(fields=['email']),
             models.Index(fields=['class_assigned']),
         ]
 
