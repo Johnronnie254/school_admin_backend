@@ -82,7 +82,7 @@ class Teacher(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, db_index=True)
     email = models.EmailField(unique=True, db_index=True)
-    school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='teachers')
+    school = models.ForeignKey('School', on_delete=models.CASCADE, related_name='teachers', null=True, blank=True)
     phone_regex = RegexValidator(
         regex=r'^07\d{8}$',
         message="Phone number must be in format '07XXXXXXXX'"
