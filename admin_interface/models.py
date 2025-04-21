@@ -61,8 +61,6 @@ class User(AbstractUser):
     username = None  # Remove username field
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PARENT)
-    school = models.ForeignKey(School, on_delete=models.SET_NULL, related_name='users', null=True, blank=True)
-    # first_name will be used for the name field
     
     objects = UserManager()
 

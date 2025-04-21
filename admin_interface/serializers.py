@@ -61,25 +61,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Get the name from validated data
         name = validated_data.pop('name')
 
-        # For admin registration, create a default school if none exists
-        if validated_data.get('role') == Role.ADMIN:
-            try:
-                school = School.objects.get(name='Default School')
-            except School.DoesNotExist:
-                school = School.objects.create(
-                    name='Default School',
-                    address='Default Address',
-                    phone_number='0700000000',
-                    email='school@example.com',
-                    registration_number='SCH001'
-                )
-            validated_data['school'] = school
-
         user = User.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
-            role=validated_data.get('role'),
-            school=validated_data.get('school')
+            role=validated_data.get('role')
         )
         
         # Set the first_name field with the provided name
