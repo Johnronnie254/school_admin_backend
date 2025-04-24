@@ -24,9 +24,9 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'school-admin-backend-x5e5.onrender.com',
-    'server1.educite.co.ke',
-    '78.111.67.196'
+    '78.111.67.196',
+    'educitebackend.co.ke',
+    'www.educitebackend.co.ke',
 ]
 
 # Add CSRF_TRUSTED_ORIGINS
