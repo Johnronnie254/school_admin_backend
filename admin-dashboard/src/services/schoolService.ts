@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { CreateSchoolDto, School, SchoolsResponse, UpdateSchoolDto } from '../types/school';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://78.111.67.196/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
 
 export interface SchoolStatistics {
   total_schools: number;

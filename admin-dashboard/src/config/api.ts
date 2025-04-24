@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  baseURL: 'http://78.111.67.196/api',
+  baseURL: 'https://educitebackend.co.ke/api',
   headers: {
     'Content-Type': 'application/json',
   },

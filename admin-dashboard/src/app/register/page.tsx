@@ -36,7 +36,7 @@ export default function RegisterPage() {
         role: 'admin'
       };
 
-      await axios.post('http://78.111.67.196/api/auth/register/', requestData);
+      await axios.post('https://educitebackend.co.ke/api/auth/register/', requestData);
       toast.success('Registration successful!');
       router.push('/dashboard');
       
