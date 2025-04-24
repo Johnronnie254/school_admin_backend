@@ -1,175 +1,162 @@
-# **EduSphere - School Management System Backend**
+# **EduCite - School Management System**
 
 ## **Live Demo**
-The API is live at: https://school-admin-backend-x5e5.onrender.com/
-
-Note: The live demo is hosted on Render's free tier, so the first request might take a few seconds to wake up the server.
+Backend API: https://educitebackend.co.ke/
+Frontend Admin Dashboard: [Coming Soon]
 
 ## **Overview**
-EduSphere is a comprehensive **school management system** built with **Django REST Framework**. It provides a **robust API** for managing various aspects of school administration, including **students, teachers, parents, exam results, fee payments, and more**.
+EduCite is a modern school management system built with Django REST Framework for the backend and Next.js for the frontend admin dashboard. It provides a comprehensive solution for managing school operations, including student records, teacher management, exam results, fee payments, and communication.
+
+## **Project Structure**
+
+The project consists of two main components:
+
+### **1. Backend (Django REST Framework)**
+- Core application logic and API endpoints
+- Database management
+- Authentication and authorization
+- Real-time notifications using WebSockets
+- File handling and data exports
+
+### **2. Admin Dashboard (Next.js)**
+- Modern, responsive user interface
+- Real-time data updates
+- Role-based access control
+- Interactive data visualization
+- Secure API integration
 
 ## **Features**
 
 ### **1. User Management**
-- Role-based authentication (Admin, Teacher, Parent)
-- JWT-based authentication
-- User registration & login
+- Multi-role authentication (Admin, Teacher, Parent)
+- JWT-based secure authentication
+- Role-based access control
 - Password management
 
 ### **2. Academic Management**
-- Student enrollment & records
+- Student enrollment and records
 - Teacher management
 - Class assignments
 - Subject management
 - Exam results tracking
-- Attendance tracking
 
 ### **3. Financial Management**
 - School fee management
-- Payment tracking & transaction history
-- Payment status monitoring
+- Payment tracking
+- Transaction history
+- Fee status monitoring
 
 ### **4. Communication**
-- Notifications system
-- Targeted messaging (teachers, students, or both)
-- Document management & file uploads
+- Real-time notifications
+- Messaging system between teachers and parents
+- Document sharing
+- Announcements
 
 ### **5. Administrative Tools**
-- Bulk data upload
-- Excel/CSV import support
 - Statistical reports
 - Data export capabilities
-
----
+- User activity monitoring
+- System settings management
 
 ## **Technology Stack**
 
-| **Component**         | **Technology** |
-|----------------------|------------------|
-| **Backend**          | Django 4.2.7 |
-| **API Framework**    | Django REST Framework 3.14.0 |
-| **Database**         | PostgreSQL |
-| **Authentication**   | JWT (djangorestframework-simplejwt) |
-| **File Handling**    | openpyxl, pandas |
-| **Testing**         | pytest, coverage |
+### **Backend**
+- Django 4.2.7
+- Django REST Framework 3.14.0
+- PostgreSQL
+- Redis (for WebSocket)
+- JWT Authentication
 
----
+### **Frontend**
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- Axios
+- React Hook Form
+- React Hot Toast
 
 ## **Installation Guide**
 
-### **1. Clone the Repository**
-```bash
-git clone https://github.com/yourusername/edusphere-backend.git
-cd edusphere-backend
-```
+### **1. Backend Setup**
 
-### **2. Set Up Virtual Environment**
 ```bash
+# Clone the repository
+git clone [repository-url]
+cd school_admin_backend
+
+# Create and activate virtual environment
 python -m venv venv
-# Activate virtual environment
-source venv/bin/activate   # On Windows: venv\Scripts\activate
-```
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-### **3. Install Dependencies**
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### **4. Configure Environment Variables**
-```bash
+# Configure environment variables
 cp .env.example .env
-```
-Edit the `.env` file to include the necessary environment variables.
+# Edit .env with your configuration
 
-### **5. Run Database Migrations**
-```bash
+# Run migrations
 python manage.py migrate
-```
 
-### **6. Start Development Server**
-```bash
+# Start development server
 python manage.py runserver
 ```
-The API will now be accessible at `http://127.0.0.1:8000/`.
 
----
+### **2. Frontend Setup**
 
-## **API Endpoints**
-
-### **Authentication**
-- `POST /api/register/` → Register new user  
-- `POST /api/login/` → User login  
-- `POST /api/logout/` → User logout  
-
-### **Users**
-- `GET /api/users/` → List all users  
-- `GET /api/users/{id}/` → Retrieve user details  
-- `PUT /api/users/{id}/` → Update user  
-- `DELETE /api/users/{id}/` → Delete user  
-
-### **Teachers**
-- `GET /api/teachers/` → List all teachers  
-- `POST /api/teachers/` → Create a new teacher  
-- `GET /api/teachers/{id}/` → Retrieve teacher details  
-- `PUT /api/teachers/{id}/` → Update teacher  
-- `DELETE /api/teachers/{id}/` → Delete teacher  
-- `POST /api/teachers/bulk_upload/` → Bulk upload teachers  
-
-### **Students**
-- `GET /api/students/` → List all students  
-- `POST /api/students/` → Create a new student  
-- `GET /api/students/{id}/` → Retrieve student details  
-- `PUT /api/students/{id}/` → Update student  
-- `DELETE /api/students/{id}/` → Delete student  
-
-### **Exam Results**
-- `GET /api/exam-results/` → List all exam results  
-- `POST /api/exam-results/` → Record exam results  
-- `GET /api/students/{id}/exam-results/` → Get a student's exam results  
-
-### **School Fees**
-- `POST /api/fees/initiate/` → Initiate fee payment  
-- `POST /api/fees/confirm/` → Confirm fee payment  
-- `GET /api/students/{id}/fees/` → Retrieve a student's fee records  
-
-### **Notifications**
-- `GET /api/notifications/` → List all notifications  
-- `POST /api/notifications/` → Create a new notification  
-- `GET /api/notifications/{id}/` → Retrieve notification details  
-
----
-
-## **Running Tests**
-To run unit tests, use:  
 ```bash
-python manage.py test admin_interface
-```
+# Navigate to admin dashboard directory
+cd admin-dashboard
 
----
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp .env.example .env.local
+# Edit .env.local with your configuration
+
+# Run development server
+npm run dev
+```
 
 ## **Environment Variables**
-The application uses the following environment variables:
+
+### **Backend (.env)**
 ```bash
-# Django configuration
-DEBUG=False  # Set to False in production
+DEBUG=True
 DJANGO_SECRET_KEY=your_secret_key
-ALLOWED_HOSTS=localhost,127.0.0.1,school-admin-backend-x5e5.onrender.com
-
-# Database configuration
+ALLOWED_HOSTS=localhost,127.0.0.1,educitebackend.co.ke
 DATABASE_URL=your_database_url
-
-# CORS settings
-CORS_ALLOWED_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
+CORS_ALLOWED_ORIGINS=http://localhost:3000
 ```
 
-## **Deployment**
-The application is currently deployed on Render. For local deployment, follow the installation steps above.
+### **Frontend (.env.local)**
+```bash
+NEXT_PUBLIC_API_URL=https://educitebackend.co.ke/api
+```
 
-### **Production Deployment**
-1. Create an account on [Render](https://render.com)
-2. Connect your GitHub repository
-3. Create a new Web Service
-4. Configure the environment variables
-5. Deploy!
+## **API Documentation**
 
----
+### **Authentication Endpoints**
+- `POST /api/auth/register/` - Register new user
+- `POST /api/auth/login/` - User login
+- `POST /api/auth/logout/` - User logout
+- `POST /api/auth/refresh/` - Refresh JWT token
+
+### **Core Endpoints**
+- `/api/students/` - Student management
+- `/api/teachers/` - Teacher management
+- `/api/parents/` - Parent management
+- `/api/exam-results/` - Exam results
+- `/api/school-fees/` - School fees
+- `/api/notifications/` - Notifications
+- `/api/messages/` - Messaging system
+
+## **Contributing**
+Please read our contributing guidelines before submitting pull requests.
+
+## **License**
+[MIT License](LICENSE)
+
+## **Support**
+For support and queries, please contact [support email]
