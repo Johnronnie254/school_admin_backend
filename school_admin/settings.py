@@ -43,12 +43,6 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
-    'http://www.educite.co.ke',
-    'https://www.educite.co.ke',
-    'http://educite.co.ke',
-    'https://educite.co.ke',
-    'http://server1.educite.co.ke',
-    'https://server1.educite.co.ke',
     'http://78.111.67.196',
     'https://78.111.67.196',
     'https://school-admin-backend-ob5i.vercel.app',
