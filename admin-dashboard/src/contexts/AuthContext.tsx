@@ -39,8 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await authService.login({ email, password });
       const { access, refresh } = response.data;
 
-      // Store tokens
-      localStorage.setItem('accessToken', access);
+      // Store tokens consistently
+      localStorage.setItem('token', access); // Store as 'token' for the API client
+      localStorage.setItem('accessToken', access); // Keep for backward compatibility
       localStorage.setItem('refreshToken', refresh);
 
       // Create user info from response
@@ -75,7 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Clear stored data regardless of logout API success
+      // Clear all stored tokens
+      localStorage.removeItem('token');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');

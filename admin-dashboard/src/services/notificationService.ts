@@ -1,6 +1,5 @@
-import axios, { AxiosError } from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
+import { AxiosError } from 'axios';
+import { apiClient as api } from '@/lib/api';
 
 export interface Notification {
   id: string;
@@ -18,7 +17,7 @@ export interface NotificationFormData {
 export const notificationService = {
   getNotifications: async () => {
     try {
-      const response = await axios.get(`${API_URL}/notifications/`);
+      const response = await api.get('/notifications/');
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -30,7 +29,7 @@ export const notificationService = {
 
   getNotificationById: async (id: string) => {
     try {
-      const response = await axios.get(`${API_URL}/notifications/${id}/`);
+      const response = await api.get(`/notifications/${id}/`);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -42,7 +41,7 @@ export const notificationService = {
 
   createNotification: async (data: NotificationFormData) => {
     try {
-      const response = await axios.post(`${API_URL}/notifications/`, data);
+      const response = await api.post('/notifications/', data);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -54,7 +53,7 @@ export const notificationService = {
 
   updateNotification: async (id: string, data: Partial<NotificationFormData>) => {
     try {
-      const response = await axios.put(`${API_URL}/notifications/${id}/`, data);
+      const response = await api.put(`/notifications/${id}/`, data);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -66,7 +65,7 @@ export const notificationService = {
 
   deleteNotification: async (id: string) => {
     try {
-      const response = await axios.delete(`${API_URL}/notifications/${id}/`);
+      const response = await api.delete(`/notifications/${id}/`);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
