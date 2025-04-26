@@ -1,73 +1,116 @@
-import axios from 'axios';
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'react-hot-toast';
 
-export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
+
+// Create axios instance with default config
+const api: AxiosInstance = axios.create({
+  baseURL: API_URL,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor for adding auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
+// Request interceptor for API calls
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log('API Request:', {
+      method: config.method,
+      url: config.url,
+      headers: config.headers,
+      data: config.data,
+    });
     return config;
   },
   (error) => {
+    console.error('Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for handling errors
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const message = error.response?.data?.message || error.message || 'An error occurred';
-    
-    // Handle authentication errors
+// Response interceptor for API calls
+api.interceptors.response.use(
+  (response) => {
+    console.log('API Response:', {
+      status: response.status,
+      url: response.config.url,
+      data: response.data,
+    });
+    return response;
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config;
+    console.error('Response Error:', {
+      status: error.response?.status,
+      url: originalRequest?.url,
+      error: error.response?.data,
+    });
+
+    // Handle 401 Unauthorized error
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-      toast.error('Session expired. Please login again.');
-    } 
-    // Handle other errors
-    else {
-      toast.error(message);
+      // Try to refresh token
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken && originalRequest) {
+        try {
+          const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
+            refresh: refreshToken,
+          });
+          
+          const { access } = response.data;
+          localStorage.setItem('accessToken', access);
+          
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${access}`;
+          return axios(originalRequest);
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          // Clear tokens and redirect to login
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          window.location.href = '/login';
+        }
+      } else {
+        // No refresh token available, redirect to login
+        window.location.href = '/login';
+      }
     }
-    
+
     return Promise.reject(error);
   }
 );
+
+export { api as apiClient };
 
 // Admin API endpoints
 export const adminApi = {
-  clearExamResults: () => apiClient.post('/admin/clear_exam_results/'),
-  clearFeeRecords: () => apiClient.post('/admin/clear_fee_records/'),
-  updateSchoolSettings: (data: SchoolSettings) => apiClient.put('/admin/update_school_settings/', data),
-  bulkPromoteStudents: (data: BulkPromoteStudentsData) => apiClient.post('/admin/bulk_promote_students/', data),
+  clearExamResults: () => api.post('/admin/clear_exam_results/'),
+  clearFeeRecords: () => api.post('/admin/clear_fee_records/'),
+  updateSchoolSettings: (data: SchoolSettings) => api.put('/admin/update_school_settings/', data),
+  bulkPromoteStudents: (data: BulkPromoteStudentsData) => api.post('/admin/bulk_promote_students/', data),
 };
 
 // School API endpoints
 export const schoolApi = {
-  create: (data: CreateSchoolData) => apiClient.post('/schools/', data),
-  list: () => apiClient.get('/schools/'),
-  getById: (id: string) => apiClient.get(`/schools/${id}/`),
-  update: (id: string, data: UpdateSchoolData) => apiClient.put(`/schools/${id}/`, data),
-  delete: (id: string) => apiClient.delete(`/schools/${id}/`),
-  getStatistics: (id: string) => apiClient.get(`/schools/${id}/statistics/`),
-  getTeachers: (id: string) => apiClient.get(`/schools/${id}/teachers/`),
-  getParents: (id: string) => apiClient.get(`/schools/${id}/parents/`),
+  create: (data: CreateSchoolData) => api.post('/schools/', data),
+  list: () => api.get('/schools/'),
+  getById: (id: string) => api.get(`/schools/${id}/`),
+  update: (id: string, data: UpdateSchoolData) => api.put(`/schools/${id}/`, data),
+  delete: (id: string) => api.delete(`/schools/${id}/`),
+  getStatistics: (id: string) => api.get(`/schools/${id}/statistics/`),
+  getTeachers: (id: string) => api.get(`/schools/${id}/teachers/`),
+  getParents: (id: string) => api.get(`/schools/${id}/parents/`),
 };
 
 // Auth API endpoints
 export const authApi = {
-  login: (data: LoginData) => apiClient.post('/auth/login/', data),
-  register: (data: RegisterData) => apiClient.post('/auth/register/', data),
-  logout: () => apiClient.post('/auth/logout/'),
+  login: (data: LoginData) => api.post('/auth/login/', data),
+  register: (data: RegisterData) => api.post('/auth/register/', data),
+  logout: () => api.post('/auth/logout/'),
 };
 
 // Types

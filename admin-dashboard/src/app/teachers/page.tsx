@@ -7,6 +7,7 @@ import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, UserGroupIcon } from '@hero
 import toast from 'react-hot-toast';
 import { teacherService } from '@/services/teacherService';
 import { Dialog } from '@/components/ui/dialog';
+import { AxiosError } from 'axios';
 
 interface Teacher {
   id: string;
@@ -19,19 +20,19 @@ interface Teacher {
   school: string;
 }
 
-interface PaginatedResponse<T> {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: T[];
-}
-
 interface TeacherFormData {
   name: string;
   email: string;
   phone_number: string;
   class_assigned: string;
   subjects: string[];
+}
+
+interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
 const AVAILABLE_SUBJECTS = [
@@ -59,7 +60,20 @@ export default function TeachersPage() {
 
   const { data: teachers, isLoading } = useQuery<PaginatedResponse<Teacher>>({
     queryKey: ['teachers'],
-    queryFn: () => teacherService.getTeachers(),
+    queryFn: async (): Promise<PaginatedResponse<Teacher>> => {
+      try {
+        const response = await teacherService.getTeachers();
+        return response as PaginatedResponse<Teacher>;
+      } catch (error: unknown) {
+        console.error('Error loading teachers:', error);
+        if (error instanceof AxiosError && error.response?.status === 401) {
+          toast.error('Session expired. Please login again.');
+        } else {
+          toast.error('Failed to load teachers. Please try again.');
+        }
+        throw error;
+      }
+    }
   });
 
   const createMutation = useMutation({
@@ -71,9 +85,14 @@ export default function TeachersPage() {
       reset();
       setSelectedSubjects([]);
     },
-    onError: (error) => {
-      toast.error('Failed to create teacher');
+    onError: (error: AxiosError | Error) => {
       console.error('Error creating teacher:', error);
+      if (error instanceof AxiosError && error.response?.status === 401) {
+        toast.error('Session expired. Please login again.');
+      } else {
+        const message = error instanceof AxiosError ? error.response?.data?.message : error.message;
+        toast.error(message || 'Failed to create teacher');
+      }
     },
   });
 
@@ -90,9 +109,14 @@ export default function TeachersPage() {
       reset();
       setSelectedSubjects([]);
     },
-    onError: (error) => {
-      toast.error('Failed to update teacher');
+    onError: (error: AxiosError | Error) => {
       console.error('Error updating teacher:', error);
+      if (error instanceof AxiosError && error.response?.status === 401) {
+        toast.error('Session expired. Please login again.');
+      } else {
+        const message = error instanceof AxiosError ? error.response?.data?.message : error.message;
+        toast.error(message || 'Failed to update teacher');
+      }
     },
   });
 
@@ -102,9 +126,14 @@ export default function TeachersPage() {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
       toast.success('Teacher deleted successfully');
     },
-    onError: (error) => {
-      toast.error('Failed to delete teacher');
+    onError: (error: AxiosError | Error) => {
       console.error('Error deleting teacher:', error);
+      if (error instanceof AxiosError && error.response?.status === 401) {
+        toast.error('Session expired. Please login again.');
+      } else {
+        const message = error instanceof AxiosError ? error.response?.data?.message : error.message;
+        toast.error(message || 'Failed to delete teacher');
+      }
     },
   });
 
@@ -198,7 +227,7 @@ export default function TeachersPage() {
                   </div>
                 </td>
               </tr>
-            ) : teachers?.results?.length === 0 ? (
+            ) : !teachers?.results || teachers.results.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-4 text-center">
                   <div className="text-center py-4">
@@ -209,7 +238,7 @@ export default function TeachersPage() {
                 </td>
               </tr>
             ) : (
-              teachers?.results?.map((teacher: Teacher) => (
+              teachers.results.map((teacher: Teacher) => (
                 <tr key={teacher.id}>
                   <td className="px-6 py-4 whitespace-nowrap">{teacher.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{teacher.email}</td>
