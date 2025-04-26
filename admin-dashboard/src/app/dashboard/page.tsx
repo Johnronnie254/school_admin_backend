@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { schoolService } from '@/services/schoolService';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  AcademicCapIcon,
   UserGroupIcon,
   UsersIcon,
   CurrencyDollarIcon,
@@ -18,17 +17,10 @@ export default function DashboardPage() {
   const { logout } = useAuth();
   const { data: schoolStats, isLoading } = useQuery({
     queryKey: ['schoolStats'],
-    queryFn: () => schoolService.getStatistics('current'),
+    queryFn: () => schoolService.getSchoolStatistics(),
   });
 
   const stats = [
-    {
-      name: 'Total Schools',
-      value: schoolStats?.total_schools || 0,
-      icon: AcademicCapIcon,
-      href: '/schools',
-      color: 'bg-blue-500',
-    },
     {
       name: 'Total Teachers',
       value: schoolStats?.total_teachers || 0,
@@ -69,16 +61,10 @@ export default function DashboardPage() {
 
   const quickActions = [
     {
-      name: 'Add School',
-      href: '/schools?action=add',
-      icon: AcademicCapIcon,
-      description: 'Register a new school in the system',
-    },
-    {
       name: 'Add Teacher',
       href: '/teachers?action=add',
       icon: UserGroupIcon,
-      description: 'Add a new teacher to a school',
+      description: 'Add a new teacher to your school',
     },
     {
       name: 'Add Student',
@@ -98,7 +84,7 @@ export default function DashboardPage() {
     return (
       <div className="animate-pulse">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
+          {[...Array(5)].map((_, i) => (
             <div
               key={i}
               className="bg-white overflow-hidden shadow rounded-lg h-32"
@@ -110,33 +96,45 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">{schoolStats?.school_name}</p>
+        </div>
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+        >
+          <ArrowRightOnRectangleIcon className="h-5 w-5" />
+          Logout
+        </button>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat) => (
+        {stats.map((item) => (
           <Link
-            key={stat.name}
-            href={stat.href}
+            key={item.name}
+            href={item.href}
             className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
           >
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <stat.icon
-                    className={`h-6 w-6 text-white ${stat.color} rounded-full p-1`}
+                  <item.icon
+                    className={`h-6 w-6 ${item.color} text-white rounded p-1`}
                   />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
                     <dt className="text-sm font-medium text-gray-500 truncate">
-                      {stat.name}
+                      {item.name}
                     </dt>
                     <dd className="flex items-baseline">
                       <div className="text-2xl font-semibold text-gray-900">
-                        {stat.prefix}
-                        {stat.value.toLocaleString()}
+                        {item.prefix && item.prefix}
+                        {item.value}
                       </div>
                     </dd>
                   </dl>
@@ -148,54 +146,34 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-8">
-        <h2 className="text-lg font-medium text-gray-900">Quick Actions</h2>
-        <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action) => (
-            <Link
-              key={action.name}
-              href={action.href}
-              className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-500 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <div>
-                <span
-                  className={`rounded-lg inline-flex p-3 ring-4 ring-white ${
-                    stats.find((s) => s.name.includes(action.name.split(' ')[1]))
-                      ?.color || 'bg-blue-500'
-                  }`}
-                >
-                  <action.icon className="h-6 w-6 text-white" aria-hidden="true" />
-                </span>
+      <h2 className="text-lg font-medium text-gray-900 mt-8 mb-4">
+        Quick Actions
+      </h2>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {quickActions.map((action) => (
+          <Link
+            key={action.name}
+            href={action.href}
+            className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+          >
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <action.icon className="h-6 w-6 text-gray-400" />
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {action.name}
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {action.description}
+                  </p>
+                </div>
               </div>
-              <div className="mt-4">
-                <h3 className="text-lg font-medium">
-                  <span className="absolute inset-0" aria-hidden="true" />
-                  {action.name}
-                </h3>
-                <p className="mt-2 text-sm text-gray-500">
-                  {action.description}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+            </div>
+          </Link>
+        ))}
       </div>
-
-      {/* Recent Activity */}
-      <div className="mt-8">
-        <h2 className="text-lg font-medium text-gray-900">Recent Activity</h2>
-        <div className="mt-4 bg-white shadow rounded-lg">
-          {/* Add recent activity content here */}
-        </div>
-      </div>
-
-      <button
-          onClick={logout}
-          className="flex items-center gap-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors duration-200"
-        >
-          <ArrowRightOnRectangleIcon className="h-5 w-5 text-white" aria-hidden="true" />
-          Logout
-        </button>
     </div>
   );
 }

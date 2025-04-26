@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   HomeIcon, 
-  AcademicCapIcon,
   UserGroupIcon,
   UsersIcon,
   DocumentTextIcon,
@@ -21,7 +20,6 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Schools', href: '/schools', icon: AcademicCapIcon },
   { name: 'Teachers', href: '/teachers', icon: UserGroupIcon },
   { name: 'Students', href: '/students', icon: UsersIcon },
   { name: 'Parents', href: '/parents', icon: UsersIcon },
