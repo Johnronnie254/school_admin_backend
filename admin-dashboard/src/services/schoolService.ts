@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
+import { apiClient } from '@/lib/api';
 
 export interface SchoolStatistics {
   total_teachers: number;
@@ -12,9 +10,8 @@ export interface SchoolStatistics {
 }
 
 export const schoolService = {
-  getSchoolStatistics: async (): Promise<SchoolStatistics> => {
-    // This will get stats for the authenticated school admin's school
-    const response = await axios.get(`${API_URL}/school/statistics/`);
+  getSchoolStatistics: async () => {
+    const response = await apiClient.get<SchoolStatistics>('/statistics/');
     return response.data;
   }
-}; 
+};

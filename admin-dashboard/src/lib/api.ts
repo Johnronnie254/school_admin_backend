@@ -1,115 +1,123 @@
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError } from 'axios';
+import { authService } from '@/services/auth.service';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
+// Types
+export interface ApiError extends AxiosError {
+  message: string;
+}
 
-// Create axios instance with default config
-const api: AxiosInstance = axios.create({
-  baseURL: API_URL,
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface ErrorResponse {
+  message: string;
+  errors?: Record<string, string[]>;
+}
+
+// API Configuration
+export const API_CONFIG = {
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://educitebackend.co.ke/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
-});
+};
 
-// Request interceptor for API calls
-api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('accessToken');
+// Create axios instance
+export const apiClient = axios.create(API_CONFIG);
+
+// Add request interceptor for authentication
+apiClient.interceptors.request.use(
+  (config) => {
+    console.log('🌐 Making API request to:', config.url);
+    const token = localStorage.getItem('access_token');
     if (token) {
+      console.log('🔑 Adding access token to request');
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.log('⚠️ No access token available for request');
     }
-    console.log('API Request:', {
-      method: config.method,
-      url: config.url,
-      headers: config.headers,
-      data: config.data,
-    });
+    // Ensure URL doesn't have any extra slashes or spaces
+    if (config.url) {
+      config.url = config.url.replace(/\/+/g, '/').trim();
+    }
     return config;
   },
   (error) => {
-    console.error('Request Error:', error);
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for API calls
-api.interceptors.response.use(
+// Add response interceptor for handling token refresh
+apiClient.interceptors.response.use(
   (response) => {
-    console.log('API Response:', {
-      status: response.status,
-      url: response.config.url,
-      data: response.data,
-    });
+    console.log('✅ API request successful:', response.config.url);
     return response;
   },
-  async (error: AxiosError) => {
-    const originalRequest = error.config;
-    console.error('Response Error:', {
-      status: error.response?.status,
-      url: originalRequest?.url,
-      error: error.response?.data,
-    });
+  async (error) => {
+    console.log('⚠️ API request failed:', error.config.url);
+    console.log('📊 Error status:', error.response?.status);
+    console.log('📝 Error data:', error.response?.data);
 
-    // Handle 401 Unauthorized error
-    if (error.response?.status === 401) {
-      // Try to refresh token
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (refreshToken && originalRequest) {
-        try {
-          const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
-            refresh: refreshToken,
-          });
-          
-          const { access } = response.data;
-          localStorage.setItem('accessToken', access);
-          
-          // Retry the original request with new token
-          originalRequest.headers.Authorization = `Bearer ${access}`;
-          return axios(originalRequest);
-        } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
-          // Clear tokens and redirect to login
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          window.location.href = '/login';
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log('🔄 Attempting token refresh due to 401 error');
+      originalRequest._retry = true;
+
+      try {
+        console.log('📤 Calling refreshToken()');
+        const response = await authService.refreshToken();
+        
+        if (response) {
+          console.log('✅ Token refresh successful');
+          console.log('🔄 Retrying original request');
+          return apiClient(originalRequest);
+        } else {
+          console.log('❌ Token refresh failed - no response');
+          return Promise.reject(error);
         }
-      } else {
-        // No refresh token available, redirect to login
-        window.location.href = '/login';
+      } catch (refreshError) {
+        console.error('❌ Token refresh error:', refreshError);
+        return Promise.reject(error);
       }
     }
 
+    console.log('❌ Request failed without recovery');
     return Promise.reject(error);
   }
 );
 
-export { api as apiClient };
-
 // Admin API endpoints
 export const adminApi = {
-  clearExamResults: () => api.post('/admin/clear_exam_results/'),
-  clearFeeRecords: () => api.post('/admin/clear_fee_records/'),
-  updateSchoolSettings: (data: SchoolSettings) => api.put('/admin/update_school_settings/', data),
-  bulkPromoteStudents: (data: BulkPromoteStudentsData) => api.post('/admin/bulk_promote_students/', data),
+  clearExamResults: () => apiClient.post('/admin/clear_exam_results/'),
+  clearFeeRecords: () => apiClient.post('/admin/clear_fee_records/'),
+  updateSchoolSettings: (data: SchoolSettings) => apiClient.put('/admin/update_school_settings/', data),
+  bulkPromoteStudents: (data: BulkPromoteStudentsData) => apiClient.post('/admin/bulk_promote_students/', data),
 };
 
 // School API endpoints
 export const schoolApi = {
-  create: (data: CreateSchoolData) => api.post('/schools/', data),
-  list: () => api.get('/schools/'),
-  getById: (id: string) => api.get(`/schools/${id}/`),
-  update: (id: string, data: UpdateSchoolData) => api.put(`/schools/${id}/`, data),
-  delete: (id: string) => api.delete(`/schools/${id}/`),
-  getStatistics: (id: string) => api.get(`/schools/${id}/statistics/`),
-  getTeachers: (id: string) => api.get(`/schools/${id}/teachers/`),
-  getParents: (id: string) => api.get(`/schools/${id}/parents/`),
+  create: (data: CreateSchoolData) => apiClient.post('/schools/', data),
+  list: () => apiClient.get('/schools/'),
+  getById: (id: string) => apiClient.get(`/schools/${id}/`),
+  update: (id: string, data: UpdateSchoolData) => apiClient.put(`/schools/${id}/`, data),
+  delete: (id: string) => apiClient.delete(`/schools/${id}/`),
+  getStatistics: (id: string) => apiClient.get(`/schools/${id}/statistics/`),
+  getTeachers: (id: string) => apiClient.get(`/schools/${id}/teachers/`),
+  getParents: (id: string) => apiClient.get(`/schools/${id}/parents/`),
 };
 
 // Auth API endpoints
 export const authApi = {
-  login: (data: LoginData) => api.post('/auth/login/', data),
-  register: (data: RegisterData) => api.post('/auth/register/', data),
-  logout: () => api.post('/auth/logout/'),
+  login: (data: LoginData) => apiClient.post('/auth/login/', data),
+  register: (data: RegisterData) => apiClient.post('/auth/register/', data),
+  logout: () => apiClient.post('/auth/logout/'),
 };
 
 // Types

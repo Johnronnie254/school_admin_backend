@@ -1,3 +1,5 @@
+import { AxiosError } from 'axios';
+
 export interface PaginatedResponse<T> {
   count: number;
   next: string | null;
@@ -7,70 +9,79 @@ export interface PaginatedResponse<T> {
 
 export interface User {
   id: string;
+  name: string;
   email: string;
+  role: string;
+  first_name?: string;
+  last_name?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AuthResponse {
+  tokens: {
+    access: string;
+    refresh: string;
+  };
+  user: User;
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
   first_name: string;
-  role: 'admin' | 'teacher' | 'parent';
-  school: string;
+  last_name: string;
+  role: 'admin' | 'teacher' | 'student';
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+export interface ResetPasswordData {
+  email: string;
+}
+
+export interface ConfirmResetData {
+  token: string;
+  password: string;
+}
+
+export interface ErrorResponse {
+  message: string;
+  errors?: Record<string, string[]>;
 }
 
 export interface School {
-  id: string;
+  id: number;
   name: string;
-  address: string;
-  phone_number: string;
-  email: string;
-  website?: string;
-  logo?: string;
   registration_number: string;
-  created_at: string;
-  updated_at: string;
+  email: string;
+  phone: string;
+  address: string;
+  website?: string;
   is_active: boolean;
-}
-
-export interface Teacher {
-  id: string;
-  name: string;
-  email: string;
-  school: string;
-  phone_number: string;
-  profile_pic?: string;
-  class_assigned?: string;
-  subjects: string[];
   created_at: string;
   updated_at: string;
 }
 
-export interface Student {
-  id: string;
+export interface CreateSchoolData {
   name: string;
-  guardian: string;
-  contact: string;
-  grade: number;
-  class_assigned?: string;
-  parent: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Parent {
-  id: string;
-  name: string;
+  registration_number: string;
   email: string;
-  phone_number: string;
-  created_at: string;
+  phone: string;
+  address: string;
+  website?: string;
 }
 
-export interface ExamResult {
-  id: string;
-  student: string;
-  exam_name: string;
-  subject: string;
-  marks: number;
-  grade: string;
-  term: string;
-  year: number;
-  remarks?: string;
-  created_at: string;
+export interface UpdateSchoolData extends Partial<CreateSchoolData> {
+  is_active?: boolean;
+}
+
+export interface ApiError extends AxiosError {
+  message: string;
 }
 
 export interface SchoolFee {
@@ -151,4 +162,16 @@ export interface TeacherParentAssociation {
   parent: string;
   created_at: string;
   is_active: boolean;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  message: string;
+  status: number;
+}
+
+export interface BaseEntity {
+  id: number;
+  created_at: string;
+  updated_at: string;
 } 

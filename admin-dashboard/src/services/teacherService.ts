@@ -1,5 +1,4 @@
-import { AxiosError } from 'axios';
-import { apiClient } from '@/lib/api';
+import { apiClient, PaginatedResponse } from '@/lib/api';
 
 export interface Teacher {
   id: string;
@@ -20,116 +19,52 @@ export interface TeacherFormData {
   subjects: string[];
 }
 
-export const teacherService = {
-  // Main CRUD operations
-  getTeachers: async () => {
-    try {
-      const response = await apiClient.get('/teachers/');
-      return response.data;
-    } catch (error: unknown) {
-      console.error('Error fetching teachers:', error);
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
-  },
+class TeacherService {
+  async getTeachers() {
+    const response = await apiClient.get<PaginatedResponse<Teacher>>('/api/teachers/');
+    return response.data;
+  }
 
-  getTeacherById: async (id: string) => {
-    try {
-      const response = await apiClient.get(`/teachers/${id}/`);
-      return response.data;
-    } catch (error: unknown) {
-      console.error(`Error fetching teacher ${id}:`, error);
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
-  },
+  async getTeacher(id: string) {
+    const response = await apiClient.get<Teacher>(`/api/teachers/${id}/`);
+    return response.data;
+  }
 
-  createTeacher: async (data: TeacherFormData) => {
-    try {
-      const response = await apiClient.post('/teachers/', data);
-      return response.data;
-    } catch (error: unknown) {
-      console.error('Error creating teacher:', error);
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
-  },
+  async createTeacher(data: Partial<Teacher>) {
+    const response = await apiClient.post<Teacher>('/api/teachers/', data);
+    return response.data;
+  }
 
-  updateTeacher: async (id: string, data: TeacherFormData) => {
-    try {
-      const response = await apiClient.put(`/teachers/${id}/`, data);
-      return response.data;
-    } catch (error: unknown) {
-      console.error(`Error updating teacher ${id}:`, error);
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
-  },
+  async updateTeacher(id: string, data: Partial<Teacher>) {
+    const response = await apiClient.put<Teacher>(`/api/teachers/${id}/`, data);
+    return response.data;
+  }
 
-  deleteTeacher: async (id: string) => {
-    try {
-      const response = await apiClient.delete(`/teachers/${id}/`);
-      return response.data;
-    } catch (error: unknown) {
-      console.error(`Error deleting teacher ${id}:`, error);
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
-  },
+  async deleteTeacher(id: string) {
+    await apiClient.delete(`/api/teachers/${id}/`);
+  }
 
   // Additional teacher-specific endpoints
-  getTeachersBySubject: async (subject: string) => {
-    try {
-      const response = await apiClient.get(`/teachers/by-subject/${subject}/`);
-      return response.data;
-    } catch (error: unknown) {
-      console.error(`Error fetching teachers by subject ${subject}:`, error);
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
-  },
+  async getTeachersBySubject(subject: string) {
+    const response = await apiClient.get(`/api/teachers/by-subject/${subject}/`);
+    return response.data;
+  }
 
-  uploadProfilePic: async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('profile_pic', file);
-      const response = await apiClient.post('/teacher/profile_pic/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
-    } catch (error: unknown) {
-      console.error('Error uploading profile picture:', error);
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
-  },
+  async uploadProfilePic(file: File) {
+    const formData = new FormData();
+    formData.append('profile_pic', file);
+    const response = await apiClient.post('/api/teacher/profile_pic/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
 
-  getTeacherSchedule: async () => {
-    try {
-      const response = await apiClient.get('/teacher/schedule/');
-      return response.data;
-    } catch (error: unknown) {
-      console.error('Error fetching teacher schedule:', error);
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
-  },
-}; 
+  async getTeacherSchedule() {
+    const response = await apiClient.get('/api/teacher/schedule/');
+    return response.data;
+  }
+}
+
+export const teacherService = new TeacherService(); 
