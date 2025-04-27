@@ -11,7 +11,7 @@ export interface SchoolStatistics {
 
 export const schoolService = {
   getSchoolStatistics: async () => {
-    const response = await apiClient.get<SchoolStatistics>('/statistics/');
+    const response = await apiClient.get<SchoolStatistics>('/api/statistics/');
     return response.data;
   }
 };

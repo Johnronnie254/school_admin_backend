@@ -5,7 +5,7 @@ class AuthService {
   async login(data: LoginData): Promise<AuthResponse> {
     console.log('🔐 Attempting login with email:', data.email);
     try {
-      const response = await apiClient.post<AuthResponse>('/auth/login/', data);
+      const response = await apiClient.post<AuthResponse>('/api/auth/login/', data);
       console.log('✅ Login successful. Response:', response.data);
       console.log('🎫 Setting tokens in localStorage');
       this.setTokens(response.data.tokens);
@@ -39,7 +39,7 @@ class AuthService {
   async register(data: RegisterData): Promise<AuthResponse> {
     console.log('📝 Attempting registration for:', data.email);
     try {
-      const response = await apiClient.post<AuthResponse>('/auth/register/', data);
+      const response = await apiClient.post<AuthResponse>('/api/auth/register/', data);
       console.log('✅ Registration successful. Response:', response.data);
       this.setTokens(response.data.tokens);
       return response.data;
@@ -54,7 +54,7 @@ class AuthService {
     const refreshToken = localStorage.getItem('refresh_token');
     if (refreshToken) {
       try {
-        await apiClient.post('/auth/logout/', { refresh: refreshToken });
+        await apiClient.post('/api/auth/logout/', { refresh: refreshToken });
         console.log('✅ Logout API call successful');
       } catch (error) {
         console.error('⚠️ Error during logout API call:', error);
@@ -67,15 +67,15 @@ class AuthService {
   }
 
   async requestPasswordReset(email: string): Promise<void> {
-    await apiClient.post('/auth/password/reset/', { email });
+    await apiClient.post('/api/auth/password/reset/', { email });
   }
 
   async resetPassword(data: ResetPasswordData): Promise<void> {
-    await apiClient.post('/auth/password/reset/confirm/', data);
+    await apiClient.post('/api/auth/password/reset/confirm/', data);
   }
 
   async confirmReset(data: ConfirmResetData): Promise<void> {
-    await apiClient.post('/auth/password/reset/complete/', data);
+    await apiClient.post('/api/auth/password/reset/complete/', data);
   }
 
   async getCurrentUser(): Promise<User | null> {
@@ -140,7 +140,7 @@ class AuthService {
         return null;
       }
       console.log('📤 Sending refresh token request');
-      const response = await apiClient.post<{ access: string }>('/auth/token/refresh/', { refresh });
+      const response = await apiClient.post<{ access: string }>('/api/auth/token/refresh/', { refresh });
       console.log('📥 Refresh token response:', response.data);
       
       if (response.data.access) {

@@ -1,6 +1,4 @@
-import axios, { AxiosError } from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
+import { apiClient, PaginatedResponse } from '@/lib/api';
 
 export interface ExamResult {
   id: string;
@@ -28,88 +26,38 @@ export interface ExamResultFormData {
 
 export const examResultService = {
   getExamResults: async () => {
-    try {
-      const response = await axios.get(`${API_URL}/exam-results/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get<PaginatedResponse<ExamResult>>('/api/exam-results/');
+    return response.data;
   },
 
   getExamResultById: async (id: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/exam-results/${id}/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get<ExamResult>(`/api/exam-results/${id}/`);
+    return response.data;
   },
 
   createExamResult: async (data: ExamResultFormData) => {
-    try {
-      const response = await axios.post(`${API_URL}/exam-results/`, data);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.post<ExamResult>('/api/exam-results/', data);
+    return response.data;
   },
 
   updateExamResult: async (id: string, data: Partial<ExamResultFormData>) => {
-    try {
-      const response = await axios.put(`${API_URL}/exam-results/${id}/`, data);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.put<ExamResult>(`/api/exam-results/${id}/`, data);
+    return response.data;
   },
 
   deleteExamResult: async (id: string) => {
-    try {
-      const response = await axios.delete(`${API_URL}/exam-results/${id}/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    await apiClient.delete(`/api/exam-results/${id}/`);
   },
 
   getStudentExamResults: async (studentId: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/students/${studentId}/exam-results/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get<ExamResult[]>(`/api/students/${studentId}/exam-results/`);
+    return response.data;
   },
 
   downloadResults: async () => {
-    try {
-      const response = await axios.get(`${API_URL}/exam-results/download/`, {
-        responseType: 'blob'
-      });
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get('/api/exam-results/download/', {
+      responseType: 'blob'
+    });
+    return response.data;
   }
 }; 

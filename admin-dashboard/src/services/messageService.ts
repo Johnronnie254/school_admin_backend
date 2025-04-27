@@ -1,6 +1,4 @@
-import axios, { AxiosError } from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
+import { apiClient, PaginatedResponse } from '@/lib/api';
 
 export interface Message {
   id: string;
@@ -25,63 +23,27 @@ export interface ChatUser {
 
 export const messageService = {
   getMessages: async () => {
-    try {
-      const response = await axios.get(`${API_URL}/messages/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get<PaginatedResponse<Message>>('/api/messages/');
+    return response.data;
   },
 
   getChatHistory: async (userId: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/messages/chat/${userId}/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get<Message[]>(`/api/messages/chat/${userId}/`);
+    return response.data;
   },
 
   sendMessage: async (data: MessageFormData) => {
-    try {
-      const response = await axios.post(`${API_URL}/messages/`, data);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.post<Message>('/api/messages/', data);
+    return response.data;
   },
 
   deleteMessage: async (id: string) => {
-    try {
-      const response = await axios.delete(`${API_URL}/messages/${id}/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    await apiClient.delete(`/api/messages/${id}/`);
   },
 
   // Get list of teachers or parents based on user role
   getChatUsers: async () => {
-    try {
-      const response = await axios.get(`${API_URL}/teacher-parent-associations/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get<ChatUser[]>('/api/teacher-parent-associations/');
+    return response.data;
   }
 }; 

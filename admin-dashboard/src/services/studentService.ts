@@ -1,6 +1,4 @@
-import axios, { AxiosError } from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
+import { apiClient, PaginatedResponse } from '@/lib/api';
 
 export interface Student {
   id: string;
@@ -38,99 +36,42 @@ export interface ApiErrorResponse {
 export const studentService = {
   // Main CRUD operations
   getStudents: async () => {
-    try {
-      const response = await axios.get(`${API_URL}/students/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get<PaginatedResponse<Student>>('/api/students/');
+    return response.data;
   },
 
   getStudentById: async (id: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/students/${id}/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get<Student>(`/api/students/${id}/`);
+    return response.data;
   },
 
   createStudent: async (data: StudentFormData) => {
-    try {
-      const response = await axios.post(`${API_URL}/students/`, data);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.post<Student>('/api/students/', data);
+    return response.data;
   },
 
   updateStudent: async (id: string, data: Partial<StudentFormData>) => {
-    try {
-      const response = await axios.put(`${API_URL}/students/${id}/`, data);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.put<Student>(`/api/students/${id}/`, data);
+    return response.data;
   },
 
   deleteStudent: async (id: string) => {
-    try {
-      const response = await axios.delete(`${API_URL}/students/${id}/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    await apiClient.delete(`/api/students/${id}/`);
   },
 
   // Additional student-specific endpoints
   getStudentExamResults: async (studentId: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/students/${studentId}/exam-results/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get(`/api/students/${studentId}/exam-results/`);
+    return response.data;
   },
 
   getStudentFeeRecords: async (studentId: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/students/${studentId}/fee-records/`);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.get(`/api/students/${studentId}/fee-records/`);
+    return response.data;
   },
 
   initiatePayment: async (studentId: string, paymentData: PaymentData) => {
-    try {
-      const response = await axios.post(`${API_URL}/students/${studentId}/initiate_payment/`, paymentData);
-      return response.data;
-    } catch (error: unknown) {
-      if (error instanceof AxiosError) {
-        throw error.response?.data || error.message;
-      }
-      throw error;
-    }
+    const response = await apiClient.post(`/api/students/${studentId}/initiate_payment/`, paymentData);
+    return response.data;
   }
 }; 

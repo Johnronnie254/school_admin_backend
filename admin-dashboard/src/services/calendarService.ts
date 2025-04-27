@@ -1,5 +1,4 @@
-import api from '@/services/api';
-import { AxiosResponse } from 'axios';
+import { apiClient, PaginatedResponse } from '@/lib/api';
 
 export interface SchoolEvent {
   id: string;
@@ -22,24 +21,28 @@ export interface CreateEventData {
 }
 
 const calendarService = {
-  getEvents: (): Promise<AxiosResponse<SchoolEvent[]>> => {
-    return api.get('/api/events/');
+  getEvents: async () => {
+    const response = await apiClient.get<PaginatedResponse<SchoolEvent>>('/api/events/');
+    return response.data;
   },
 
-  getEvent: (id: string): Promise<AxiosResponse<SchoolEvent>> => {
-    return api.get(`/api/events/${id}/`);
+  getEvent: async (id: string) => {
+    const response = await apiClient.get<SchoolEvent>(`/api/events/${id}/`);
+    return response.data;
   },
 
-  createEvent: (data: CreateEventData): Promise<AxiosResponse<SchoolEvent>> => {
-    return api.post('/api/events/', data);
+  createEvent: async (data: CreateEventData) => {
+    const response = await apiClient.post<SchoolEvent>('/api/events/', data);
+    return response.data;
   },
 
-  updateEvent: (id: string, data: CreateEventData): Promise<AxiosResponse<SchoolEvent>> => {
-    return api.put(`/api/events/${id}/`, data);
+  updateEvent: async (id: string, data: CreateEventData) => {
+    const response = await apiClient.put<SchoolEvent>(`/api/events/${id}/`, data);
+    return response.data;
   },
 
-  deleteEvent: (id: string): Promise<AxiosResponse<void>> => {
-    return api.delete(`/api/events/${id}/`);
+  deleteEvent: async (id: string) => {
+    await apiClient.delete(`/api/events/${id}/`);
   },
 };
 

@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { apiClient, PaginatedResponse } from '@/lib/api';
 
 interface Class {
   id: string;
@@ -17,27 +15,27 @@ interface ClassFormData {
 }
 
 export const classService = {
-  getClasses: async () => {
-    const response = await axios.get(`${API_URL}/api/classes/`);
-    return response.data;
+  getClasses: async (): Promise<PaginatedResponse<Class>> => {
+    const { data } = await apiClient.get<PaginatedResponse<Class>>('/api/classes/');
+    return data;
   },
 
-  getClass: async (id: string) => {
-    const response = await axios.get(`${API_URL}/api/classes/${id}/`);
-    return response.data;
+  getClass: async (id: string): Promise<Class> => {
+    const { data } = await apiClient.get<Class>(`/api/classes/${id}/`);
+    return data;
   },
 
-  createClass: async (data: ClassFormData) => {
-    const response = await axios.post(`${API_URL}/api/classes/`, data);
-    return response.data;
+  createClass: async (formData: ClassFormData): Promise<Class> => {
+    const { data } = await apiClient.post<Class>('/api/classes/', formData);
+    return data;
   },
 
-  updateClass: async (id: string, data: Partial<ClassFormData>) => {
-    const response = await axios.put(`${API_URL}/api/classes/${id}/`, data);
-    return response.data;
+  updateClass: async (id: string, formData: Partial<ClassFormData>): Promise<Class> => {
+    const { data } = await apiClient.put<Class>(`/api/classes/${id}/`, formData);
+    return data;
   },
 
-  deleteClass: async (id: string) => {
-    await axios.delete(`${API_URL}/api/classes/${id}/`);
+  deleteClass: async (id: string): Promise<void> => {
+    await apiClient.delete(`/api/classes/${id}/`);
   }
 }; 

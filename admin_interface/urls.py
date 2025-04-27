@@ -55,9 +55,7 @@ urlpatterns = [
     # Students
     path('students/<uuid:student_id>/exam-results/', StudentExamResultsView.as_view(), name='student-exam-results'),
     path('students/<uuid:student_id>/fee-records/', StudentFeeRecordsView.as_view(), name='student-fee-records'),
-    path('students/<uuid:student_id>/initiate_payment/', 
-         InitiateFeesPaymentView.as_view(), 
-         name='initiate-payment'),
+    path('students/<uuid:student_id>/initiate_payment/', InitiateFeesPaymentView.as_view(), name='initiate-payment'),
 
     # Teachers
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),

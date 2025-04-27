@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { apiClient, PaginatedResponse } from '@/lib/api';
 
 export interface Product {
   id: string;
@@ -27,15 +27,19 @@ export interface ApiError {
 
 const shopService = {
   // Get all products
-  getProducts: () => axios.get<Product[]>('/api/products'),
+  getProducts: async () => {
+    const response = await apiClient.get<PaginatedResponse<Product>>('/api/products/');
+    return response.data;
+  },
 
   // Get a single product by ID
-  getProduct: (id: string) => {
-    return axios.get<Product>(`/api/products/${id}/`);
+  getProduct: async (id: string) => {
+    const response = await apiClient.get<Product>(`/api/products/${id}/`);
+    return response.data;
   },
 
   // Create a new product
-  createProduct: (data: CreateProductData) => {
+  createProduct: async (data: CreateProductData) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -48,11 +52,16 @@ const shopService = {
         }
       }
     });
-    return axios.post<Product>('/api/products', formData);
+    const response = await apiClient.post<Product>('/api/products/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
   },
 
   // Update an existing product
-  updateProduct: (data: CreateProductData & { id: string }) => {
+  updateProduct: async (data: CreateProductData & { id: string }) => {
     const { id, ...productData } = data;
     const formData = new FormData();
     Object.entries(productData).forEach(([key, value]) => {
@@ -66,11 +75,18 @@ const shopService = {
         }
       }
     });
-    return axios.put<Product>(`/api/products/${id}`, formData);
+    const response = await apiClient.put<Product>(`/api/products/${id}/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
   },
 
   // Delete a product
-  deleteProduct: (id: string) => axios.delete<void>(`/api/products/${id}`),
+  deleteProduct: async (id: string) => {
+    await apiClient.delete(`/api/products/${id}/`);
+  },
 };
 
 export default shopService; 

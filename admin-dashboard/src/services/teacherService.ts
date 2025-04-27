@@ -21,39 +21,39 @@ export interface TeacherFormData {
 
 class TeacherService {
   async getTeachers() {
-    const response = await apiClient.get<PaginatedResponse<Teacher>>('/teachers/');
+    const response = await apiClient.get<PaginatedResponse<Teacher>>('/api/teachers/');
     return response.data;
   }
 
   async getTeacher(id: string) {
-    const response = await apiClient.get<Teacher>(`/teachers/${id}/`);
+    const response = await apiClient.get<Teacher>(`/api/teachers/${id}/`);
     return response.data;
   }
 
   async createTeacher(data: Partial<Teacher>) {
-    const response = await apiClient.post<Teacher>('/teachers/', data);
+    const response = await apiClient.post<Teacher>('/api/teachers/', data);
     return response.data;
   }
 
   async updateTeacher(id: string, data: Partial<Teacher>) {
-    const response = await apiClient.put<Teacher>(`/teachers/${id}/`, data);
+    const response = await apiClient.put<Teacher>(`/api/teachers/${id}/`, data);
     return response.data;
   }
 
   async deleteTeacher(id: string) {
-    await apiClient.delete(`/teachers/${id}/`);
+    await apiClient.delete(`/api/teachers/${id}/`);
   }
 
   // Additional teacher-specific endpoints
   async getTeachersBySubject(subject: string) {
-    const response = await apiClient.get(`/teachers/by-subject/${subject}/`);
+    const response = await apiClient.get(`/api/teachers/by-subject/${subject}/`);
     return response.data;
   }
 
   async uploadProfilePic(file: File) {
     const formData = new FormData();
     formData.append('profile_pic', file);
-    const response = await apiClient.post('/teacher/profile_pic/', formData, {
+    const response = await apiClient.post('/api/teacher/profile_pic/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -62,7 +62,7 @@ class TeacherService {
   }
 
   async getTeacherSchedule() {
-    const response = await apiClient.get('/teacher/schedule/');
+    const response = await apiClient.get('/api/teacher/schedule/');
     return response.data;
   }
 }
