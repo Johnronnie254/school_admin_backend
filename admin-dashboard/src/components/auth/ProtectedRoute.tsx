@@ -15,13 +15,21 @@ export default function ProtectedRoute({
   const pathname = usePathname();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    console.log('🔒 Checking authentication in ProtectedRoute');
+    console.log('📍 Current path:', pathname);
+    const token = localStorage.getItem('access_token');
+    console.log('🎫 Token exists:', !!token);
     const isPublicPath = publicPaths.includes(pathname);
+    console.log('🌐 Is public path:', isPublicPath);
 
     if (!token && !isPublicPath) {
+      console.log('❌ No token found, redirecting to login');
       router.push('/login');
     } else if (token && isPublicPath) {
+      console.log('✅ Token found on public path, redirecting to dashboard');
       router.push('/dashboard');
+    } else {
+      console.log('✅ Authentication check passed');
     }
   }, [pathname, router]);
 

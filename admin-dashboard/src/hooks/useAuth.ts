@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import { authService } from '@/services/api';
+import { authService } from '@/services/auth.service';
 import toast from 'react-hot-toast';
 
 export function useAuth() {
@@ -7,7 +7,7 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
         await authService.logout();
       }
@@ -15,8 +15,8 @@ export function useAuth() {
       console.error('Logout error:', error);
     } finally {
       // Clear local storage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
       
       // Show success message
