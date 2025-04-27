@@ -20,7 +20,7 @@ export interface ErrorResponse {
 
 // API Configuration
 export const API_CONFIG = {
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://educitebackend.co.ke/api',
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://educitebackend.co.ke',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

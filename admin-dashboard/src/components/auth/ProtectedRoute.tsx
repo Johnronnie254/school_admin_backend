@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import DashboardLayout from '../layout/DashboardLayout';
 
-const publicPaths = ['/login', '/register', '/forgot-password'];
+const publicPaths = ['/login', '/register', '/forgot-password', '/'];
 
 export default function ProtectedRoute({
   children,
@@ -25,7 +25,8 @@ export default function ProtectedRoute({
     if (!token && !isPublicPath) {
       console.log('❌ No token found, redirecting to login');
       router.push('/login');
-    } else if (token && isPublicPath) {
+    } else if (token && isPublicPath && pathname !== '/') {
+      // Only redirect to dashboard if on a public path that's not the landing page
       console.log('✅ Token found on public path, redirecting to dashboard');
       router.push('/dashboard');
     } else {
@@ -33,7 +34,7 @@ export default function ProtectedRoute({
     }
   }, [pathname, router]);
 
-  // Don't wrap public routes in the dashboard layout
+  // Don't wrap public routes or landing page in the dashboard layout
   if (publicPaths.includes(pathname)) {
     return <>{children}</>;
   }
