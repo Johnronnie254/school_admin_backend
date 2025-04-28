@@ -103,6 +103,19 @@ export default function StudentsPage() {
     }
   };
 
+  const handleAddStudent = () => {
+    setEditingStudent(null);
+    reset({
+      name: '',
+      guardian: '',
+      contact: '',
+      grade: undefined,
+      class_assigned: '',
+      parent: ''
+    });
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -111,11 +124,7 @@ export default function StudentsPage() {
           <h1 className="text-2xl font-semibold text-gray-800">Students</h1>
         </div>
         <button
-          onClick={() => {
-            setEditingStudent(null);
-            reset();
-            setIsModalOpen(true);
-          }}
+          onClick={handleAddStudent}
           disabled={createMutation.isPending || updateMutation.isPending}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
@@ -182,7 +191,14 @@ export default function StudentsPage() {
         onClose={() => {
           setIsModalOpen(false);
           setEditingStudent(null);
-          reset();
+          reset({
+            name: '',
+            guardian: '',
+            contact: '',
+            grade: undefined,
+            class_assigned: '',
+            parent: ''
+          });
         }}
         className="relative z-50"
       >

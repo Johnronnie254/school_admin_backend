@@ -21,13 +21,15 @@ export default function ParentsPage() {
   const [editingParent, setEditingParent] = useState<Parent | null>(null);
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ParentFormData>({
+  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<ParentFormData>({
     defaultValues: editingParent ? {
       name: editingParent.name,
       email: editingParent.email,
       phone_number: editingParent.phone_number,
     } : {}
   });
+
+  const password = watch('password');
 
   const { data: parentsData, isLoading } = useQuery<PaginatedResponse<Parent>>({
     queryKey: ['parents'],
@@ -279,26 +281,49 @@ export default function ParentsPage() {
                 </div>
 
                 {!editingParent && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Password
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <div className="mt-2">
-                      <input
-                        type="password"
-                        {...register('password', { 
-                          required: 'Password is required',
-                          minLength: { value: 6, message: 'Password must be at least 6 characters' }
-                        })}
-                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                        placeholder="Enter password"
-                      />
-                      {errors.password && (
-                        <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>
-                      )}
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Password
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <div className="mt-2">
+                        <input
+                          type="password"
+                          {...register('password', { 
+                            required: 'Password is required',
+                            minLength: { value: 6, message: 'Password must be at least 6 characters' }
+                          })}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                          placeholder="Enter password"
+                        />
+                        {errors.password && (
+                          <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Confirm Password
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <div className="mt-2">
+                        <input
+                          type="password"
+                          {...register('password_confirmation', { 
+                            required: 'Please confirm your password',
+                            validate: value => value === password || 'Passwords do not match'
+                          })}
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                          placeholder="Confirm password"
+                        />
+                        {errors.password_confirmation && (
+                          <p className="mt-2 text-sm text-red-600">{errors.password_confirmation.message}</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
 

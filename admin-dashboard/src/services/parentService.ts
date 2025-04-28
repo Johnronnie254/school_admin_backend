@@ -12,7 +12,8 @@ export interface ParentFormData {
   name: string;
   email: string;
   phone_number: string;
-  password?: string;
+  password: string;
+  password_confirmation: string;
 }
 
 export const parentService = {
@@ -27,7 +28,10 @@ export const parentService = {
   },
 
   createParent: async (data: ParentFormData) => {
-    const response = await apiClient.post<Parent>('/api/parents/', data);
+    const response = await apiClient.post<Parent>('/api/parent', {
+      ...data,
+      role: 'parent'
+    });
     return response.data;
   },
 
