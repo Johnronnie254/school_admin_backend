@@ -599,6 +599,31 @@ class ParentViewSet(viewsets.ModelViewSet):
         
         return combined_queryset
 
+    def destroy(self, request, *args, **kwargs):
+        """Delete a parent and their associated User record"""
+        try:
+            parent = self.get_object()
+            
+            # Delete associated User record if it exists
+            try:
+                user = User.objects.get(email=parent.email, role=Role.PARENT)
+                user.delete()
+            except User.DoesNotExist:
+                pass
+                
+            # Delete the Parent record
+            self.perform_destroy(parent)
+            
+            return Response(
+                {"message": "Parent deleted successfully"},
+                status=status.HTTP_204_NO_CONTENT
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     @action(detail=False, methods=['post'])
     def login(self, request):
         email = request.data.get('email')
