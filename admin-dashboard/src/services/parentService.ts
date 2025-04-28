@@ -18,7 +18,9 @@ export interface ParentFormData {
 
 export const parentService = {
   getParents: async () => {
+    console.log('Fetching parents...');
     const response = await apiClient.get<PaginatedResponse<Parent>>('/api/parents/');
+    console.log('Parent service response:', response.data);
     return response.data;
   },
 
@@ -28,10 +30,12 @@ export const parentService = {
   },
 
   createParent: async (data: ParentFormData) => {
+    console.log('Creating parent with data:', data);
     const response = await apiClient.post<Parent>('/api/auth/register/', {
       ...data,
       role: 'parent'
     });
+    console.log('Create parent response:', response.data);
     return response.data;
   },
 

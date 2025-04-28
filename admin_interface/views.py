@@ -571,18 +571,60 @@ class ParentViewSet(viewsets.ModelViewSet):
             return ParentRegistrationSerializer
         return ParentSerializer
 
+    def get_queryset(self):
+        """Get all parents, including those created through User model"""
+        # Get all Parent records
+        parent_records = Parent.objects.all()
+        # Get all User records with role=PARENT
+        parent_users = User.objects.filter(role=Role.PARENT)
+        
+        # Combine both querysets
+        combined_queryset = parent_records
+        for user in parent_users:
+            if not parent_records.filter(email=user.email).exists():
+                # Create a Parent record for this user if it doesn't exist
+                parent = Parent.objects.create(
+                    name=user.first_name,
+                    email=user.email,
+                    phone_number='',  # Default empty phone number
+                    password=''  # Default empty password
+                )
+                combined_queryset = combined_queryset | Parent.objects.filter(id=parent.id)
+        
+        return combined_queryset
+
     @action(detail=False, methods=['post'])
     def login(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
         try:
-            parent = Parent.objects.get(email=email)
-            if check_password(password, parent.password):
-                refresh = RefreshToken.for_user(parent)
-                return Response({
-                    'token': str(refresh.access_token),
-                    'parent': ParentSerializer(parent).data
-                })
+            # Try to find parent in User model first
+            try:
+                user = User.objects.get(email=email, role=Role.PARENT)
+                if user.check_password(password):
+                    # Create or get Parent record
+                    parent, created = Parent.objects.get_or_create(
+                        email=email,
+                        defaults={
+                            'name': user.first_name,
+                            'phone_number': '',
+                            'password': ''
+                        }
+                    )
+                    refresh = RefreshToken.for_user(user)
+                    return Response({
+                        'token': str(refresh.access_token),
+                        'parent': ParentSerializer(parent).data
+                    })
+            except User.DoesNotExist:
+                # Fall back to Parent model
+                parent = Parent.objects.get(email=email)
+                if check_password(password, parent.password):
+                    refresh = RefreshToken.for_user(parent)
+                    return Response({
+                        'token': str(refresh.access_token),
+                        'parent': ParentSerializer(parent).data
+                    })
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         except Parent.DoesNotExist:
             return Response({'error': 'Parent not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -590,7 +632,12 @@ class ParentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def children(self, request, pk=None):
         parent = self.get_object()
-        children = Student.objects.filter(parent=parent)
+        # Get the associated User if it exists
+        try:
+            user = User.objects.get(email=parent.email, role=Role.PARENT)
+            children = Student.objects.filter(parent=user)
+        except User.DoesNotExist:
+            children = Student.objects.filter(parent=None)  # No children if no User record
         serializer = StudentDetailSerializer(children, many=True)
         return Response(serializer.data)
 
@@ -602,6 +649,15 @@ class ParentViewSet(viewsets.ModelViewSet):
             serializer = ParentSerializer(parent, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+            
+            # Also update the User record if it exists
+            try:
+                user = User.objects.get(email=parent.email, role=Role.PARENT)
+                user.first_name = parent.name
+                user.save()
+            except User.DoesNotExist:
+                pass
+                
             return Response({
                 'message': 'Profile updated successfully',
                 'parent': serializer.data
@@ -622,6 +678,15 @@ class ParentViewSet(viewsets.ModelViewSet):
             if email:
                 parent.email = email
             parent.save()
+            
+            # Also update the User record if it exists
+            try:
+                user = User.objects.get(email=parent.email, role=Role.PARENT)
+                if email:
+                    user.email = email
+                user.save()
+            except User.DoesNotExist:
+                pass
             
             return Response({
                 'message': 'Contact information updated successfully',

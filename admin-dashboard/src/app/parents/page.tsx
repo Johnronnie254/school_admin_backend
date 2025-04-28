@@ -33,7 +33,11 @@ export default function ParentsPage() {
 
   const { data: parentsData, isLoading } = useQuery<PaginatedResponse<Parent>>({
     queryKey: ['parents'],
-    queryFn: parentService.getParents
+    queryFn: async () => {
+      const response = await parentService.getParents();
+      console.log('Parents API Response:', response);
+      return response;
+    }
   });
 
   const createMutation = useMutation<Parent, Error, ParentFormData>({
