@@ -589,7 +589,7 @@ class ParentViewSet(viewsets.ModelViewSet):
                     parent = Parent.objects.create(
                         name=user.first_name,
                         email=user.email,
-                        phone_number=f'user_{user.id}',  # Use a unique identifier
+                        phone_number=f'u{user.id.hex[:8]}',  # Use first 8 chars of UUID hex
                         password=''  # Default empty password
                     )
                     combined_queryset = combined_queryset | Parent.objects.filter(id=parent.id)
@@ -613,7 +613,7 @@ class ParentViewSet(viewsets.ModelViewSet):
                         email=email,
                         defaults={
                             'name': user.first_name,
-                            'phone_number': f'user_{user.id}',  # Use a unique identifier
+                            'phone_number': f'u{user.id.hex[:8]}',  # Use first 8 chars of UUID hex
                             'password': ''
                         }
                     )
