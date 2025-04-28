@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -21,15 +21,27 @@ export default function ParentsPage() {
   const [editingParent, setEditingParent] = useState<Parent | null>(null);
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<ParentFormData>({
-    defaultValues: editingParent ? {
-      name: editingParent.name,
-      email: editingParent.email,
-      phone_number: editingParent.phone_number,
-    } : {}
-  });
+  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<ParentFormData>();
 
   const password = watch('password');
+
+  useEffect(() => {
+    if (editingParent) {
+      reset({
+        name: editingParent.name,
+        email: editingParent.email,
+        phone_number: editingParent.phone_number,
+      });
+    } else {
+      reset({
+        name: '',
+        email: '',
+        phone_number: '',
+        password: '',
+        password_confirmation: '',
+      });
+    }
+  }, [editingParent, reset]);
 
   const { data: parentsData, isLoading } = useQuery<PaginatedResponse<Parent>>({
     queryKey: ['parents'],
@@ -88,11 +100,6 @@ export default function ParentsPage() {
 
   const handleEdit = (parent: Parent) => {
     setEditingParent(parent);
-    reset({
-      name: parent.name,
-      email: parent.email,
-      phone_number: parent.phone_number,
-    });
     setIsModalOpen(true);
   };
 
@@ -254,6 +261,37 @@ export default function ParentsPage() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Phone Number
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <div className="mt-2 relative">
+                    <input
+                      type="tel"
+                      {...register('phone_number', { 
+                        required: 'Phone number is required',
+                        pattern: {
+                          value: /^07[0-9]{8}$/,
+                          message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
+                        }
+                      })}
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      placeholder="Enter phone number"
+                    />
+                    <div className="absolute right-2 top-2 group">
+                      <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400" />
+                      <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
+                        Enter a valid phone number (format: 07XXXXXXXX)
+                      </div>
+                    </div>
+                    {errors.phone_number && (
+                      <p className="mt-2 text-sm text-red-600">{errors.phone_number.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Password fields - only show when creating new parent */}
                 {!editingParent && (
                   <>
                     <div>
@@ -265,7 +303,7 @@ export default function ParentsPage() {
                         <input
                           type="password"
                           {...register('password', { 
-                            required: 'Password is required',
+                            required: !editingParent ? 'Password is required' : false,
                             minLength: { value: 6, message: 'Password must be at least 6 characters' }
                           })}
                           className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
@@ -286,8 +324,8 @@ export default function ParentsPage() {
                         <input
                           type="password"
                           {...register('password_confirmation', { 
-                            required: 'Please confirm your password',
-                            validate: value => value === password || 'Passwords do not match'
+                            required: !editingParent ? 'Please confirm your password' : false,
+                            validate: value => !editingParent ? (value === password || 'Passwords do not match') : true
                           })}
                           className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                           placeholder="Confirm password"
