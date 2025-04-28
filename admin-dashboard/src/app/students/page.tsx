@@ -150,12 +150,12 @@ export default function StudentsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {students.map((student: Student) => (
                 <tr key={student.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{student.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{student.guardian}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{student.contact}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{student.grade}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{student.class_assigned || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.guardian}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEdit(student)}
                       className="text-blue-600 hover:text-blue-900 mr-4"

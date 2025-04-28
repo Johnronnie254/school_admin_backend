@@ -162,21 +162,21 @@ export default function SchoolFeesPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {feeRecords.map((fee: SchoolFee) => (
                 <tr key={fee.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     KES {fee.amount.toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{fee.term}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{fee.year}</td>
-                  <td className="px-6 py-4 whitespace-nowrap capitalize">{fee.payment_method}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{fee.term}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{fee.year}</td>
+                  <td className="px-6 py-4 whitespace-nowrap capitalize text-sm text-gray-900">{fee.payment_method}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(fee.status)}`}>
                       {fee.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(fee.payment_date).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     {fee.status === 'pending' && (
                       <button
                         onClick={() => handleConfirmPayment(fee.transaction_id)}

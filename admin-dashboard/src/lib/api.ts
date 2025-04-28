@@ -1,3 +1,5 @@
+console.log('--- LOADING api.ts ---');
+
 import axios, { AxiosError } from 'axios';
 import { authService } from '@/services/auth.service';
 
@@ -33,18 +35,38 @@ export const apiClient = axios.create(API_CONFIG);
 // Add request interceptor for authentication
 apiClient.interceptors.request.use(
   (config) => {
-    console.log('🌐 Making API request to:', config.url);
+    console.log('INTERCEPTOR: Original config.url:', config.url);
+    console.log('INTERCEPTOR: Original config.baseURL:', config.baseURL);
+
     const token = localStorage.getItem('access_token');
     if (token) {
-      console.log('🔑 Adding access token to request');
+      console.log('INTERCEPTOR: Adding token...');
       config.headers.Authorization = `Bearer ${token}`;
     } else {
-      console.log('⚠️ No access token available for request');
+      console.log('INTERCEPTOR: No token found.');
     }
-    // Ensure URL doesn't have any extra slashes or spaces
-    if (config.url) {
-      config.url = config.url.replace(/\/+/g, '/').trim();
+
+    // Construct the final URL correctly
+    if (config.url && config.baseURL && !config.url.startsWith('http')) {
+      // Ensure baseURL does NOT end with a slash
+      const base = config.baseURL.replace(/\/+$/, ''); 
+      // Ensure path starts with /api/ and ends with /
+      let path = config.url.replace(/^\/+/g, ''); // Remove leading slashes
+      if (!path.startsWith('api/')) { 
+        path = 'api/' + path; // Add api/ prefix if missing
+      }
+      if (!path.endsWith('/')) {
+        path = path + '/'; // Add trailing slash if missing
+      }
+      
+      config.url = `${base}/${path}`;
+      console.log(`INTERCEPTOR: Constructed final URL: ${config.url}`);
+    } else {
+       console.log(`INTERCEPTOR: URL not modified (already absolute or missing base/url): ${config.url}`);
     }
+    
+    console.log('INTERCEPTOR: Final config object:', config);
+
     return config;
   },
   (error) => {

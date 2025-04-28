@@ -240,11 +240,11 @@ export default function TeachersPage() {
             ) : (
               teachers.results.map((teacher: Teacher) => (
                 <tr key={teacher.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{teacher.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{teacher.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{teacher.phone_number}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{teacher.class_assigned || '-'}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.phone_number}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.class_assigned || '-'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="flex flex-wrap gap-1">
                       {teacher.subjects.map((subject) => (
                         <span
@@ -256,7 +256,7 @@ export default function TeachersPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEdit(teacher)}
                       className="text-blue-600 hover:text-blue-900 mr-4"

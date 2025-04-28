@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { parentService, type Parent, type ParentFormData } from '@/services/parentService';
 import { Dialog } from '@/components/ui/dialog';
+import type { PaginatedResponse } from '@/types';
 
 export default function ParentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,7 +29,7 @@ export default function ParentsPage() {
     } : {}
   });
 
-  const { data: parents = [], isLoading } = useQuery<Parent[]>({
+  const { data: parentsData, isLoading } = useQuery<PaginatedResponse<Parent>>({
     queryKey: ['parents'],
     queryFn: parentService.getParents
   });
@@ -120,7 +121,7 @@ export default function ParentsPage() {
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      ) : parents.length === 0 ? (
+      ) : !parentsData?.results || parentsData.results.length === 0 ? (
         <div className="text-center py-12">
           <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No parents</h3>
@@ -138,12 +139,12 @@ export default function ParentsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {parents.map((parent: Parent) => (
+              {parentsData.results.map((parent: Parent) => (
                 <tr key={parent.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{parent.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{parent.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{parent.phone_number}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.phone_number}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEdit(parent)}
                       className="text-blue-600 hover:text-blue-900 mr-4"
