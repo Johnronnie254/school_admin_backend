@@ -227,7 +227,7 @@ export default function StudentsPage() {
                         minLength: { value: 2, message: 'Name must be at least 2 characters' }
                       })}
                       className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter student's full name"
+                      placeholder=" Enter student's full name"
                     />
                     {errors.name && (
                       <p className="mt-2 text-sm text-red-600">{errors.name.message}</p>
@@ -248,7 +248,7 @@ export default function StudentsPage() {
                         minLength: { value: 2, message: 'Guardian name must be at least 2 characters' }
                       })}
                       className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter guardian's name"
+                      placeholder=" Enter guardian's name"
                     />
                     {errors.guardian && (
                       <p className="mt-2 text-sm text-red-600">{errors.guardian.message}</p>
@@ -272,7 +272,7 @@ export default function StudentsPage() {
                         }
                       })}
                       className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter contact number"
+                      placeholder=" Enter contact number"
                     />
                     <div className="absolute right-2 top-2 group">
                       <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400" />
@@ -291,17 +291,19 @@ export default function StudentsPage() {
                     Parent Email
                   </label>
                   <div className="mt-2">
-                    <input
-                      type="email"
-                      {...register('parent', {
-                        pattern: {
-                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: 'Please enter a valid email address'
-                        }
-                      })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter parent's email"
-                    />
+                    <div className="flex flex-col">
+                      <input
+                        type="email"
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                        placeholder=" Enter parent's email (for display only)"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">Note: Parent email is for display purposes only. Parent-student linking requires admin action.</p>
+                      {/* Hidden input for parent UUID */}
+                      <input
+                        type="hidden"
+                        {...register('parent')}
+                      />
+                    </div>
                     {errors.parent && (
                       <p className="mt-2 text-sm text-red-600">{errors.parent.message}</p>
                     )}
@@ -327,6 +329,23 @@ export default function StudentsPage() {
                     </select>
                     {errors.grade && (
                       <p className="mt-2 text-sm text-red-600">{errors.grade.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Class
+                  </label>
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      {...register('class_assigned')}
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      placeholder="Enter class (e.g., 7A)"
+                    />
+                    {errors.class_assigned && (
+                      <p className="mt-2 text-sm text-red-600">{errors.class_assigned.message}</p>
                     )}
                   </div>
                 </div>

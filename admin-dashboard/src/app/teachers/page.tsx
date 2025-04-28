@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, UserGroupIcon, EnvelopeIcon, PhoneIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { teacherService } from '@/services/teacherService';
 import { Dialog } from '@/components/ui/dialog';
@@ -172,12 +172,12 @@ export default function TeachersPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-2">
           <UserGroupIcon className="h-6 w-6 text-gray-600" />
-          <h1 className="text-2xl font-semibold text-gray-800">Teachers Management</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Teachers Management</h1>
         </div>
         <button
           onClick={() => {
@@ -193,73 +193,97 @@ export default function TeachersPage() {
         </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Phone
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Class
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Subjects
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-4 text-center">
-                  <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                  </div>
-                </td>
-              </tr>
-            ) : !teachers?.results || teachers.results.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-4 text-center">
-                  <div className="text-center py-4">
-                    <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No teachers</h3>
-                    <p className="mt-1 text-sm text-gray-500">Get started by adding a new teacher.</p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              teachers.results.map((teacher: Teacher) => (
-                <tr key={teacher.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.phone_number}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.class_assigned || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="flex flex-wrap gap-1">
-                      {teacher.subjects.map((subject) => (
-                        <span
-                          key={subject}
-                          className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+      {/* Table for desktop, Cards for mobile */}
+      {isLoading ? (
+        <div className="flex justify-center p-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : !teachers?.results || teachers.results.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-center py-8">
+            <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No teachers</h3>
+            <p className="mt-1 text-sm text-gray-500">Get started by adding a new teacher.</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Phone
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Class
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Subjects
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {teachers.results.map((teacher: Teacher) => (
+                    <tr key={teacher.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.phone_number}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.class_assigned || '-'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        <div className="flex flex-wrap gap-1">
+                          {teacher.subjects.map((subject) => (
+                            <span
+                              key={subject}
+                              className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                            >
+                              {subject}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleEdit(teacher)}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
                         >
-                          {subject}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <PencilIcon className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(teacher.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          {/* Mobile Cards - Shown only on mobile */}
+          <div className="grid grid-cols-1 gap-4 sm:hidden">
+            {teachers.results.map((teacher: Teacher) => (
+              <div key={teacher.id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-lg font-medium text-gray-900">{teacher.name}</h3>
+                  <div className="flex space-x-2">
                     <button
                       onClick={() => handleEdit(teacher)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-600 hover:text-blue-900"
                     >
                       <PencilIcon className="w-5 h-5" />
                     </button>
@@ -269,13 +293,44 @@ export default function TeachersPage() {
                     >
                       <TrashIcon className="w-5 h-5" />
                     </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                  </div>
+                </div>
+                
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <EnvelopeIcon className="w-4 h-4 mr-2" />
+                    {teacher.email}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <PhoneIcon className="w-4 h-4 mr-2" />
+                    {teacher.phone_number}
+                  </div>
+                  {teacher.class_assigned && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <AcademicCapIcon className="w-4 h-4 mr-2" />
+                      Class: {teacher.class_assigned}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 mb-1">Subjects:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {teacher.subjects.map((subject) => (
+                      <span
+                        key={subject}
+                        className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                      >
+                        {subject}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Teacher Form Modal */}
       <Dialog
@@ -290,7 +345,7 @@ export default function TeachersPage() {
         <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl">
+          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="absolute right-4 top-4">
               <button
                 onClick={() => {
@@ -304,7 +359,7 @@ export default function TeachersPage() {
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center gap-3 mb-6 sm:mb-8">
               <div className="rounded-full bg-blue-50 p-2">
                 <UserGroupIcon className="h-6 w-6 text-blue-600" />
               </div>
@@ -314,7 +369,7 @@ export default function TeachersPage() {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Name
@@ -385,7 +440,7 @@ export default function TeachersPage() {
                   Subjects
                   <span className="text-red-500 ml-1">*</span>
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {AVAILABLE_SUBJECTS.map((subject) => (
                     <div key={subject} className="flex items-center">
                       <input
@@ -406,7 +461,7 @@ export default function TeachersPage() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mt-6 sm:mt-8">
                 <button
                   type="button"
                   onClick={() => {
@@ -415,17 +470,17 @@ export default function TeachersPage() {
                     setSelectedSubjects([]);
                     reset();
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={selectedSubjects.length === 0 || createMutation.isPending || updateMutation.isPending}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto"
                 >
                   {createMutation.isPending || updateMutation.isPending ? (
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center">
                       <div className="animate-spin -ml-1 mr-2 h-4 w-4 text-white">
                         <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

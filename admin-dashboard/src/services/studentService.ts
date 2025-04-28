@@ -7,7 +7,7 @@ export interface Student {
   contact: string;
   grade: number;
   class_assigned: string | null;
-  parent: string;
+  parent: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -18,7 +18,7 @@ export interface StudentFormData {
   contact: string;
   grade: number;
   class_assigned?: string;
-  parent?: string;
+  parent?: string | null;
 }
 
 export interface PaymentData {
@@ -46,12 +46,32 @@ export const studentService = {
   },
 
   createStudent: async (data: StudentFormData) => {
-    const response = await apiClient.post<Student>('/api/students/', data);
+    // Strip out parent if it's not a valid UUID to prevent 400 errors
+    const formData = { ...data };
+    
+    // Check if parent is a valid UUID format using regex
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (formData.parent && !uuidRegex.test(formData.parent)) {
+      // If not a valid UUID, set to null
+      formData.parent = null;
+    }
+    
+    const response = await apiClient.post<Student>('/api/students/', formData);
     return response.data;
   },
 
   updateStudent: async (id: string, data: Partial<StudentFormData>) => {
-    const response = await apiClient.put<Student>(`/api/students/${id}/`, data);
+    // Strip out parent if it's not a valid UUID to prevent 400 errors
+    const formData = { ...data };
+    
+    // Check if parent is a valid UUID format using regex
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (formData.parent && !uuidRegex.test(formData.parent)) {
+      // If not a valid UUID, set to null
+      formData.parent = null;
+    }
+    
+    const response = await apiClient.put<Student>(`/api/students/${id}/`, formData);
     return response.data;
   },
 
