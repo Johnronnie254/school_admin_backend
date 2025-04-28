@@ -254,36 +254,6 @@ export default function ParentsPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Phone Number
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-2 relative">
-                    <input
-                      type="tel"
-                      {...register('phone_number', { 
-                        required: 'Phone number is required',
-                        pattern: {
-                          value: /^07[0-9]{8}$/,
-                          message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
-                        }
-                      })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter phone number"
-                    />
-                    <div className="absolute right-2 top-2 group">
-                      <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400" />
-                      <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
-                        Enter a valid phone number (format: 07XXXXXXXX)
-                      </div>
-                    </div>
-                    {errors.phone_number && (
-                      <p className="mt-2 text-sm text-red-600">{errors.phone_number.message}</p>
-                    )}
-                  </div>
-                </div>
-
                 {!editingParent && (
                   <>
                     <div>
