@@ -36,7 +36,7 @@ class TeacherService {
   }
 
   async updateTeacher(id: string, data: Partial<Teacher>) {
-    const response = await apiClient.put<Teacher>(`/api/teachers/${id}/`, data);
+    const response = await apiClient.patch<Teacher>(`/api/teachers/${id}/`, data);
     return response.data;
   }
 

@@ -111,7 +111,8 @@ class TeacherSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         """Ensure email is unique"""
-        if Teacher.objects.filter(email=value).exists():
+        instance = getattr(self, 'instance', None)
+        if Teacher.objects.filter(email=value).exclude(id=instance.id if instance else None).exists():
             raise serializers.ValidationError("A teacher with this email already exists.")
         return value
 
