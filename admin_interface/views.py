@@ -31,6 +31,7 @@ from django.urls import path
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.exceptions import PermissionDenied
+from django.db import IntegrityError
 
 class RegisterView(APIView):
     """Handles user registration."""
@@ -582,14 +583,19 @@ class ParentViewSet(viewsets.ModelViewSet):
         combined_queryset = parent_records
         for user in parent_users:
             if not parent_records.filter(email=user.email).exists():
-                # Create a Parent record for this user if it doesn't exist
-                parent = Parent.objects.create(
-                    name=user.first_name,
-                    email=user.email,
-                    phone_number='',  # Default empty phone number
-                    password=''  # Default empty password
-                )
-                combined_queryset = combined_queryset | Parent.objects.filter(id=parent.id)
+                try:
+                    # Create a Parent record for this user if it doesn't exist
+                    # Use a unique phone number for each parent
+                    parent = Parent.objects.create(
+                        name=user.first_name,
+                        email=user.email,
+                        phone_number=f'user_{user.id}',  # Use a unique identifier
+                        password=''  # Default empty password
+                    )
+                    combined_queryset = combined_queryset | Parent.objects.filter(id=parent.id)
+                except IntegrityError:
+                    # If there's a conflict, skip this user
+                    continue
         
         return combined_queryset
 
@@ -607,7 +613,7 @@ class ParentViewSet(viewsets.ModelViewSet):
                         email=email,
                         defaults={
                             'name': user.first_name,
-                            'phone_number': '',
+                            'phone_number': f'user_{user.id}',  # Use a unique identifier
                             'password': ''
                         }
                     )
