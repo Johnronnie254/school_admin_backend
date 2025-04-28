@@ -159,16 +159,43 @@ class ParentSerializer(serializers.ModelSerializer):
 class ParentRegistrationSerializer(serializers.ModelSerializer):
     """Serializer for Parent registration"""
     password = serializers.CharField(write_only=True)
-    
+    password_confirmation = serializers.CharField(write_only=True)
+
     class Meta:
         model = Parent
-        fields = ('id', 'name', 'email', 'phone_number', 'password')
+        fields = ('id', 'name', 'email', 'phone_number', 'password', 'password_confirmation')
+
+    def validate(self, data):
+        if data['password'] != data['password_confirmation']:
+            raise serializers.ValidationError({
+                "password": "Password fields didn't match."
+            })
+        return data
 
     def create(self, validated_data):
+        # Remove password_confirmation from the data
+        validated_data.pop('password_confirmation')
         password = validated_data.pop('password')
-        # Hash the password before saving
-        validated_data['password'] = make_password(password)
-        return super().create(validated_data)
+        name = validated_data.pop('name')
+        email = validated_data.pop('email')
+
+        # Create User first
+        user = User.objects.create_user(
+            email=email,
+            password=password,
+            role=Role.PARENT,
+            first_name=name
+        )
+
+        # Create Parent record
+        parent = Parent.objects.create(
+            user=user,
+            name=name,
+            email=email,
+            phone_number=validated_data.get('phone_number')
+        )
+
+        return parent
 
 class ExamResultSerializer(serializers.ModelSerializer):
     """Serializer for exam results"""

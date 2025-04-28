@@ -28,7 +28,7 @@ export const parentService = {
   },
 
   createParent: async (data: ParentFormData) => {
-    const response = await apiClient.post<Parent>('/api/parent', {
+    const response = await apiClient.post<Parent>('/api/auth/register/', {
       ...data,
       role: 'parent'
     });
