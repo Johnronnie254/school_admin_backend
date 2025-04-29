@@ -1233,7 +1233,9 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Message.objects.filter(Q(sender=user) | Q(receiver=user))
+        if self.action == 'list':
+            return Message.objects.filter(Q(sender=user) | Q(receiver=user))
+        return Message.objects.all()
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
