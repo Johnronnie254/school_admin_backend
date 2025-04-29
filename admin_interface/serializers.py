@@ -8,7 +8,14 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User (Admins)"""
     class Meta:
         model = User
-        fields = ('id', 'email')
+        fields = ('id', 'email', 'first_name', 'role')
+        read_only_fields = ('id', 'email', 'first_name', 'role')
+
+    def to_representation(self, instance):
+        """Custom representation to include name and role"""
+        data = super().to_representation(instance)
+        data['name'] = instance.first_name
+        return data
 
 class SchoolSerializer(serializers.ModelSerializer):
     """Serializer for School model"""

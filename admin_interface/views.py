@@ -159,6 +159,20 @@ class AdminViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['get'])
+    def users(self, request):
+        """Get all users (teachers and parents)"""
+        teachers = User.objects.filter(role=Role.TEACHER)
+        parents = User.objects.filter(role=Role.PARENT)
+        
+        teacher_serializer = UserSerializer(teachers, many=True)
+        parent_serializer = UserSerializer(parents, many=True)
+        
+        return Response({
+            'teachers': teacher_serializer.data,
+            'parents': parent_serializer.data
+        })
+
 class SchoolViewSet(viewsets.ModelViewSet):
     """ViewSet for School operations"""
     queryset = School.objects.all()

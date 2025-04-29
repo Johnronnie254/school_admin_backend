@@ -22,8 +22,8 @@ export interface ChatUser {
 }
 
 export const messageService = {
-  getMessages: async () => {
-    const response = await apiClient.get<PaginatedResponse<Message>>('/api/messages/');
+  getMessages: async (userId: string) => {
+    const response = await apiClient.get<Message[]>(`/api/messages/${userId}/`);
     return response.data;
   },
 
@@ -37,13 +37,14 @@ export const messageService = {
     return response.data;
   },
 
-  deleteMessage: async (id: string) => {
-    await apiClient.delete(`/api/messages/${id}/`);
+  deleteMessage: async (messageId: string) => {
+    await apiClient.delete(`/api/messages/${messageId}/`);
   },
 
-  // Get list of teachers or parents based on user role
+  // Get all users for messaging
   getChatUsers: async () => {
-    const response = await apiClient.get<ChatUser[]>('/api/teacher-parent-associations/');
-    return response.data;
+    const response = await apiClient.get<{ teachers: ChatUser[], parents: ChatUser[] }>('/api/admin/users/');
+    // Combine teachers and parents into a single array
+    return [...response.data.teachers, ...response.data.parents];
   }
 }; 
