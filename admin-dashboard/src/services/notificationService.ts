@@ -14,10 +14,17 @@ export interface NotificationFormData {
   target_group: 'all' | 'teachers' | 'students' | 'parents';
 }
 
+export interface NotificationResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Notification[];
+}
+
 export const notificationService = {
   getNotifications: async () => {
     try {
-      const response = await api.get('/notifications/');
+      const response = await api.get<NotificationResponse>('/notifications/');
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {

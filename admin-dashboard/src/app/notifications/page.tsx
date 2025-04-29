@@ -23,10 +23,12 @@ export default function NotificationsPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<NotificationFormData>();
 
   // Fetch notifications with proper typing
-  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
+  const { data, isLoading } = useQuery<{ results: Notification[] }>({
     queryKey: ['notifications'],
     queryFn: notificationService.getNotifications
   });
+
+  const notifications = data?.results || [];
 
   // Create notification mutation
   const createMutation = useMutation({
@@ -104,72 +106,87 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="sm:flex sm:items-center">
-        <div className="sm:flex-auto">
-          <div className="flex items-center gap-2">
-            <BellIcon className="h-6 w-6 text-gray-600" />
-            <h1 className="text-xl font-semibold text-gray-900">Notifications</h1>
-          </div>
-          <p className="mt-2 text-sm text-gray-700">
-            Manage and send notifications to different groups in the school
-          </p>
+    <div className="p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <BellIcon className="h-6 w-6 text-gray-600" />
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Notifications Management</h1>
         </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
-            onClick={() => {
-              setEditingNotification(null);
-              reset();
-              setIsModalOpen(true);
-            }}
-            className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto"
-            disabled={createMutation.isPending || updateMutation.isPending}
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Create Notification
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setIsModalOpen(true);
+            setEditingNotification(null);
+            reset();
+          }}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <PlusIcon className="w-5 h-5 mr-2" />
+          Create Notification
+        </button>
       </div>
 
-      <div className="mt-8 flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
+      {/* Table for desktop, Cards for mobile */}
+      {isLoading ? (
+        <div className="flex justify-center p-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : !notifications || notifications.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-center py-8">
+            <BellIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No notifications</h3>
+            <p className="mt-1 text-sm text-gray-500">Get started by creating a new notification.</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Message</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Target Group</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Created At</th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Actions</span>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Message
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Target Group
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created At
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="bg-white divide-y divide-gray-200">
                   {notifications.map((notification) => (
                     <tr key={notification.id}>
-                      <td className="whitespace-normal py-4 pl-4 pr-3 text-sm text-gray-900 sm:pl-6">{notification.message}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm">
+                      <td className="px-6 py-4 whitespace-normal text-sm text-gray-900">
+                        {notification.message}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                           {notification.target_group}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(notification.created_at).toLocaleDateString()}
                       </td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleEdit(notification)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-4"
+                          className="text-blue-600 hover:text-blue-900 mr-4"
                         >
-                          <PencilIcon className="h-5 w-5" />
+                          <PencilIcon className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(notification.id)}
                           className="text-red-600 hover:text-red-900"
                         >
-                          <TrashIcon className="h-5 w-5" />
+                          <TrashIcon className="w-5 h-5" />
                         </button>
                       </td>
                     </tr>
@@ -178,43 +195,96 @@ export default function NotificationsPage() {
               </table>
             </div>
           </div>
-        </div>
-      </div>
+          
+          {/* Mobile Cards - Shown only on mobile */}
+          <div className="grid grid-cols-1 gap-4 sm:hidden">
+            {notifications.map((notification) => (
+              <div key={notification.id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-gray-900 font-medium">{notification.message}</p>
+                    <div className="mt-1 flex items-center text-sm text-gray-500">
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                        {notification.target_group}
+                      </span>
+                      <span className="ml-2">{new Date(notification.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(notification)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      <PencilIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(notification.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <TrashIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <Dialog
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingNotification(null);
+          reset();
+        }}
         className="relative z-50"
       >
         <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden bg-white rounded-lg max-w-md w-full mx-4 p-6 shadow-xl transition-all">
-            <div className="flex justify-between items-center mb-4">
-              <Dialog.Title className="text-lg font-medium">
-                {editingNotification ? 'Edit Notification' : 'Add New Notification'}
-              </Dialog.Title>
-              <button onClick={() => setIsModalOpen(false)}>
-                <XMarkIcon className="h-6 w-6 text-gray-500" />
+          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="absolute right-4 top-4">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingNotification(null);
+                  reset();
+                }}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex items-center gap-3 mb-6 sm:mb-8">
+              <div className="rounded-full bg-blue-50 p-2">
+                <BellIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
+                {editingNotification ? 'Edit Notification' : 'Create New Notification'}
+              </Dialog.Title>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-700">
                   Message
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
-                <div className="mt-1">
+                <div className="mt-2">
                   <textarea
                     {...register('message', { 
                       required: 'Message is required',
-                      minLength: { value: 10, message: 'Message must be at least 10 characters' }
+                      minLength: { value: 10, message: 'Message must be at least 10 characters' },
+                      maxLength: { value: 500, message: 'Message cannot exceed 500 characters' }
                     })}
                     rows={4}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                     placeholder="Enter your notification message..."
                   />
                   {errors.message && (
-                    <p className="mt-1 text-sm text-red-600">{errors.message.message}</p>
+                    <p className="mt-2 text-sm text-red-600">{errors.message.message}</p>
                   )}
                 </div>
               </div>
@@ -222,11 +292,12 @@ export default function NotificationsPage() {
               <div>
                 <label htmlFor="target_group" className="block text-sm font-medium text-gray-700">
                   Target Group
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
-                <div className="mt-1">
+                <div className="mt-2">
                   <select
                     {...register('target_group', { required: 'Target group is required' })}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                   >
                     <option value="">Select Target Group</option>
                     <option value="all">Everyone</option>
@@ -235,12 +306,12 @@ export default function NotificationsPage() {
                     <option value="parents">Parents Only</option>
                   </select>
                   {errors.target_group && (
-                    <p className="mt-1 text-sm text-red-600">{errors.target_group.message}</p>
+                    <p className="mt-2 text-sm text-red-600">{errors.target_group.message}</p>
                   )}
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mt-6 sm:mt-8">
                 <button
                   type="button"
                   onClick={() => {
@@ -248,22 +319,23 @@ export default function NotificationsPage() {
                     setEditingNotification(null);
                     reset();
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
                   disabled={createMutation.isPending || updateMutation.isPending}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto"
                 >
                   {createMutation.isPending || updateMutation.isPending ? (
-                    <div className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin -ml-1 mr-2 h-4 w-4 text-white">
+                        <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
                       {editingNotification ? 'Updating...' : 'Creating...'}
                     </div>
                   ) : (

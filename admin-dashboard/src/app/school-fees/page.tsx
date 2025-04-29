@@ -7,24 +7,30 @@ import toast from 'react-hot-toast';
 import { 
   PlusIcon, 
   XMarkIcon,
-  CheckCircleIcon,
   BanknotesIcon,
-  QuestionMarkCircleIcon 
+  UserGroupIcon 
 } from '@heroicons/react/24/outline';
 import { schoolFeeService, type SchoolFee, type SchoolFeeFormData } from '@/services/schoolFeeService';
+import { studentService, type Student } from '@/services/studentService';
 import { Dialog } from '@headlessui/react';
 
 export default function SchoolFeesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<SchoolFeeFormData>();
 
+  // Fetch all students
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery({
+    queryKey: ['students'],
+    queryFn: studentService.getStudents
+  });
+
   // Fetch fee records for selected student
-  const { data: feeRecords = [], isLoading } = useQuery({
-    queryKey: ['feeRecords', selectedStudent],
-    queryFn: () => selectedStudent ? schoolFeeService.getStudentFeeRecords(selectedStudent) : Promise.resolve([]),
+  const { data: feeRecords = [], isLoading: isLoadingFees } = useQuery({
+    queryKey: ['feeRecords', selectedStudent?.id],
+    queryFn: () => selectedStudent ? schoolFeeService.getStudentFeeRecords(selectedStudent.id) : Promise.resolve([]),
     enabled: !!selectedStudent
   });
 
@@ -32,10 +38,10 @@ export default function SchoolFeesPage() {
   const initiateMutation = useMutation({
     mutationFn: (data: SchoolFeeFormData) => 
       selectedStudent 
-        ? schoolFeeService.initiatePayment(selectedStudent, data)
-        : schoolFeeService.initiateFeePayment(data),
+        ? schoolFeeService.initiatePayment(selectedStudent.id, data)
+        : Promise.reject(new Error('No student selected')),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feeRecords', selectedStudent] });
+      queryClient.invalidateQueries({ queryKey: ['feeRecords', selectedStudent?.id] });
       toast.success('Payment initiated successfully');
       setIsModalOpen(false);
       reset();
@@ -51,7 +57,7 @@ export default function SchoolFeesPage() {
   const confirmPaymentMutation = useMutation({
     mutationFn: schoolFeeService.confirmPayment,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feeRecords', selectedStudent] });
+      queryClient.invalidateQueries({ queryKey: ['feeRecords', selectedStudent?.id] });
       toast.success('Payment confirmed successfully');
     },
     onError: (error: unknown) => {
@@ -62,13 +68,26 @@ export default function SchoolFeesPage() {
   });
 
   const onSubmit = (data: SchoolFeeFormData) => {
-    initiateMutation.mutate(data);
+    if (!selectedStudent) {
+      toast.error('Please select a student first');
+      return;
+    }
+    initiateMutation.mutate({
+      ...data,
+      student: selectedStudent.id
+    });
   };
 
   const handleConfirmPayment = async (transactionId: string) => {
     if (window.confirm('Are you sure you want to confirm this payment?')) {
       confirmPaymentMutation.mutate(transactionId);
     }
+  };
+
+  const handleStudentClick = (student: Student) => {
+    setSelectedStudent(student);
+    setIsModalOpen(true);
+    reset();
   };
 
   const getStatusColor = (status: string) => {
@@ -91,102 +110,43 @@ export default function SchoolFeesPage() {
           <BanknotesIcon className="h-6 w-6 text-gray-600" />
           <h1 className="text-2xl font-semibold text-gray-800">School Fees</h1>
         </div>
-        <div className="flex gap-4">
-          <button
-            onClick={() => {
-              reset();
-              setIsModalOpen(true);
-            }}
-            disabled={initiateMutation.isPending || confirmPaymentMutation.isPending}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            <PlusIcon className="h-5 w-5" />
-            Initiate Payment
-          </button>
-        </div>
       </div>
 
-      {/* Student Selection */}
-      <div className="mb-6 max-w-md">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Select Student
-          <span className="text-red-500 ml-1">*</span>
-        </label>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Enter Student ID"
-            className="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            onChange={(e) => setSelectedStudent(e.target.value)}
-            value={selectedStudent || ''}
-          />
-          <div className="absolute right-2 top-2 group">
-            <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400" />
-            <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
-              Enter the student&apos;s ID to view their fee records
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {isLoading || initiateMutation.isPending || confirmPaymentMutation.isPending ? (
+      {/* Students Table */}
+      {isLoadingStudents ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      ) : !selectedStudent ? (
+      ) : students.length === 0 ? (
         <div className="text-center py-12">
-          <BanknotesIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No student selected</h3>
-          <p className="mt-1 text-sm text-gray-500">Enter a student&apos;s ID to view fee records.</p>
-        </div>
-      ) : feeRecords.length === 0 ? (
-        <div className="text-center py-12">
-          <BanknotesIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No fee records</h3>
-          <p className="mt-1 text-sm text-gray-500">This student has no fee records yet.</p>
+          <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No students found</h3>
+          <p className="mt-1 text-sm text-gray-500">Add students to manage their fee payments.</p>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Date</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guardian</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {feeRecords.map((fee: SchoolFee) => (
-                <tr key={fee.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    KES {fee.amount.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{fee.term}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{fee.year}</td>
-                  <td className="px-6 py-4 whitespace-nowrap capitalize text-sm text-gray-900">{fee.payment_method}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(fee.status)}`}>
-                      {fee.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(fee.payment_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {fee.status === 'pending' && (
-                      <button
-                        onClick={() => handleConfirmPayment(fee.transaction_id)}
-                        className="text-green-600 hover:text-green-900"
-                        title="Confirm Payment"
-                      >
-                        <CheckCircleIcon className="h-5 w-5" />
-                      </button>
-                    )}
-                  </td>
+              {students.map((student) => (
+                <tr 
+                  key={student.id} 
+                  onClick={() => handleStudentClick(student)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.guardian}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
                 </tr>
               ))}
             </tbody>
@@ -194,7 +154,7 @@ export default function SchoolFeesPage() {
         </div>
       )}
 
-      {/* Payment Initiation Modal */}
+      {/* Payment Modal */}
       <Dialog
         open={isModalOpen}
         onClose={() => {
@@ -224,36 +184,63 @@ export default function SchoolFeesPage() {
                 <BanknotesIcon className="h-6 w-6 text-blue-600" />
               </div>
               <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
-                Initiate New Payment
+                {selectedStudent ? `Initiate Payment for ${selectedStudent.name}` : 'Initiate Payment'}
               </Dialog.Title>
             </div>
+
+            {/* Student Fee Records */}
+            {selectedStudent && (
+              <div className="mb-8">
+                <h3 className="text-sm font-medium text-gray-700 mb-4">Fee Records</h3>
+                {isLoadingFees ? (
+                  <div className="flex justify-center items-center h-24">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : feeRecords.length === 0 ? (
+                  <p className="text-sm text-gray-500">No fee records found for this student.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Term</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Year</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Amount</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {feeRecords.map((fee: SchoolFee) => (
+                          <tr key={fee.id}>
+                            <td className="px-4 py-2 text-sm text-gray-900">{fee.term}</td>
+                            <td className="px-4 py-2 text-sm text-gray-900">{fee.year}</td>
+                            <td className="px-4 py-2 text-sm text-gray-900">KES {fee.amount.toLocaleString()}</td>
+                            <td className="px-4 py-2 text-sm">
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(fee.status)}`}>
+                                {fee.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-900">
+                              {new Date(fee.payment_date).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Student ID
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      {...register('student', { required: 'Student ID is required' })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter student ID"
-                    />
-                    {errors.student && (
-                      <p className="mt-2 text-sm text-red-600">{errors.student.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
                     Amount (KES)
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2 relative">
+                  <div className="mt-2">
                     <input
                       type="number"
                       step="0.01"
