@@ -1,4 +1,4 @@
-import { apiClient, PaginatedResponse } from '@/lib/api';
+import { apiClient} from '@/lib/api';
 
 export interface Message {
   id: string;
@@ -23,7 +23,7 @@ export interface ChatUser {
 
 export const messageService = {
   getMessages: async (userId: string) => {
-    const response = await apiClient.get<Message[]>(`/api/messages/${userId}/`);
+    const response = await apiClient.get<Message[]>(`/api/messages/chat/${userId}/`);
     return response.data;
   },
 
