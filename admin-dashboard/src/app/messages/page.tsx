@@ -49,7 +49,7 @@ export default function MessagesPage() {
   const sendMessageMutation = useMutation({
     mutationFn: (data: MessageFormData) => messageService.sendMessage(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedUser?.id] });
       reset();
     },
     onError: (error: AxiosError | Error) => {
@@ -66,7 +66,7 @@ export default function MessagesPage() {
   const deleteMessageMutation = useMutation({
     mutationFn: (messageId: string) => messageService.deleteMessage(messageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedUser?.id] });
       toast.success('Message deleted successfully');
     },
     onError: (error: AxiosError | Error) => {
@@ -202,7 +202,7 @@ export default function MessagesPage() {
                   type="text"
                   {...register('content', { required: 'Message is required' })}
                   placeholder="Type a message..."
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   type="submit"

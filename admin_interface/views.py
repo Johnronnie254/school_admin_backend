@@ -32,6 +32,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.exceptions import PermissionDenied
 from django.db import IntegrityError
+from django.db.models import Q
 
 class RegisterView(APIView):
     """Handles user registration."""
