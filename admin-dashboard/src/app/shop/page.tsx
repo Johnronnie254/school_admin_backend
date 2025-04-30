@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { Dialog } from '@headlessui/react';
 import { PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import shopService, { Product, CreateProductData, ApiError } from '@/services/shopService';
+import shopService, { Product, CreateProductData } from '@/services/shopService';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function ShopPage() {
@@ -18,24 +18,26 @@ export default function ShopPage() {
 
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['products'],
-    queryFn: () => shopService.getProducts().then(res => res.data),
+    queryFn: () => shopService.getProducts().then(res => res.results),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: CreateProductData) => shopService.createProduct(data).then(res => res.data),
+    mutationFn: (data: CreateProductData) => shopService.createProduct(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Product created successfully');
       setIsOpen(false);
       reset();
     },
-    onError: (error: ApiError) => {
-      toast.error(error.response?.data?.message || 'Failed to create product');
-    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Failed to create product');
+      }
+    }
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: CreateProductData & { id: string }) => shopService.updateProduct(data).then(res => res.data),
+    mutationFn: (data: CreateProductData & { id: string }) => shopService.updateProduct(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Product updated successfully');
@@ -43,20 +45,24 @@ export default function ShopPage() {
       setEditingProduct(null);
       reset();
     },
-    onError: (error: ApiError) => {
-      toast.error(error.response?.data?.message || 'Failed to update product');
-    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Failed to update product');
+      }
+    }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => shopService.deleteProduct(id).then(res => res.data),
+    mutationFn: (id: string) => shopService.deleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Product deleted successfully');
     },
-    onError: (error: ApiError) => {
-      toast.error(error.response?.data?.message || 'Failed to delete product');
-    },
+    onError: (error: unknown) => {
+      if (error instanceof Error) {
+        toast.error(error.message || 'Failed to delete product');
+      }
+    }
   });
 
   const onSubmit = (data: CreateProductData) => {
