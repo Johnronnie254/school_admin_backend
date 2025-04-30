@@ -13,6 +13,7 @@ import {
   QuestionMarkCircleIcon 
 } from '@heroicons/react/24/outline';
 import { studentService, type Student, type StudentFormData } from '@/services/studentService';
+import { type PaginatedResponse } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 
 const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -33,9 +34,10 @@ export default function StudentsPage() {
     } : {}
   });
 
-  const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery<PaginatedResponse<Student>, Error, Student[]>({
     queryKey: ['students'],
-    queryFn: studentService.getStudents
+    queryFn: studentService.getStudents,
+    select: (data) => data.results
   });
 
   const createMutation = useMutation<Student, Error, StudentFormData>({
