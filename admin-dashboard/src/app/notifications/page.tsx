@@ -289,26 +289,60 @@ export default function NotificationsPage() {
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="target_group" className="block text-sm font-medium text-gray-700">
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700">
                   Target Group
                   <span className="text-red-500 ml-1">*</span>
                 </label>
-                <div className="mt-2">
-                  <select
-                    {...register('target_group', { required: 'Target group is required' })}
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                  >
-                    <option value="">Select Target Group</option>
-                    <option value="all">Everyone</option>
-                    <option value="teachers">Teachers Only</option>
-                    <option value="students">Students Only</option>
-                    <option value="parents">Parents Only</option>
-                  </select>
-                  {errors.target_group && (
-                    <p className="mt-2 text-sm text-red-600">{errors.target_group.message}</p>
-                  )}
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      {...register('target_group', { required: 'Target group is required' })}
+                      type="radio"
+                      value="all"
+                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-600"
+                    />
+                    <label className="ml-3 block text-sm font-medium text-gray-700">
+                      Everyone
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      {...register('target_group')}
+                      type="radio"
+                      value="teachers"
+                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-600"
+                    />
+                    <label className="ml-3 block text-sm font-medium text-gray-700">
+                      Teachers Only
+                    </label>
+                  </div>
+                  {/* <div className="flex items-center">
+                    <input
+                      {...register('target_group')}
+                      type="radio"
+                      value="students"
+                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-600"
+                    />
+                    <label className="ml-3 block text-sm font-medium text-gray-700">
+                      Students Only
+                    </label>
+                  </div> */}
+                  <div className="flex items-center">
+                    <input
+                      {...register('target_group')}
+                      type="radio"
+                      value="parents"
+                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-600"
+                    />
+                    <label className="ml-3 block text-sm font-medium text-gray-700">
+                      Parents Only
+                    </label>
+                  </div>
                 </div>
+                {errors.target_group && (
+                  <p className="mt-2 text-sm text-red-600">{errors.target_group.message}</p>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mt-6 sm:mt-8">
