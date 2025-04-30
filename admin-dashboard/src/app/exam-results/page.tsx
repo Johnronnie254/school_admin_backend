@@ -33,9 +33,12 @@ export default function ExamResultsPage() {
     } : {}
   });
 
-  const { data: examResults = [], isLoading } = useQuery<ExamResult[]>({
+  const { data: examResults = [], isLoading } = useQuery({
     queryKey: ['examResults'],
-    queryFn: examResultService.getExamResults
+    queryFn: async () => {
+      const response = await examResultService.getExamResults();
+      return response.results;
+    }
   });
 
   const createMutation = useMutation({
