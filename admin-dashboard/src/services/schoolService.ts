@@ -4,8 +4,13 @@ export interface SchoolStatistics {
   total_teachers: number;
   total_students: number;
   total_parents: number;
-  fee_collection: number;
   active_users: number;
+  students_per_grade: Array<{ grade: number; count: number }>;
+  recent_notifications: Array<{
+    message: string;
+    target_group: string;
+    created_at: string;
+  }>;
   school_name: string;
 }
 

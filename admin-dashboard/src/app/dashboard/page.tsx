@@ -1,12 +1,13 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { schoolService } from '@/services/schoolService';
+import { teacherService } from '@/services/teacherService';
+import { studentService } from '@/services/studentService';
+import { parentService } from '@/services/parentService';
 import { useAuth } from '@/hooks/useAuth';
 import {
   UserGroupIcon,
   UsersIcon,
-  CurrencyDollarIcon,
   ChartBarIcon,
   CalendarIcon,
   ArrowRightOnRectangleIcon,
@@ -15,44 +16,60 @@ import Link from 'next/link';
 
 export default function DashboardPage() {
   const { logout } = useAuth();
-  const { data: schoolStats, isLoading } = useQuery({
-    queryKey: ['schoolStats'],
-    queryFn: () => schoolService.getSchoolStatistics(),
+  
+  const { data: teachersData, isLoading: isLoadingTeachers } = useQuery({
+    queryKey: ['teachers'],
+    queryFn: () => teacherService.getTeachers(),
   });
+
+  const { data: studentsData, isLoading: isLoadingStudents } = useQuery({
+    queryKey: ['students'],
+    queryFn: () => studentService.getStudents(),
+  });
+
+  const { data: parentsData, isLoading: isLoadingParents } = useQuery({
+    queryKey: ['parents'],
+    queryFn: () => parentService.getParents(),
+  });
+
+  const isLoading = isLoadingTeachers || isLoadingStudents || isLoadingParents;
+  const teachers = teachersData?.results || [];
+  const students = studentsData?.results || [];
+  const parents = parentsData?.results || [];
 
   const stats = [
     {
       name: 'Total Teachers',
-      value: schoolStats?.total_teachers || 0,
+      value: teachers.length,
       icon: UserGroupIcon,
       href: '/teachers',
       color: 'bg-green-500',
     },
     {
       name: 'Total Students',
-      value: schoolStats?.total_students || 0,
+      value: students.length,
       icon: UsersIcon,
       href: '/students',
       color: 'bg-purple-500',
     },
     {
       name: 'Total Parents',
-      value: schoolStats?.total_parents || 0,
+      value: parents.length,
       icon: UsersIcon,
       href: '/parents',
       color: 'bg-yellow-500',
     },
-    {
-      name: 'Fee Collection',
-      value: schoolStats?.fee_collection || 0,
-      icon: CurrencyDollarIcon,
-      href: '/school-fees',
-      color: 'bg-red-500',
-      prefix: '$',
-    },
+    // {
+    //   name: 'Fee Collection',
+    //   value: schoolStats?.fee_collection || 0,
+    //   icon: CurrencyDollarIcon,
+    //   href: '/school-fees',
+    //   color: 'bg-red-500',
+    //   prefix: '$',
+    // },
     {
       name: 'Active Users',
-      value: schoolStats?.active_users || 0,
+      value: teachers.length + students.length + parents.length,
       icon: ChartBarIcon,
       href: '#',
       color: 'bg-indigo-500',
@@ -84,7 +101,7 @@ export default function DashboardPage() {
     return (
       <div className="animate-pulse">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(4)].map((_, i) => (
             <div
               key={i}
               className="bg-white overflow-hidden shadow rounded-lg h-32"
@@ -100,7 +117,7 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-500">{schoolStats?.school_name}</p>
+          <p className="mt-1 text-sm text-gray-500">School Administration</p>
         </div>
         <button
           onClick={logout}
@@ -133,7 +150,6 @@ export default function DashboardPage() {
                     </dt>
                     <dd className="flex items-baseline">
                       <div className="text-2xl font-semibold text-gray-900">
-                        {item.prefix && item.prefix}
                         {item.value}
                       </div>
                     </dd>

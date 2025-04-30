@@ -5,7 +5,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col items-center justify-center p-4">
       <div className="max-w-3xl text-center space-y-8">
         <h1 className="text-5xl font-bold text-gray-900 mb-4">
-          Welcome to School Admin Portal
+          Welcome to Educite Admin Portal
         </h1>
         
         <p className="text-xl text-gray-600 mb-8">
