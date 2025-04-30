@@ -35,7 +35,7 @@ export default function CalendarPage() {
     queryKey: ['events'],
     queryFn: async () => {
       const response = await calendarService.getEvents();
-      return response.data;
+      return response.results;
     }
   });
 
