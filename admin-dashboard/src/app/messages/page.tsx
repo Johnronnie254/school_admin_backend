@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { MagnifyingGlassIcon, PaperAirplaneIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PaperAirplaneIcon, TrashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { messageService } from '@/services/messageService';
 import { AxiosError } from 'axios';
@@ -113,8 +113,8 @@ export default function MessagesPage() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
-      {/* Left sidebar - User list */}
-      <div className="w-80 border-r border-gray-200 bg-white">
+      {/* Messages List - Hidden on mobile when chat is open */}
+      <div className={`${selectedUser ? 'hidden md:block' : 'block'} w-full md:w-80 border-r border-gray-200 bg-white`}>
         <div className="p-4 space-y-4">
           <div className="relative">
             <input
@@ -183,14 +183,24 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* Right side - Chat area */}
-      <div className="flex-1 flex flex-col">
+      {/* Chat Area - Full width on mobile */}
+      <div className={`${selectedUser ? 'block' : 'hidden md:block'} flex-1 flex flex-col`}>
         {selectedUser ? (
           <>
-            {/* Chat header */}
+            {/* Chat header with back button on mobile */}
             <div className="border-b border-gray-200 p-4">
-              <h2 className="text-lg font-medium text-gray-900">{selectedUser.name}</h2>
-              <p className="text-sm text-gray-500">{selectedUser.email}</p>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="md:hidden p-2 rounded-md hover:bg-gray-100"
+                >
+                  <ArrowLeftIcon className="h-6 w-6 text-gray-500" />
+                </button>
+                <div>
+                  <h2 className="text-lg font-medium text-gray-900">{selectedUser.name}</h2>
+                  <p className="text-sm text-gray-500">{selectedUser.email}</p>
+                </div>
+              </div>
             </div>
 
             {/* Messages */}
