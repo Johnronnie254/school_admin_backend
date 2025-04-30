@@ -52,19 +52,19 @@ export default function SchoolFeesPage() {
     }
   });
 
-  // Confirm payment mutation
-  const confirmPaymentMutation = useMutation({
-    mutationFn: schoolFeeService.confirmPayment,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feeRecords', selectedStudent?.id] });
-      toast.success('Payment confirmed successfully');
-    },
-    onError: (error: unknown) => {
-      if (error instanceof Error) {
-        toast.error(error.message || 'Failed to confirm payment');
-      }
-    }
-  });
+  // // Confirm payment mutation
+  // const confirmPaymentMutation = useMutation({
+  //   mutationFn: schoolFeeService.confirmPayment,
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ['feeRecords', selectedStudent?.id] });
+  //     toast.success('Payment confirmed successfully');
+  //   },
+  //   onError: (error: unknown) => {
+  //     if (error instanceof Error) {
+  //       toast.error(error.message || 'Failed to confirm payment');
+  //     }
+  //   }
+  // });
 
   const onSubmit = (data: SchoolFeeFormData) => {
     if (!selectedStudent) {
