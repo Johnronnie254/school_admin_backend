@@ -31,6 +31,7 @@ interface MessageFormData {
 export default function MessagesPage() {
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<MessageFormData>();
@@ -86,16 +87,37 @@ export default function MessagesPage() {
     sendMessageMutation.mutate({ ...data, receiver: selectedUser.id });
   };
 
-  const filteredUsers = chatUsers.filter(user => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Get unique roles from users - use a different approach to avoid Set iteration issues
+  const availableRoles = chatUsers
+    .map(user => user.role)
+    .filter((role, index, array) => array.indexOf(role) === index);
+
+  // Toggle role selection
+  const toggleRole = (role: string) => {
+    setSelectedRoles(prev => 
+      prev.includes(role) 
+        ? prev.filter(r => r !== role) 
+        : [...prev, role]
+    );
+  };
+
+  const filteredUsers = chatUsers.filter(user => {
+    // Filter by search query
+    const matchesSearch = 
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Filter by selected roles (if any are selected)
+    const matchesRole = selectedRoles.length === 0 || selectedRoles.includes(user.role);
+    
+    return matchesSearch && matchesRole;
+  });
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Left sidebar - User list */}
       <div className="w-80 border-r border-gray-200 bg-white">
-        <div className="p-4">
+        <div className="p-4 space-y-4">
           <div className="relative">
             <input
               type="text"
@@ -106,9 +128,30 @@ export default function MessagesPage() {
             />
             <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
           </div>
+          
+          {/* Role filter toggles */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">Filter by role:</p>
+            <div className="flex flex-wrap gap-2">
+              {availableRoles.map(role => (
+                <button
+                  key={role}
+                  onClick={() => toggleRole(role)}
+                  className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                    selectedRoles.includes(role)
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {role}
+                </button>
+              ))}
+             
+            </div>
+          </div>
         </div>
 
-        <div className="overflow-y-auto h-[calc(100vh-8rem)]">
+        <div className="overflow-y-auto h-[calc(100vh-12rem)]">
           {isLoadingUsers ? (
             <div className="flex justify-center p-4">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
