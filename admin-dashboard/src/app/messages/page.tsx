@@ -82,6 +82,7 @@ export default function MessagesPage() {
 
   const onSubmit = (data: MessageFormData) => {
     if (!selectedUser) return;
+    console.log('Sending message to:', selectedUser);
     sendMessageMutation.mutate({ ...data, receiver: selectedUser.id });
   };
 
