@@ -87,10 +87,8 @@ export default function MessagesPage() {
     sendMessageMutation.mutate({ ...data, receiver: selectedUser.id });
   };
 
-  // Get unique roles from users - use a different approach to avoid Set iteration issues
-  const availableRoles = chatUsers
-    .map(user => user.role)
-    .filter((role, index, array) => array.indexOf(role) === index);
+  // Get unique roles from users
+  const availableRoles = Array.from(new Set(chatUsers.map(user => user.role)));
 
   // Toggle role selection
   const toggleRole = (role: string) => {
@@ -137,16 +135,15 @@ export default function MessagesPage() {
                 <button
                   key={role}
                   onClick={() => toggleRole(role)}
-                  className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                  className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${
                     selectedRoles.includes(role)
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
                   }`}
                 >
                   {role}
                 </button>
               ))}
-             
             </div>
           </div>
         </div>
@@ -246,12 +243,12 @@ export default function MessagesPage() {
                   type="text"
                   {...register('content', { required: 'Message is required' })}
                   placeholder="Type a message..."
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-full border border-gray-300 px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <button
                   type="submit"
                   disabled={sendMessageMutation.isPending}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="bg-blue-600 text-white px-5 py-2.5 rounded-full hover:bg-blue-700 disabled:opacity-50 transition-all duration-200 shadow-md hover:shadow-lg disabled:shadow-none"
                 >
                   <PaperAirplaneIcon className="h-5 w-5" />
                 </button>
