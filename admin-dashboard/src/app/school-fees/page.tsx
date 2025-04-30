@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { 
-  PlusIcon, 
+import {
   XMarkIcon,
   BanknotesIcon,
   UserGroupIcon 
@@ -78,11 +77,11 @@ export default function SchoolFeesPage() {
     });
   };
 
-  const handleConfirmPayment = async (transactionId: string) => {
-    if (window.confirm('Are you sure you want to confirm this payment?')) {
-      confirmPaymentMutation.mutate(transactionId);
-    }
-  };
+  // const handleConfirmPayment = async (transactionId: string) => {
+  //   if (window.confirm('Are you sure you want to confirm this payment?')) {
+  //     confirmPaymentMutation.mutate(transactionId);
+  //   }
+  // };
 
   const handleStudentClick = (student: Student) => {
     setSelectedStudent(student);
@@ -358,4 +357,4 @@ export default function SchoolFeesPage() {
       </Dialog>
     </div>
   );
-} 
+}

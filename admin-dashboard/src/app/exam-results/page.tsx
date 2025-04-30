@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 import { 
   PencilIcon, 
   TrashIcon, 
-  PlusIcon, 
   XMarkIcon,
   AcademicCapIcon,
   ArrowDownTrayIcon,
