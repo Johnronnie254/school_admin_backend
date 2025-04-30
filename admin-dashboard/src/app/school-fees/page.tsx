@@ -23,7 +23,10 @@ export default function SchoolFeesPage() {
   // Fetch all students
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: ['students'],
-    queryFn: studentService.getStudents
+    queryFn: async () => {
+      const response = await studentService.getStudents();
+      return response.results;
+    }
   });
 
   // Fetch fee records for selected student
