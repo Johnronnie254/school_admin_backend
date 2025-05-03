@@ -1298,15 +1298,27 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
         return LeaveApplication.objects.none()
         
     def perform_create(self, serializer):
-        """Only teachers can create leave applications"""
-        if self.request.user.role != Role.TEACHER:
-            raise serializers.ValidationError({"error": "Only teachers can create leave applications."})
-            
-        try:
-            teacher = Teacher.objects.get(email=self.request.user.email)
-            serializer.save(teacher=teacher)
-        except Teacher.DoesNotExist:
-            raise serializers.ValidationError({"error": "Your teacher profile could not be found. Please contact an administrator."})
+        """Teachers and admins can create leave applications"""
+        user = self.request.user
+        
+        if user.role == Role.TEACHER:
+            try:
+                teacher = Teacher.objects.get(email=user.email)
+                serializer.save(teacher=teacher)
+            except Teacher.DoesNotExist:
+                raise serializers.ValidationError({"error": "Your teacher profile could not be found. Please contact an administrator."})
+        elif user.role == Role.ADMIN:
+            # For testing: Allow admins to create leave applications
+            # Get the first teacher from the database
+            try:
+                teacher = Teacher.objects.first()
+                if not teacher:
+                    raise serializers.ValidationError({"error": "No teachers found in the system. Please create a teacher first."})
+                serializer.save(teacher=teacher)
+            except Exception as e:
+                raise serializers.ValidationError({"error": f"Could not create leave application: {str(e)}"})
+        else:
+            raise serializers.ValidationError({"error": "Only teachers and admins can create leave applications."})
             
     def update(self, request, *args, **kwargs):
         """Handle updates based on user role"""
