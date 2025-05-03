@@ -77,8 +77,10 @@ export const leaveApplicationService = {
 
   deleteLeaveApplication: async (id: string): Promise<void> => {
     try {
+      console.log(`Deleting leave application with ID: ${id}`);
       await apiClient.delete(`leave-applications/${id}`);
     } catch (error: unknown) {
+      console.error('Error deleting leave application:', error);
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }

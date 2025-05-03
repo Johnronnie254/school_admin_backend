@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { leaveApplicationService, type LeaveApplication, type CreateLeaveApplicationData } from '@/services/leaveApplicationService';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { leaveApplicationService, type LeaveApplication } from '@/services/leaveApplicationService';
 import toast from 'react-hot-toast';
 import { 
   ClipboardDocumentCheckIcon, 
@@ -12,20 +11,17 @@ import {
   XCircleIcon,
   CalendarDaysIcon,
   FunnelIcon,
-  PlusIcon,
-  XMarkIcon
+  TrashIcon
 } from '@heroicons/react/24/outline';
-import { Dialog } from '@/components/ui/dialog';
+import { CheckIcon } from '@heroicons/react/24/solid';
 
 export default function LeaveApplicationsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateLeaveApplicationData>();
-
   useEffect(() => {
     const userStr = localStorage.getItem('user');
     const user = userStr ? JSON.parse(userStr) : null;
@@ -54,20 +50,6 @@ export default function LeaveApplicationsPage() {
     ? applications.filter(app => app.status === statusFilter) 
     : applications;
 
-  const createMutation = useMutation({
-    mutationFn: leaveApplicationService.createLeaveApplication,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leaveApplications'] });
-      setIsModalOpen(false);
-      reset();
-      toast.success('Test leave application created successfully');
-    },
-    onError: (error) => {
-      toast.error('Failed to create test leave application');
-      console.error('Error creating test leave application:', error);
-    }
-  });
-
   const approveMutation = useMutation({
     mutationFn: (id: string) => leaveApplicationService.approveLeaveApplication(id),
     onSuccess: () => {
@@ -92,8 +74,109 @@ export default function LeaveApplicationsPage() {
     }
   });
 
-  const onSubmit: SubmitHandler<CreateLeaveApplicationData> = (data) => {
-    createMutation.mutate(data);
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      // Delete all applications one by one
+      const deletePromises = applications.map(app => 
+        leaveApplicationService.deleteLeaveApplication(app.id)
+      );
+      await Promise.all(deletePromises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leaveApplications'] });
+      toast.success('All leave applications deleted successfully');
+      setSelectedIds(new Set());
+    },
+    onError: (error) => {
+      toast.error('Failed to delete leave applications');
+      console.error('Error deleting leave applications:', error);
+    }
+  });
+
+  const deleteSelectedMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      // Delete selected applications one by one
+      const deletePromises = ids.map(id => 
+        leaveApplicationService.deleteLeaveApplication(id)
+      );
+      await Promise.all(deletePromises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leaveApplications'] });
+      toast.success(`${selectedIds.size} leave application(s) deleted successfully`);
+      setSelectedIds(new Set());
+    },
+    onError: (error) => {
+      toast.error('Failed to delete selected leave applications');
+      console.error('Error deleting selected leave applications:', error);
+    }
+  });
+
+  const deleteSingleMutation = useMutation({
+    mutationFn: (id: string) => leaveApplicationService.deleteLeaveApplication(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leaveApplications'] });
+      toast.success('Leave application deleted successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to delete leave application');
+      console.error('Error deleting leave application:', error);
+    }
+  });
+
+  // Confirm and delete all applications
+  const handleClearAll = () => {
+    if (applications.length === 0) {
+      toast.error('No applications to delete');
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete all ${applications.length} leave applications? This action cannot be undone.`)) {
+      deleteAllMutation.mutate();
+    }
+  };
+
+  // Confirm and delete selected applications
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) {
+      toast.error('No applications selected');
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.size} selected leave application(s)? This action cannot be undone.`)) {
+      deleteSelectedMutation.mutate(Array.from(selectedIds));
+    }
+  };
+
+  // Handle single application delete
+  const handleDeleteSingle = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this leave application? This action cannot be undone.')) {
+      deleteSingleMutation.mutate(id);
+    }
+  };
+
+  // Toggle selection of a single application
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle selection of all applications
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredApplications.length) {
+      // If all are selected, deselect all
+      setSelectedIds(new Set());
+    } else {
+      // Otherwise select all filtered applications
+      setSelectedIds(new Set(filteredApplications.map(app => app.id)));
+    }
   };
 
   // Get counts for each status
@@ -128,14 +211,29 @@ export default function LeaveApplicationsPage() {
           <h1 className="text-2xl font-semibold text-gray-800">Leave Applications</h1>
         </div>
         
-        {/* Temporary Create Button (for testing) */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Create Test Application
-        </button>
+        <div className="flex gap-3">
+          {/* Delete Selected Button - Only show when items are selected */}
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              disabled={deleteSelectedMutation.isPending}
+            >
+              <TrashIcon className="h-5 w-5" />
+              {deleteSelectedMutation.isPending ? 'Deleting...' : `Delete Selected (${selectedIds.size})`}
+            </button>
+          )}
+          
+          {/* Clear All Button */}
+          <button
+            onClick={handleClearAll}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            disabled={applications.length === 0 || deleteAllMutation.isPending}
+          >
+            <TrashIcon className="h-5 w-5" />
+            {deleteAllMutation.isPending ? 'Deleting...' : 'Delete All'}
+          </button>
+        </div>
       </div>
 
       {/* Status Filter */}
@@ -201,33 +299,52 @@ export default function LeaveApplicationsPage() {
               ? `There are no ${statusFilter} leave applications at this time.` 
               : 'No leave applications have been submitted yet.'}
           </p>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-            Create Test Application
-          </button>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-3 py-3 text-left">
+                  <button 
+                    onClick={toggleSelectAll}
+                    className="rounded p-1 hover:bg-gray-200 transition-colors"
+                    title={selectedIds.size === filteredApplications.length ? "Deselect all" : "Select all"}
+                  >
+                    {selectedIds.size === filteredApplications.length && filteredApplications.length > 0 ? (
+                      <div className="h-5 w-5 bg-blue-600 rounded flex items-center justify-center text-white">
+                        <CheckIcon className="h-4 w-4" />
+                      </div>
+                    ) : (
+                      <div className="h-5 w-5 border-2 border-gray-400 rounded" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                {/* Only show Actions column for pending applications or All filter */}
-                {(statusFilter === 'pending' || statusFilter === null) && (
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                )}
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredApplications.map((application) => (
-                <tr key={application.id} className="hover:bg-gray-50">
+                <tr key={application.id} className={`hover:bg-gray-50 ${selectedIds.has(application.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-3 py-4">
+                    <button 
+                      onClick={() => toggleSelect(application.id)}
+                      className="rounded p-1 hover:bg-gray-200 transition-colors"
+                    >
+                      {selectedIds.has(application.id) ? (
+                        <div className="h-5 w-5 bg-blue-600 rounded flex items-center justify-center text-white">
+                          <CheckIcon className="h-4 w-4" />
+                        </div>
+                      ) : (
+                        <div className="h-5 w-5 border-2 border-gray-400 rounded" />
+                      )}
+                    </button>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{application.teacher_name || 'Teacher'}</div>
                   </td>
@@ -253,174 +370,41 @@ export default function LeaveApplicationsPage() {
                       {application.status}
                     </span>
                   </td>
-                  {/* Only show Actions column for pending applications */}
-                  {(statusFilter === 'pending' || statusFilter === null) && application.status === 'pending' && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => approveMutation.mutate(application.id)}
-                          className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs rounded-md hover:bg-green-700"
-                        >
-                          <CheckCircleIcon className="h-4 w-4 mr-1" />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => rejectMutation.mutate(application.id)}
-                          className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
-                        >
-                          <XCircleIcon className="h-4 w-4 mr-1" />
-                          Reject
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                  {/* Add an empty cell for applications that aren't pending to maintain table layout */}
-                  {(statusFilter === 'pending' || statusFilter === null) && application.status !== 'pending' && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"></td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex justify-end gap-2">
+                      {application.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => approveMutation.mutate(application.id)}
+                            className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs rounded-md hover:bg-green-700"
+                          >
+                            <CheckCircleIcon className="h-4 w-4 mr-1" />
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => rejectMutation.mutate(application.id)}
+                            className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
+                          >
+                            <XCircleIcon className="h-4 w-4 mr-1" />
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDeleteSingle(application.id)}
+                        className="inline-flex items-center px-3 py-1.5 bg-gray-600 text-white text-xs rounded-md hover:bg-gray-700"
+                      >
+                        <TrashIcon className="h-4 w-4 mr-1" />
+                        Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-
-      {/* Test Create Leave Application Modal */}
-      <Dialog
-        open={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          reset();
-        }}
-        className="relative z-50"
-      >
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
-        
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-lg">
-            <div className="absolute right-4 top-4">
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  reset();
-                }}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 mb-8">
-              <div className="rounded-full bg-blue-50 p-2">
-                <CalendarDaysIcon className="h-6 w-6 text-blue-600" />
-              </div>
-              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
-                Create Test Leave Application
-              </Dialog.Title>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Leave Type
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    {...register('leave_type', { required: 'Leave type is required' })}
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                  >
-                    <option value="">Select Leave Type</option>
-                    <option value="sick">Sick Leave</option>
-                    <option value="casual">Casual Leave</option>
-                    <option value="emergency">Emergency Leave</option>
-                  </select>
-                  {errors.leave_type && (
-                    <p className="mt-1 text-sm text-red-600">{errors.leave_type.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    {...register('start_date', { required: 'Start date is required' })}
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                  />
-                  {errors.start_date && (
-                    <p className="mt-1 text-sm text-red-600">{errors.start_date.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    {...register('end_date', { required: 'End date is required' })}
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                  />
-                  {errors.end_date && (
-                    <p className="mt-1 text-sm text-red-600">{errors.end_date.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Reason
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <textarea
-                    {...register('reason', { required: 'Reason is required' })}
-                    rows={3}
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter reason for leave"
-                  />
-                  {errors.reason && (
-                    <p className="mt-1 text-sm text-red-600">{errors.reason.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    reset();
-                  }}
-                  className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
-                  disabled={createMutation.isPending}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending ? (
-                    <div className="flex items-center gap-2">
-                      <svg className="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Creating...
-                    </div>
-                  ) : (
-                    'Create Application'
-                  )}
-                </button>
-              </div>
-            </form>
-          </Dialog.Panel>
-        </div>
-      </Dialog>
     </div>
   );
 } 

@@ -13,7 +13,7 @@ from .views import (
     ProductViewSet, TeacherScheduleView, TeacherProfilePicView,
     TeacherExamViewSet, PasswordResetRequestView,
     PasswordResetConfirmView, TeacherParentAssociationViewSet,
-    SchoolViewSet, ParentViewSet
+    SchoolViewSet, ParentViewSet, SchoolEventViewSet
 )
 
 router = DefaultRouter()
@@ -27,6 +27,7 @@ router.register(r'teacher/exams', TeacherExamViewSet, basename='teacher-exams')
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'teacher-parent-associations', TeacherParentAssociationViewSet, basename='teacher-parent-association')
 router.register(r'leave-applications', LeaveApplicationViewSet, basename='leave-application')
+router.register(r'school-events', SchoolEventViewSet, basename='school-event')
 
 urlpatterns = [
     # Authentication

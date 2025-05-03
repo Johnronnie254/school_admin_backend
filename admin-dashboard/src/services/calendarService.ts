@@ -22,27 +22,27 @@ export interface CreateEventData {
 
 const calendarService = {
   getEvents: async () => {
-    const response = await apiClient.get<PaginatedResponse<SchoolEvent>>('/api/events/');
+    const response = await apiClient.get<PaginatedResponse<SchoolEvent>>('/api/school-events/');
     return response.data;
   },
 
   getEvent: async (id: string) => {
-    const response = await apiClient.get<SchoolEvent>(`/api/events/${id}/`);
+    const response = await apiClient.get<SchoolEvent>(`/api/school-events/${id}/`);
     return response.data;
   },
 
   createEvent: async (data: CreateEventData) => {
-    const response = await apiClient.post<SchoolEvent>('/api/events/', data);
+    const response = await apiClient.post<SchoolEvent>('/api/school-events/', data);
     return response.data;
   },
 
   updateEvent: async (id: string, data: CreateEventData) => {
-    const response = await apiClient.put<SchoolEvent>(`/api/events/${id}/`, data);
+    const response = await apiClient.put<SchoolEvent>(`/api/school-events/${id}/`, data);
     return response.data;
   },
 
   deleteEvent: async (id: string) => {
-    await apiClient.delete(`/api/events/${id}/`);
+    await apiClient.delete(`/api/school-events/${id}/`);
   },
 };
 
