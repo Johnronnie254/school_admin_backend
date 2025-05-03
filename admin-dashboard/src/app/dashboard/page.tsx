@@ -19,23 +19,32 @@ export default function DashboardPage() {
   
   const { data: teachersData, isLoading: isLoadingTeachers } = useQuery({
     queryKey: ['teachers'],
-    queryFn: () => teacherService.getTeachers(),
+    queryFn: async () => {
+      const response = await teacherService.getTeachers();
+      return response.results;
+    },
   });
 
   const { data: studentsData, isLoading: isLoadingStudents } = useQuery({
     queryKey: ['students'],
-    queryFn: () => studentService.getStudents(),
+    queryFn: async () => {
+      const response = await studentService.getStudents();
+      return response.results;
+    },
   });
 
   const { data: parentsData, isLoading: isLoadingParents } = useQuery({
     queryKey: ['parents'],
-    queryFn: () => parentService.getParents(),
+    queryFn: async () => {
+      const response = await parentService.getParents();
+      return response.results;
+    },
   });
 
   const isLoading = isLoadingTeachers || isLoadingStudents || isLoadingParents;
-  const teachers = teachersData?.results || [];
-  const students = studentsData?.results || [];
-  const parents = parentsData?.results || [];
+  const teachers = teachersData || [];
+  const students = studentsData || [];
+  const parents = parentsData || [];
 
   const stats = [
     {

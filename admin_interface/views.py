@@ -1281,20 +1281,27 @@ class TeacherParentAssociationViewSet(viewsets.ModelViewSet):
 class LeaveApplicationViewSet(viewsets.ModelViewSet):
     """ViewSet for teacher leave applications"""
     serializer_class = LeaveApplicationSerializer
-    permission_classes = [IsTeacher]
+    permission_classes = [IsAdminOrTeacher]
 
     def get_queryset(self):
-        if self.request.user.role == Role.TEACHER:
+        user = self.request.user
+        if user.role == Role.TEACHER:
+            # Teachers can only see their own applications
             try:
-                # Find the teacher instance corresponding to the authenticated user
-                teacher = Teacher.objects.get(email=self.request.user.email)
+                teacher = Teacher.objects.get(email=user.email)
                 return LeaveApplication.objects.filter(teacher=teacher)
             except Teacher.DoesNotExist:
                 return LeaveApplication.objects.none()
-        return LeaveApplication.objects.all()
+        elif user.role == Role.ADMIN:
+            # Admins can see all applications
+            return LeaveApplication.objects.all()
+        return LeaveApplication.objects.none()
         
     def perform_create(self, serializer):
-        """Set the teacher before saving"""
+        """Only teachers can create leave applications"""
+        if self.request.user.role != Role.TEACHER:
+            raise serializers.ValidationError({"error": "Only teachers can create leave applications."})
+            
         try:
             teacher = Teacher.objects.get(email=self.request.user.email)
             serializer.save(teacher=teacher)
@@ -1302,28 +1309,64 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"error": "Your teacher profile could not be found. Please contact an administrator."})
             
     def update(self, request, *args, **kwargs):
-        """Ensure updates maintain the same teacher"""
-        partial = kwargs.pop('partial', False)
+        """Handle updates based on user role"""
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         
-        # Get the teacher from the authenticated user
-        try:
-            teacher = Teacher.objects.get(email=self.request.user.email)
-            # Ensure the user can only update their own leave applications
-            if instance.teacher.id != teacher.id:
+        if request.user.role == Role.TEACHER:
+            # Teachers can only update their own applications
+            try:
+                teacher = Teacher.objects.get(email=request.user.email)
+                if instance.teacher.id != teacher.id:
+                    return Response(
+                        {"detail": "You do not have permission to update this leave application."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            except Teacher.DoesNotExist:
                 return Response(
-                    {"detail": "You do not have permission to update this leave application."},
-                    status=status.HTTP_403_FORBIDDEN
+                    {"error": "Your teacher profile could not be found."},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-            self.perform_update(serializer)
-            return Response(serializer.data)
-        except Teacher.DoesNotExist:
+        elif request.user.role == Role.ADMIN:
+            # Admins can update any application
+            pass
+        else:
             return Response(
-                {"error": "Your teacher profile could not be found."},
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "You do not have permission to update leave applications."},
+                status=status.HTTP_403_FORBIDDEN
             )
+            
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Admin-only action to approve a leave application"""
+        if request.user.role != Role.ADMIN:
+            return Response(
+                {"detail": "Only administrators can approve leave applications."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        application = self.get_object()
+        application.status = 'approved'
+        application.save()
+        return Response({"status": "approved"})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Admin-only action to reject a leave application"""
+        if request.user.role != Role.ADMIN:
+            return Response(
+                {"detail": "Only administrators can reject leave applications."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        application = self.get_object()
+        application.status = 'rejected'
+        application.save()
+        return Response({"status": "rejected"})
 
 class TeacherScheduleView(APIView):
     """View for teacher's daily schedule"""
