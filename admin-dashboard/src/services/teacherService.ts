@@ -21,8 +21,14 @@ export interface TeacherFormData {
 
 class TeacherService {
   async getTeachers() {
-    const response = await apiClient.get<PaginatedResponse<Teacher>>('/api/teachers/');
-    return response.data;
+    try {
+      const response = await apiClient.get<PaginatedResponse<Teacher>>('/api/teachers/');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+      // Return an empty paginated response instead of undefined
+      return { count: 0, next: null, previous: null, results: [] };
+    }
   }
 
   async getTeacher(id: string) {

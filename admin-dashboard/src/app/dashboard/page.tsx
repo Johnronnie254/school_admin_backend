@@ -20,24 +20,39 @@ export default function DashboardPage() {
   const { data: teachersData, isLoading: isLoadingTeachers } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
-      const response = await teacherService.getTeachers();
-      return response.results;
+      try {
+        const response = await teacherService.getTeachers();
+        return response.results;
+      } catch (error) {
+        console.error('Error fetching teachers in dashboard:', error);
+        return [];
+      }
     },
   });
 
   const { data: studentsData, isLoading: isLoadingStudents } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
-      const response = await studentService.getStudents();
-      return response.results;
+      try {
+        const response = await studentService.getStudents();
+        return response.results;
+      } catch (error) {
+        console.error('Error fetching students in dashboard:', error);
+        return [];
+      }
     },
   });
 
   const { data: parentsData, isLoading: isLoadingParents } = useQuery({
     queryKey: ['parents'],
     queryFn: async () => {
-      const response = await parentService.getParents();
-      return response.results;
+      try {
+        const response = await parentService.getParents();
+        return response.results;
+      } catch (error) {
+        console.error('Error fetching parents in dashboard:', error);
+        return [];
+      }
     },
   });
 
@@ -46,24 +61,31 @@ export default function DashboardPage() {
   const students = studentsData || [];
   const parents = parentsData || [];
 
+  // Safe count function that converts NaN or undefined to 0
+  const safeCount = (arr) => Array.isArray(arr) ? arr.length : 0;
+  const teacherCount = safeCount(teachers);
+  const studentCount = safeCount(students);
+  const parentCount = safeCount(parents);
+  const totalActiveUsers = teacherCount + studentCount + parentCount;
+
   const stats = [
     {
       name: 'Total Teachers',
-      value: teachers.length,
+      value: teacherCount,
       icon: UserGroupIcon,
       href: '/teachers',
       color: 'bg-green-500',
     },
     {
       name: 'Total Students',
-      value: students.length,
+      value: studentCount,
       icon: UsersIcon,
       href: '/students',
       color: 'bg-purple-500',
     },
     {
       name: 'Total Parents',
-      value: parents.length,
+      value: parentCount,
       icon: UsersIcon,
       href: '/parents',
       color: 'bg-yellow-500',
@@ -78,7 +100,7 @@ export default function DashboardPage() {
     // },
     {
       name: 'Active Users',
-      value: teachers.length + students.length + parents.length,
+      value: totalActiveUsers,
       icon: ChartBarIcon,
       href: '#',
       color: 'bg-indigo-500',
@@ -159,7 +181,8 @@ export default function DashboardPage() {
                     </dt>
                     <dd className="flex items-baseline">
                       <div className="text-2xl font-semibold text-gray-900">
-                        {item.value}
+                        {/* Convert value to string to avoid NaN issues */}
+                        {String(item.value)}
                       </div>
                     </dd>
                   </dl>

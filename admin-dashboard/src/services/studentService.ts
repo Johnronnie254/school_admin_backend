@@ -36,8 +36,14 @@ export interface ApiErrorResponse {
 export const studentService = {
   // Main CRUD operations
   getStudents: async () => {
-    const response = await apiClient.get<PaginatedResponse<Student>>('/api/students/');
-    return response.data;
+    try {
+      const response = await apiClient.get<PaginatedResponse<Student>>('/api/students/');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      // Return an empty paginated response instead of undefined
+      return { count: 0, next: null, previous: null, results: [] };
+    }
   },
 
   getStudentById: async (id: string) => {

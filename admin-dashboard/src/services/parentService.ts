@@ -18,10 +18,16 @@ export interface ParentFormData {
 
 export const parentService = {
   getParents: async () => {
-    console.log('Fetching parents...');
-    const response = await apiClient.get<PaginatedResponse<Parent>>('/api/parents/');
-    console.log('Parent service response:', response.data);
-    return response.data;
+    try {
+      console.log('Fetching parents...');
+      const response = await apiClient.get<PaginatedResponse<Parent>>('/api/parents/');
+      console.log('Parent service response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching parents:', error);
+      // Return an empty paginated response instead of undefined
+      return { count: 0, next: null, previous: null, results: [] };
+    }
   },
 
   getParentById: async (id: string) => {

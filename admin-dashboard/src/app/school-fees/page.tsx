@@ -24,15 +24,29 @@ export default function SchoolFeesPage() {
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: ['students'],
     queryFn: async () => {
-      const response = await studentService.getStudents();
-      return response.results;
+      try {
+        const response = await studentService.getStudents();
+        return response.results || [];
+      } catch (error) {
+        console.error('Error fetching students in school-fees page:', error);
+        return [];
+      }
     }
   });
 
   // Fetch fee records for selected student
   const { data: feeRecords = [], isLoading: isLoadingFees } = useQuery({
     queryKey: ['feeRecords', selectedStudent?.id],
-    queryFn: () => selectedStudent ? schoolFeeService.getStudentFeeRecords(selectedStudent.id) : Promise.resolve([]),
+    queryFn: async () => {
+      try {
+        if (!selectedStudent) return [];
+        const response = await schoolFeeService.getStudentFeeRecords(selectedStudent.id);
+        return Array.isArray(response) ? response : [];
+      } catch (error) {
+        console.error('Error fetching fee records:', error);
+        return [];
+      }
+    },
     enabled: !!selectedStudent
   });
 
