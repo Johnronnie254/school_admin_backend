@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 class Role(models.TextChoices):
+    SUPERUSER = 'superuser', 'Super User'
     ADMIN = 'admin', 'Administrator'
     TEACHER = 'teacher', 'Teacher'
     PARENT = 'parent', 'Parent'
@@ -51,6 +52,8 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("role", Role.SUPERUSER)
+        
         return self.create_user(email, password, **extra_fields)
 
 
@@ -61,6 +64,7 @@ class User(AbstractUser):
     username = None  # Remove username field
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.PARENT)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='users', null=True, blank=True)
     
     objects = UserManager()
 
@@ -139,6 +143,7 @@ class Parent(models.Model):
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=15, unique=True)
     password = models.CharField(max_length=255)  # Will store hashed password
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='parents', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -155,6 +160,7 @@ class Student(models.Model):
     grade = models.PositiveIntegerField(db_index=True)
     class_assigned = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='children', null=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='students', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -182,6 +188,7 @@ class Notification(models.Model):
     target_group = models.CharField(max_length=10, choices=TARGET_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
 
     def __str__(self):
         return f"Notification to {self.get_target_group_display()}"
@@ -199,6 +206,7 @@ class ExamResult(models.Model):
     marks = models.DecimalField(max_digits=5, decimal_places=2)
     grade = models.CharField(max_length=2)
     term = models.CharField(max_length=20)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='exam_results', null=True, blank=True)
     year = models.PositiveIntegerField()
     remarks = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -223,6 +231,7 @@ class SchoolFee(models.Model):
     payment_method = models.CharField(max_length=50)
     transaction_id = models.UUIDField(default=uuid.uuid4, unique=True)
     status = models.CharField(max_length=20, default='pending')
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='fees', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -266,6 +275,7 @@ class TimeTable(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     room = models.CharField(max_length=50)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='timetables', null=True, blank=True)
 
     class Meta:
         unique_together = ['grade', 'day', 'period']
@@ -295,6 +305,7 @@ class Document(models.Model):
     ])
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='documents', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -321,6 +332,7 @@ class SchoolEvent(models.Model):
         ('parents', 'Parents')
     ])
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='events', null=True, blank=True)
 
 
 class Message(models.Model):
@@ -330,6 +342,7 @@ class Message(models.Model):
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
     content = models.TextField()
     is_read = models.BooleanField(default=False)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='messages', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -387,6 +400,7 @@ class LeaveApplication(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected')
     ], default='pending')
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='leave_applications', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -398,6 +412,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.ImageField(upload_to='products/')
     stock = models.PositiveIntegerField()
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

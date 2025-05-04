@@ -13,10 +13,11 @@ from .views import (
     ProductViewSet, TeacherScheduleView, TeacherProfilePicView,
     TeacherExamViewSet, PasswordResetRequestView,
     PasswordResetConfirmView, TeacherParentAssociationViewSet,
-    SchoolViewSet, ParentViewSet, SchoolEventViewSet
+    SchoolViewSet, ParentViewSet, SchoolEventViewSet, SuperUserViewSet
 )
 
 router = DefaultRouter()
+router.register(r'superuser', SuperUserViewSet, basename='superuser')
 router.register(r'admin', AdminViewSet, basename='admin')
 router.register(r'schools', SchoolViewSet, basename='school')
 router.register(r'teachers', TeacherViewSet)

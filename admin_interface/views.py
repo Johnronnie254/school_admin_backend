@@ -100,6 +100,9 @@ class AdminViewSet(viewsets.ViewSet):
         term = request.data.get('term')
         
         queryset = ExamResult.objects.all()
+        if hasattr(request.user, 'school') and request.user.school:
+            queryset = queryset.filter(school=request.user.school)
+        
         if year:
             queryset = queryset.filter(year=year)
         if term:
@@ -119,6 +122,9 @@ class AdminViewSet(viewsets.ViewSet):
         status_type = request.data.get('status')
         
         queryset = SchoolFee.objects.all()
+        if hasattr(request.user, 'school') and request.user.school:
+            queryset = queryset.filter(school=request.user.school)
+            
         if year:
             queryset = queryset.filter(year=year)
         if status_type:
@@ -182,9 +188,17 @@ class SchoolViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'registration_number', 'email']
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == Role.SUPERUSER:
+            return School.objects.all()
+        elif hasattr(user, 'school') and user.school:
+            return School.objects.filter(id=user.school.id)
+        return School.objects.none()
+
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAdmin()]
+            return [IsSuperUser()]
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
@@ -196,7 +210,7 @@ class SchoolViewSet(viewsets.ModelViewSet):
         school = self.get_object()
         stats = {
             'total_teachers': Teacher.objects.filter(school=school).count(),
-            'total_students': Student.objects.filter(parent__school=school).count(),
+            'total_students': Student.objects.filter(school=school).count(),
             'total_parents': User.objects.filter(school=school, role=Role.PARENT).count(),
             'active_users': User.objects.filter(school=school, is_active=True).count()
         }
@@ -1639,3 +1653,78 @@ class PasswordResetConfirmView(APIView):
                 {"error": "Invalid reset token"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+# Create a custom permission for superuser
+class IsSuperUser(IsAuthenticated):
+    """
+    Allows access only to super users.
+    """
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.role == Role.SUPERUSER)
+
+class SuperUserViewSet(viewsets.ViewSet):
+    """ViewSet for superuser operations"""
+    permission_classes = [IsSuperUser]
+    
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        """Get superuser dashboard statistics"""
+        school_count = School.objects.count()
+        users_count = User.objects.count()
+        teachers_count = Teacher.objects.count()
+        students_count = Student.objects.count()
+        
+        return Response({
+            'school_count': school_count,
+            'users_count': users_count,
+            'teachers_count': teachers_count,
+            'students_count': students_count
+        })
+    
+    @action(detail=False, methods=['post'])
+    def create_school(self, request):
+        """Create a new school"""
+        serializer = SchoolSerializer(data=request.data)
+        if serializer.is_valid():
+            school = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'])
+    def create_admin_for_school(self, request, pk=None):
+        """Create an admin user for a school"""
+        try:
+            school = School.objects.get(pk=pk)
+            data = request.data.copy()
+            data['role'] = Role.ADMIN
+            data['school'] = school.id
+            
+            serializer = RegisterSerializer(data=data)
+            if serializer.is_valid():
+                user = serializer.save()
+                user.school = school
+                user.save()
+                return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except School.DoesNotExist:
+            return Response({'error': 'School not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['get'])
+    def school_statistics(self, request, pk=None):
+        """Get statistics for a specific school"""
+        try:
+            school = School.objects.get(pk=pk)
+            admin_count = User.objects.filter(school=school, role=Role.ADMIN).count()
+            teacher_count = Teacher.objects.filter(school=school).count()
+            student_count = Student.objects.filter(school=school).count()
+            parent_count = User.objects.filter(school=school, role=Role.PARENT).count()
+            
+            return Response({
+                'school_name': school.name,
+                'admin_count': admin_count,
+                'teacher_count': teacher_count,
+                'student_count': student_count,
+                'parent_count': parent_count
+            })
+        except School.DoesNotExist:
+            return Response({'error': 'School not found'}, status=status.HTTP_404_NOT_FOUND)
