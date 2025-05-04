@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leaveApplicationService, type LeaveApplication } from '@/services/leaveApplicationService';
 import toast from 'react-hot-toast';
-import { 
+import {
   ClipboardDocumentCheckIcon, 
   CheckCircleIcon, 
   XCircleIcon,
@@ -283,8 +283,8 @@ export default function LeaveApplicationsPage() {
           >
             Rejected ({rejectedCount})
           </button>
-        </div>
-      </div>
+                </div>
+              </div>
 
       {filteredApplications.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg shadow">
@@ -299,14 +299,14 @@ export default function LeaveApplicationsPage() {
               ? `There are no ${statusFilter} leave applications at this time.` 
               : 'No leave applications have been submitted yet.'}
           </p>
-        </div>
+              </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-3 text-left">
-                  <button 
+                  <button
                     onClick={toggleSelectAll}
                     className="rounded p-1 hover:bg-gray-200 transition-colors"
                     title={selectedIds.size === filteredApplications.length ? "Deselect all" : "Select all"}
@@ -374,13 +374,13 @@ export default function LeaveApplicationsPage() {
                     <div className="flex justify-end gap-2">
                       {application.status === 'pending' && (
                         <>
-                          <button
+                  <button
                             onClick={() => approveMutation.mutate(application.id)}
                             className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-xs rounded-md hover:bg-green-700"
-                          >
+                  >
                             <CheckCircleIcon className="h-4 w-4 mr-1" />
-                            Approve
-                          </button>
+                    Approve
+                  </button>
                           <button
                             onClick={() => rejectMutation.mutate(application.id)}
                             className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
@@ -397,14 +397,14 @@ export default function LeaveApplicationsPage() {
                         <TrashIcon className="h-4 w-4 mr-1" />
                         Delete
                       </button>
-                    </div>
+            </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+          </div>
+        )}
     </div>
   );
 } 

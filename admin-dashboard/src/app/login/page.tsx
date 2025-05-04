@@ -20,7 +20,6 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       await login(data.email, data.password);
-      toast.success('Welcome back, Administrator');
     } catch (err) {
       if (err instanceof Error) {
         toast.error(err.message);
