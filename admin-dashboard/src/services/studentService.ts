@@ -35,10 +35,22 @@ export interface ApiErrorResponse {
 
 export const studentService = {
   // Main CRUD operations
-  getStudents: async () => {
+  getStudents: async (): Promise<PaginatedResponse<Student>> => {
     try {
       const response = await apiClient.get<PaginatedResponse<Student>>('/api/students/');
-      return response.data;
+      // Deep check to make sure response has the right structure
+      if (response?.data && typeof response.data === 'object') {
+        // Ensure results is always an array
+        const results = Array.isArray(response.data.results) ? response.data.results : [];
+        return {
+          count: response.data.count || 0,
+          next: response.data.next || null,
+          previous: response.data.previous || null,
+          results
+        };
+      }
+      console.error('Malformed response in getStudents:', response);
+      return { count: 0, next: null, previous: null, results: [] };
     } catch (error) {
       console.error('Error fetching students:', error);
       // Return an empty paginated response instead of undefined

@@ -21,12 +21,13 @@ export default function SchoolFeesPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<SchoolFeeFormData>();
 
   // Fetch all students
-  const { data: students = [], isLoading: isLoadingStudents } = useQuery({
+  const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
     queryKey: ['students'],
     queryFn: async () => {
       try {
         const response = await studentService.getStudents();
-        return response.results || [];
+        // Always return an array, even if the response is malformed
+        return Array.isArray(response?.results) ? response.results : [];
       } catch (error) {
         console.error('Error fetching students in school-fees page:', error);
         return [];
@@ -35,7 +36,7 @@ export default function SchoolFeesPage() {
   });
 
   // Fetch fee records for selected student
-  const { data: feeRecords = [], isLoading: isLoadingFees } = useQuery({
+  const { data: feeRecords = [], isLoading: isLoadingFees } = useQuery<SchoolFee[]>({
     queryKey: ['feeRecords', selectedStudent?.id],
     queryFn: async () => {
       try {

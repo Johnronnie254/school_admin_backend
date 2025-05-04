@@ -1,9 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { teacherService } from '@/services/teacherService';
-import { studentService } from '@/services/studentService';
-import { parentService } from '@/services/parentService';
+import { teacherService, Teacher } from '@/services/teacherService';
+import { studentService, Student } from '@/services/studentService';
+import { parentService, Parent } from '@/services/parentService';
 import { useAuth } from '@/hooks/useAuth';
 import {
   UserGroupIcon,
@@ -17,12 +17,13 @@ import Link from 'next/link';
 export default function DashboardPage() {
   const { logout } = useAuth();
   
-  const { data: teachersData, isLoading: isLoadingTeachers } = useQuery({
+  const { data: teachersData, isLoading: isLoadingTeachers } = useQuery<Teacher[]>({
     queryKey: ['teachers'],
     queryFn: async () => {
       try {
         const response = await teacherService.getTeachers();
-        return response.results;
+        // Always return an array, even if the response is malformed
+        return Array.isArray(response?.results) ? response.results : [];
       } catch (error) {
         console.error('Error fetching teachers in dashboard:', error);
         return [];
@@ -30,12 +31,13 @@ export default function DashboardPage() {
     },
   });
 
-  const { data: studentsData, isLoading: isLoadingStudents } = useQuery({
+  const { data: studentsData, isLoading: isLoadingStudents } = useQuery<Student[]>({
     queryKey: ['students'],
     queryFn: async () => {
       try {
         const response = await studentService.getStudents();
-        return response.results;
+        // Always return an array, even if the response is malformed
+        return Array.isArray(response?.results) ? response.results : [];
       } catch (error) {
         console.error('Error fetching students in dashboard:', error);
         return [];
@@ -43,12 +45,13 @@ export default function DashboardPage() {
     },
   });
 
-  const { data: parentsData, isLoading: isLoadingParents } = useQuery({
+  const { data: parentsData, isLoading: isLoadingParents } = useQuery<Parent[]>({
     queryKey: ['parents'],
     queryFn: async () => {
       try {
         const response = await parentService.getParents();
-        return response.results;
+        // Always return an array, even if the response is malformed
+        return Array.isArray(response?.results) ? response.results : [];
       } catch (error) {
         console.error('Error fetching parents in dashboard:', error);
         return [];
@@ -62,7 +65,7 @@ export default function DashboardPage() {
   const parents = parentsData || [];
 
   // Safe count function that converts NaN or undefined to 0
-  const safeCount = (arr) => Array.isArray(arr) ? arr.length : 0;
+  const safeCount = (arr: Array<unknown> | undefined | null): number => Array.isArray(arr) ? arr.length : 0;
   const teacherCount = safeCount(teachers);
   const studentCount = safeCount(students);
   const parentCount = safeCount(parents);

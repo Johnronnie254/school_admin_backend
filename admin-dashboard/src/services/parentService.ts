@@ -17,12 +17,25 @@ export interface ParentFormData {
 }
 
 export const parentService = {
-  getParents: async () => {
+  getParents: async (): Promise<PaginatedResponse<Parent>> => {
     try {
       console.log('Fetching parents...');
       const response = await apiClient.get<PaginatedResponse<Parent>>('/api/parents/');
       console.log('Parent service response:', response.data);
-      return response.data;
+      
+      // Deep check to make sure response has the right structure
+      if (response?.data && typeof response.data === 'object') {
+        // Ensure results is always an array
+        const results = Array.isArray(response.data.results) ? response.data.results : [];
+        return {
+          count: response.data.count || 0,
+          next: response.data.next || null,
+          previous: response.data.previous || null,
+          results
+        };
+      }
+      console.error('Malformed response in getParents:', response);
+      return { count: 0, next: null, previous: null, results: [] };
     } catch (error) {
       console.error('Error fetching parents:', error);
       // Return an empty paginated response instead of undefined
