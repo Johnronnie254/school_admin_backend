@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isSuperuser: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
@@ -31,6 +32,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Computed property for superuser role
+  const isSuperuser = user?.role === 'superuser';
 
   useEffect(() => {
     const initAuth = async () => {
@@ -58,7 +62,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authService.login({ email, password });
       setUser(response.user);
       toast.success('Login successful');
-      router.push('/dashboard');
+      
+      // Check user role and redirect accordingly
+      if (response.user.role === 'superuser') {
+        router.push('/superuser');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error) {
       const apiError = error as ApiError;
       toast.error(apiError.message || 'Login failed');
@@ -89,7 +99,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authService.register(data);
       setUser(response.user);
       toast.success('Registration successful');
-      router.push('/dashboard');
+      
+      // Check user role for proper redirection after registration
+      if (response.user.role === 'superuser') {
+        router.push('/superuser');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error) {
       const apiError = error as ApiError;
       toast.error(apiError.message || 'Registration failed');
@@ -146,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     loading,
+    isSuperuser,
     login,
     logout,
     register,
