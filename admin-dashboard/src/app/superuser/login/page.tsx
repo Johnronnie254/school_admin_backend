@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 
 interface LoginForm {
   email: string;
@@ -16,16 +15,12 @@ export default function SuperuserLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
   const { login } = useAuth();
-  const router = useRouter();
 
   const onSubmit = async (data: LoginForm) => {
     try {
       setIsLoading(true);
-      
       await login(data.email, data.password);
-      
       // Let AuthContext handle the redirection based on role
-      // No need to duplicate redirection logic here
     } catch (err) {
       if (err instanceof Error) {
         toast.error(err.message);

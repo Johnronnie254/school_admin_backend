@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import shopService, { Product, CreateProductData } from '@/services/shopService';
 import { Dialog } from '@/components/ui/dialog';
+import Image from 'next/image';
 
 export default function ShopPage() {
   const [isOpen, setIsOpen] = useState(false);
@@ -251,10 +252,12 @@ export default function ShopPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {product.image ? (
-                      <img 
+                      <Image 
                         src={product.image} 
                         alt={product.name} 
-                        className="h-10 w-10 rounded-full object-cover"
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover"
                       />
                     ) : (
                       <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
@@ -406,9 +409,11 @@ export default function ShopPage() {
                     {/* Image Preview */}
                     <div className="w-32 h-32 border rounded-md overflow-hidden flex items-center justify-center bg-gray-50">
                       {previewUrl ? (
-                        <img 
+                        <Image 
                           src={previewUrl} 
                           alt="Product preview" 
+                          width={128}
+                          height={128}
                           className="object-cover w-full h-full"
                         />
                       ) : (

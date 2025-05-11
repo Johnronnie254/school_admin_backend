@@ -37,6 +37,16 @@ export interface AdminUser {
   role: string;
 }
 
+export interface AdminUserResponse {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const superuserService = {
   getDashboardStats: async (): Promise<SuperuserStats> => {
     const response = await apiClient.get('/api/superuser/dashboard/');
@@ -72,8 +82,8 @@ export const superuserService = {
     return response.data;
   },
 
-  createAdminForSchool: async (schoolId: string, adminData: AdminUser): Promise<any> => {
-    const response = await apiClient.post(`/api/superuser/${schoolId}/create_admin_for_school/`, adminData);
+  createAdminForSchool: async (schoolId: string, adminData: AdminUser): Promise<AdminUserResponse> => {
+    const response = await apiClient.post<AdminUserResponse>(`/api/superuser/${schoolId}/create_admin_for_school/`, adminData);
     return response.data;
   }
 }; 
