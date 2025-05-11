@@ -146,25 +146,32 @@ export default function UsersPage() {
         {schools.map((school) => {
           const stats = schoolStats[school.id];
           return (
-            <div key={school.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div key={school.id} className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300">
               <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">{school.name}</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-black">{school.name}</h2>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    school.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {school.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
                 
                 <div className="space-y-4">
                   {/* Admins Section */}
-                  <div className="border-t pt-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <UserIcon className="h-5 w-5 text-blue-600" />
-                        <h3 className="font-medium">Administrators</h3>
+                        <h3 className="font-semibold text-black">Administrators</h3>
                       </div>
-                      <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
                         {stats?.admin_count || 0}
                       </span>
                     </div>
                     <button
                       onClick={() => handleAddAdmin(school)}
-                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
+                      className="w-full mt-2 flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-800 bg-white border border-blue-200 rounded-md py-1.5 transition-colors"
                     >
                       <PlusIcon className="h-4 w-4" />
                       Add Administrator
@@ -172,26 +179,26 @@ export default function UsersPage() {
                   </div>
 
                   {/* Teachers Section */}
-                  <div className="border-t pt-4">
+                  <div className="bg-green-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <AcademicCapIcon className="h-5 w-5 text-green-600" />
-                        <h3 className="font-medium">Teachers</h3>
+                        <h3 className="font-semibold text-black">Teachers</h3>
                       </div>
-                      <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
+                      <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
                         {stats?.teacher_count || 0}
                       </span>
                     </div>
                   </div>
 
                   {/* Parents Section */}
-                  <div className="border-t pt-4">
+                  <div className="bg-purple-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <UsersIcon className="h-5 w-5 text-purple-600" />
-                        <h3 className="font-medium">Parents</h3>
+                        <h3 className="font-semibold text-black">Parents</h3>
                       </div>
-                      <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                      <span className="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-medium">
                         {stats?.parent_count || 0}
                       </span>
                     </div>

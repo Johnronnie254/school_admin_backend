@@ -92,7 +92,7 @@ export default function SuperuserPage() {
       </div>
 
       <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Welcome to the Superuser Dashboard</h2>
+        <h2 className="text-lg font-semibold text-black mb-4">Welcome to the Superuser Dashboard</h2>
         <p className="text-gray-600">
           As a superuser, you have access to manage all aspects of the system:
         </p>
