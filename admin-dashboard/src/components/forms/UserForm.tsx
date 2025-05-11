@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { superuserService } from '@/services/superuserService';
 import type { User } from '@/services/superuserService';
 
 interface UserFormProps {
-  user?: User | null;
   onSubmit: (data: Partial<User>) => Promise<void>;
   onCancel: () => void;
 }
 
-export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
+export default function UserForm({ onSubmit, onCancel }: UserFormProps) {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -24,18 +23,6 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
     queryKey: ['schools'],
     queryFn: superuserService.getSchools,
   });
-
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        role: user.role,
-        school_id: user.school?.id || '',
-      });
-    }
-  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +37,7 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="first_name" className="block text-sm font-medium text-black">
           First Name
         </label>
         <input
@@ -60,12 +47,12 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
           required
           value={formData.first_name}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
         />
       </div>
 
       <div>
-        <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="last_name" className="block text-sm font-medium text-black">
           Last Name
         </label>
         <input
@@ -75,12 +62,12 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
           required
           value={formData.last_name}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
         />
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="email" className="block text-sm font-medium text-black">
           Email
         </label>
         <input
@@ -90,12 +77,12 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
           required
           value={formData.email}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
         />
       </div>
 
       <div>
-        <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="role" className="block text-sm font-medium text-black">
           Role
         </label>
         <select
@@ -104,7 +91,7 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
           required
           value={formData.role}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
         >
           <option value="admin">Admin</option>
           <option value="teacher">Teacher</option>
@@ -113,7 +100,7 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
       </div>
 
       <div>
-        <label htmlFor="school_id" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="school_id" className="block text-sm font-medium text-black">
           School
         </label>
         <select
@@ -122,7 +109,7 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
           required
           value={formData.school_id}
           onChange={handleChange}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
         >
           <option value="">Select a school</option>
           {schools?.map(school => (
@@ -137,7 +124,7 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+          className="px-4 py-2 text-sm font-medium text-black bg-gray-100 hover:bg-gray-200 rounded-md"
         >
           Cancel
         </button>
@@ -145,7 +132,7 @@ export default function UserForm({ user, onSubmit, onCancel }: UserFormProps) {
           type="submit"
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
         >
-          {user ? 'Update' : 'Create'} User
+          Create User
         </button>
       </div>
     </form>

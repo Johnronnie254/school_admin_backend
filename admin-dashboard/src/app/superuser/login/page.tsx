@@ -31,7 +31,7 @@ export default function SuperuserLoginPage() {
     
     if (isSuperuser && user && token) {
       console.log('✅ Already logged in as superuser, redirecting to dashboard');
-      router.push('/superuser/dashboard');
+      router.push('/superuser');
     }
   }, [router]);
 
@@ -114,7 +114,7 @@ export default function SuperuserLoginPage() {
             
             // Force a delay to ensure localStorage and cookies are set
             setTimeout(() => {
-              router.push('/superuser/dashboard');
+              router.push('/superuser');
             }, 300);
           } catch (testError) {
             console.error('❌ Test API call failed:', testError);
@@ -141,54 +141,54 @@ export default function SuperuserLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Superuser Login
+            Superuser Login
         </h1>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
+            <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              {...register('email', {
-                required: 'Email is required',
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Invalid email address',
-                },
-              })}
-              type="email"
+                Email
+              </label>
+              <input
+                {...register('email', {
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Invalid email address',
+                  },
+                })}
+                type="email"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter superuser email"
               defaultValue={SUPERUSER_EMAIL} // Pre-fill for easy testing
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
           
-          <div>
+            <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              {...register('password', {
+                Password
+              </label>
+              <input
+                {...register('password', {
                 required: 'Password is required'
-              })}
-              type="password"
+                })}
+                type="password"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter superuser password"
               defaultValue={SUPERUSER_PASSWORD} // Pre-fill for easy testing
-            />
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.password.message}
-              </p>
-            )}
+              />
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.password.message}
+                </p>
+              )}
           </div>
-          
+
           <div>
             <button
               type="submit"

@@ -1,74 +1,40 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { School } from '@/services/superuserService';
 
 interface SchoolFormProps {
-  school?: School | null;
-  onSubmit: (data: Partial<School>) => Promise<void>;
+  initialData?: School | null;
+  onSubmit: (data: Partial<School>) => void;
   onCancel: () => void;
 }
 
-export default function SchoolForm({ school, onSubmit, onCancel }: SchoolFormProps) {
-  const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    phone_number: '',
-    email: '',
-    website: '',
-    registration_number: '',
-    is_active: true
+export default function SchoolForm({ initialData, onSubmit, onCancel }: SchoolFormProps) {
+  const { register, handleSubmit, formState: { errors } } = useForm<Partial<School>>({
+    defaultValues: initialData || {
+      name: '',
+      address: '',
+      contact_email: '',
+      contact_phone: '',
+      is_active: true,
+    },
   });
 
-  useEffect(() => {
-    if (school) {
-      // Pre-fill form with school data when editing
-      setFormData({
-        name: school.name,
-        address: school.address,
-        phone_number: school.phone_number,
-        email: school.email,
-        website: school.website || '',
-        registration_number: school.registration_number,
-        is_active: school.is_active
-      });
-    }
-  }, [school]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target as HTMLInputElement;
-    
-    // Handle checkbox separately
-    if (type === 'checkbox') {
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: (e.target as HTMLInputElement).checked 
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit(formData);
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
           School Name
         </label>
         <input
           type="text"
-          name="name"
           id="name"
-          value={formData.name}
-          onChange={handleChange}
-          required
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          {...register('name', { required: 'School name is required' })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         />
+        {errors.name && (
+          <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+        )}
       </div>
 
       <div>
@@ -76,106 +42,77 @@ export default function SchoolForm({ school, onSubmit, onCancel }: SchoolFormPro
           Address
         </label>
         <textarea
-          name="address"
           id="address"
-          value={formData.address}
-          onChange={handleChange}
-          required
+          {...register('address', { required: 'Address is required' })}
           rows={3}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
         />
+        {errors.address && (
+          <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700">
-            Phone Number
-          </label>
-          <input
-            type="text"
-            name="phone_number"
-            id="phone_number"
-            value={formData.phone_number}
-            onChange={handleChange}
-            required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
-          <input
-            type="email"
-            name="email"
-            id="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
-        </div>
+      <div>
+        <label htmlFor="contact_email" className="block text-sm font-medium text-gray-700">
+          Contact Email
+        </label>
+        <input
+          type="email"
+          id="contact_email"
+          {...register('contact_email', {
+            required: 'Contact email is required',
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: 'Invalid email address',
+            },
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+        />
+        {errors.contact_email && (
+          <p className="mt-1 text-sm text-red-600">{errors.contact_email.message}</p>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="website" className="block text-sm font-medium text-gray-700">
-            Website (Optional)
-          </label>
-          <input
-            type="url"
-            name="website"
-            id="website"
-            value={formData.website}
-            onChange={handleChange}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="registration_number" className="block text-sm font-medium text-gray-700">
-            Registration Number
-          </label>
-          <input
-            type="text"
-            name="registration_number"
-            id="registration_number"
-            value={formData.registration_number}
-            onChange={handleChange}
-            required
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
-        </div>
+      <div>
+        <label htmlFor="contact_phone" className="block text-sm font-medium text-gray-700">
+          Contact Phone
+        </label>
+        <input
+          type="tel"
+          id="contact_phone"
+          {...register('contact_phone', { required: 'Contact phone is required' })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+        />
+        {errors.contact_phone && (
+          <p className="mt-1 text-sm text-red-600">{errors.contact_phone.message}</p>
+        )}
       </div>
 
       <div className="flex items-center">
         <input
           type="checkbox"
-          name="is_active"
           id="is_active"
-          checked={formData.is_active}
-          onChange={handleChange}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          {...register('is_active')}
+          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
           Active
         </label>
       </div>
 
-      <div className="pt-5 flex justify-end space-x-3">
+      <div className="flex justify-end space-x-3 pt-4">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-          {school ? 'Update' : 'Create'} School
+          {initialData ? 'Update School' : 'Create School'}
         </button>
       </div>
     </form>
