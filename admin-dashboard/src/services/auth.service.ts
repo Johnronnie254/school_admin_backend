@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api';
 import { AuthResponse, LoginData, RegisterData, ResetPasswordData, ConfirmResetData, User } from '@/types';
+import axios from 'axios';
 
 class AuthService {
   async login(data: LoginData): Promise<AuthResponse> {
@@ -139,39 +140,68 @@ class AuthService {
       const refresh = localStorage.getItem('refresh_token');
       if (!refresh) {
         console.log('❌ No refresh token found in localStorage');
+        this.clearTokens();
         return null;
       }
-      console.log('📤 Sending refresh token request');
-      const response = await apiClient.post<{ access: string }>('auth/token/refresh/', { refresh });
+      console.log('📤 Sending refresh token request with refresh token');
+      
+      // Use a direct axios call instead of apiClient to avoid interceptors
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://educitebackend.co.ke'}/api/auth/token/refresh/`, 
+        { refresh },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
       console.log('📥 Refresh token response:', response.data);
       
+      // Handle different response formats
+      let accessToken = null;
+      
       if (response.data.access) {
+        // Standard JWT refresh format
+        accessToken = response.data.access;
+      } else if (response.data.tokens?.access) {
+        // Our custom API format
+        accessToken = response.data.tokens.access;
+      }
+      
+      if (accessToken) {
         console.log('✅ Received new access token');
-        localStorage.setItem('access_token', response.data.access);
+        localStorage.setItem('access_token', accessToken);
         console.log('🔍 Getting user info with new token');
         const user = await this.getCurrentUser();
         
         if (!user) {
-          console.log('❌ Could not get user info with new token');
+          console.log('❌ User info fetch failed after token refresh');
           this.clearTokens();
           return null;
         }
         
-        console.log('✅ Successfully refreshed token and got user info');
         return {
           tokens: {
-            access: response.data.access,
+            access: accessToken,
             refresh: refresh
           },
           user
         };
+      } else {
+        console.log('❌ Refresh token response missing access token');
+        this.clearTokens();
+        return null;
+      }
+    } catch (error: any) {
+      console.error('❌ Error refreshing token:', error);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('📊 Error status:', error.response.status);
+        console.error('📝 Error data:', error.response.data);
       }
       
-      console.log('❌ No access token in refresh response');
-      return null;
-    } catch (error) {
-      console.error('❌ Error refreshing token:', error);
-      console.log('🧹 Clearing tokens due to refresh error');
       this.clearTokens();
       return null;
     }
