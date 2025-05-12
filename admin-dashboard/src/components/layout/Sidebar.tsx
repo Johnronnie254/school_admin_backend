@@ -1,5 +1,6 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   BuildingLibraryIcon,
   UserGroupIcon,
@@ -39,10 +40,12 @@ export default function Sidebar() {
       <div className="flex flex-col h-full">
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <img
-              className="h-8 w-auto"
+            <Image
               src="/logo.png"
-              alt="Your Company"
+              alt="Logo"
+              width={40}
+              height={40}
+              className="h-10 w-auto"
             />
           </div>
           <nav className="mt-8 flex-1 px-2 space-y-1">
@@ -84,10 +87,12 @@ export default function Sidebar() {
         <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
           <div className="flex items-center">
             <div>
-              <img
-                className="inline-block h-9 w-9 rounded-full"
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                alt=""
+              <Image
+                src="/user-avatar.png"
+                alt="User avatar"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full"
               />
             </div>
             <div className="ml-3">

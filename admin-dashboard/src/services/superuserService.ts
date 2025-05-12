@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 export interface School {
   id: string;
@@ -31,10 +31,11 @@ export interface SchoolStats {
 }
 
 export interface AdminUser {
-  email: string;
-  password: string;
+  id: string;
   first_name: string;
   last_name: string;
+  email: string;
+  phone_number: string;
   role: string;
 }
 

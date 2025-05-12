@@ -112,18 +112,6 @@ export default function UsersPage() {
     },
   });
 
-  // Delete admin mutation
-  const deleteAdminMutation = useMutation({
-    mutationFn: (userId: string) => superuserService.deleteUser(userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schoolStats'] });
-      toast.success('Admin deleted successfully');
-    },
-    onError: () => {
-      toast.error('Failed to delete admin');
-    },
-  });
-
   const handleAddAdmin = (school: School) => {
     setSelectedSchool(school);
     setIsModalOpen(true);

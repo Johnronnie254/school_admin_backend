@@ -128,7 +128,7 @@ class AuthService {
         console.error('❌ Error decoding JWT token:', error);
         return null;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Error getting current user:', error);
       return null;
     }

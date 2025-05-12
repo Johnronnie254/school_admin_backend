@@ -22,66 +22,72 @@ export default function SuperuserLoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       setIsLoading(true);
-      
-      if (data.email === SUPERUSER_EMAIL && data.password === SUPERUSER_PASSWORD) {
-        const loginResponse = await axios.post(
-          'https://educitebackend.co.ke/api/auth/login/', 
-          { email: data.email, password: data.password },
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-        
-        if (!loginResponse.data.tokens?.access || !loginResponse.data.tokens?.refresh) {
-          toast.error('Authentication failed');
-          return;
-        }
-        
-        const token = loginResponse.data.tokens.access;
-        const refreshToken = loginResponse.data.tokens.refresh;
-        
-        const superuserData = {
-          id: 'superuser-1',
-          email: SUPERUSER_EMAIL,
-          name: 'Super User',
-          role: 'superuser',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        // Clear any existing data first
-        localStorage.clear();
-        
-        // Store superuser data
-        localStorage.setItem('user', JSON.stringify(superuserData));
-        localStorage.setItem('is_superuser', 'true');
-        localStorage.setItem('access_token', token);
-        localStorage.setItem('refresh_token', refreshToken);
-        
-        // Set cookies for middleware authentication
-        const cookieOptions = 'path=/; max-age=86400; samesite=lax';
-        document.cookie = `is_superuser=true; ${cookieOptions}`;
-        document.cookie = `access_token=${token}; ${cookieOptions}`;
-        document.cookie = `refresh_token=${refreshToken}; ${cookieOptions}`;
-        
-        // Verify the connection works
-        const testResult = await superuserService.testAuthCall();
-        
-        if (testResult) {
-          toast.success('Login successful');
-          // Force a hard reload to the superuser dashboard
-          window.location.href = '/superuser';
-        } else {
-          toast.error('Authentication failed');
-          localStorage.clear();
-        }
+      await login(data.email, data.password);
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
       } else {
-        toast.error('Invalid credentials');
+        toast.error('An unexpected error occurred');
       }
-    } catch (err) {
-      toast.error('An error occurred');
-      localStorage.clear();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    if (email === SUPERUSER_EMAIL && password === SUPERUSER_PASSWORD) {
+      const loginResponse = await axios.post(
+        'https://educitebackend.co.ke/api/auth/login/', 
+        { email: email, password: password },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+      
+      if (!loginResponse.data.tokens?.access || !loginResponse.data.tokens?.refresh) {
+        toast.error('Authentication failed');
+        return;
+      }
+      
+      const token = loginResponse.data.tokens.access;
+      const refreshToken = loginResponse.data.tokens.refresh;
+      
+      const superuserData = {
+        id: 'superuser-1',
+        email: SUPERUSER_EMAIL,
+        name: 'Super User',
+        role: 'superuser',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Clear any existing data first
+      localStorage.clear();
+      
+      // Store superuser data
+      localStorage.setItem('user', JSON.stringify(superuserData));
+      localStorage.setItem('is_superuser', 'true');
+      localStorage.setItem('access_token', token);
+      localStorage.setItem('refresh_token', refreshToken);
+      
+      // Set cookies for middleware authentication
+      const cookieOptions = 'path=/; max-age=86400; samesite=lax';
+      document.cookie = `is_superuser=true; ${cookieOptions}`;
+      document.cookie = `access_token=${token}; ${cookieOptions}`;
+      document.cookie = `refresh_token=${refreshToken}; ${cookieOptions}`;
+      
+      // Verify the connection works
+      const testResult = await superuserService.testAuthCall();
+      
+      if (testResult) {
+        toast.success('Login successful');
+        // Force a hard reload to the superuser dashboard
+        window.location.href = '/superuser';
+      } else {
+        toast.error('Authentication failed');
+        localStorage.clear();
+      }
+    } else {
+      toast.error('Invalid credentials');
     }
   };
 
