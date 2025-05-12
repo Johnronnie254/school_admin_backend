@@ -11,10 +11,6 @@ interface LoginForm {
   password: string;
 }
 
-// Hardcoded superuser credentials matching Django backend's ensure_superuser.py
-const SUPERUSER_EMAIL = 'educite@gmail.com';
-const SUPERUSER_PASSWORD = 'educite@gmail.com';
-
 export default function SuperuserLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
@@ -35,59 +31,55 @@ export default function SuperuserLoginPage() {
   };
 
   const login = async (email: string, password: string) => {
-    if (email === SUPERUSER_EMAIL && password === SUPERUSER_PASSWORD) {
-      const loginResponse = await axios.post(
-        'https://educitebackend.co.ke/api/auth/login/', 
-        { email: email, password: password },
-        { headers: { 'Content-Type': 'application/json' } }
-      );
-      
-      if (!loginResponse.data.tokens?.access || !loginResponse.data.tokens?.refresh) {
-        toast.error('Authentication failed');
-        return;
-      }
-      
-      const token = loginResponse.data.tokens.access;
-      const refreshToken = loginResponse.data.tokens.refresh;
-      
-      const superuserData = {
-        id: 'superuser-1',
-        email: SUPERUSER_EMAIL,
-        name: 'Super User',
-        role: 'superuser',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      // Clear any existing data first
-      localStorage.clear();
-      
-      // Store superuser data
-      localStorage.setItem('user', JSON.stringify(superuserData));
-      localStorage.setItem('is_superuser', 'true');
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('refresh_token', refreshToken);
-      
-      // Set cookies for middleware authentication
-      const cookieOptions = 'path=/; max-age=86400; samesite=lax';
-      document.cookie = `is_superuser=true; ${cookieOptions}`;
-      document.cookie = `access_token=${token}; ${cookieOptions}`;
-      document.cookie = `refresh_token=${refreshToken}; ${cookieOptions}`;
-      
-      // Verify the connection works
-      const testResult = await superuserService.testAuthCall();
-      
-      if (testResult) {
-        toast.success('Login successful');
-        // Force a hard reload to the superuser dashboard
-        window.location.href = '/superuser';
-      } else {
-        toast.error('Authentication failed');
-        localStorage.clear();
-      }
+    const loginResponse = await axios.post(
+      'https://educitebackend.co.ke/api/auth/login/', 
+      { email: email, password: password },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    
+    if (!loginResponse.data.tokens?.access || !loginResponse.data.tokens?.refresh) {
+      toast.error('Authentication failed');
+      return;
+    }
+    
+    const token = loginResponse.data.tokens.access;
+    const refreshToken = loginResponse.data.tokens.refresh;
+    
+    const superuserData = {
+      id: 'superuser-1',
+      email: email,
+      name: 'Super User',
+      role: 'superuser',
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    // Clear any existing data first
+    localStorage.clear();
+    
+    // Store superuser data
+    localStorage.setItem('user', JSON.stringify(superuserData));
+    localStorage.setItem('is_superuser', 'true');
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('refresh_token', refreshToken);
+    
+    // Set cookies for middleware authentication
+    const cookieOptions = 'path=/; max-age=86400; samesite=lax';
+    document.cookie = `is_superuser=true; ${cookieOptions}`;
+    document.cookie = `access_token=${token}; ${cookieOptions}`;
+    document.cookie = `refresh_token=${refreshToken}; ${cookieOptions}`;
+    
+    // Verify the connection works
+    const testResult = await superuserService.testAuthCall();
+    
+    if (testResult) {
+      toast.success('Login successful');
+      // Force a hard reload to the superuser dashboard
+      window.location.href = '/superuser';
     } else {
-      toast.error('Invalid credentials');
+      toast.error('Authentication failed');
+      localStorage.clear();
     }
   };
 
@@ -98,7 +90,7 @@ export default function SuperuserLoginPage() {
           Superuser Login
         </h1>
         
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -112,9 +104,10 @@ export default function SuperuserLoginPage() {
                 },
               })}
               type="email"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter superuser email"
-              defaultValue={SUPERUSER_EMAIL}
+              id="email"
+              autoComplete="off"
+              className="w-full px-3 py-2 border border-gray-300  text-gray-700  rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter your email"
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-600">
@@ -132,9 +125,10 @@ export default function SuperuserLoginPage() {
                 required: 'Password is required'
               })}
               type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter superuser password"
-              defaultValue={SUPERUSER_PASSWORD}
+              id="password"
+              autoComplete="new-password"
+              className="w-full px-3 py-2 border text-gray-700  border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter your password"
             />
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">
