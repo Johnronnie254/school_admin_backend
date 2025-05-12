@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { superuserService } from '@/services/superuserService';
-import { School } from '@/services/superuserService';
+import { School } from '@/types/school';
+import { CreateSchoolDto } from '@/types/school';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import {
@@ -72,7 +73,7 @@ export default function SchoolsPage() {
 
   // Update school mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<School> }) =>
+    mutationFn: ({ id, data }: { id: number; data: Partial<School> }) =>
       superuserService.updateSchool(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
@@ -107,7 +108,7 @@ export default function SchoolsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteSchool = async (schoolId: string) => {
+  const handleDeleteSchool = async (schoolId: number) => {
     if (window.confirm('Are you sure you want to delete this school?')) {
       deleteMutation.mutate(schoolId);
     }
@@ -117,7 +118,7 @@ export default function SchoolsPage() {
     if (editingSchool) {
       updateMutation.mutate({ id: editingSchool.id, data });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(data as CreateSchoolDto);
     }
   };
 

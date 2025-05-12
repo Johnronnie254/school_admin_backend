@@ -1,19 +1,6 @@
 import { apiClient } from '@/lib/api';
 import axios, { AxiosError } from 'axios';
-
-export interface School {
-  id: string;
-  name: string;
-  address: string;
-  phone_number: string;
-  email: string;
-  website?: string;
-  logo?: string;
-  registration_number: string;
-  created_at: string;
-  updated_at: string;
-  is_active: boolean;
-}
+import { School, CreateSchoolDto, UpdateSchoolDto } from '@/types/school';
 
 export interface SuperuserStats {
   school_count: number;
@@ -97,26 +84,26 @@ export const superuserService = {
     }
   },
 
-  getSchool: async (id: string): Promise<School> => {
+  getSchool: async (id: number): Promise<School> => {
     const response = await apiClient.get(`schools/${id}/`);
     return response.data;
   },
 
-  createSchool: async (schoolData: Partial<School>): Promise<School> => {
+  createSchool: async (schoolData: CreateSchoolDto): Promise<School> => {
     const response = await apiClient.post('superuser/create_school/', schoolData);
     return response.data;
   },
 
-  updateSchool: async (id: string, schoolData: Partial<School>): Promise<School> => {
+  updateSchool: async (id: number, schoolData: UpdateSchoolDto): Promise<School> => {
     const response = await apiClient.put(`schools/${id}/`, schoolData);
     return response.data;
   },
 
-  deleteSchool: async (id: string): Promise<void> => {
+  deleteSchool: async (id: number): Promise<void> => {
     await apiClient.delete(`schools/${id}/`);
   },
 
-  getSchoolStats: async (schoolId: string): Promise<SchoolStats> => {
+  getSchoolStats: async (schoolId: number): Promise<SchoolStats> => {
     const response = await apiClient.get(`superuser/${schoolId}/school_statistics/`);
     return response.data;
   },
