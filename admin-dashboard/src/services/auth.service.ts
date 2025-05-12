@@ -1,6 +1,6 @@
 import { apiClient } from '@/lib/api';
 import { AuthResponse, LoginData, RegisterData, ResetPasswordData, ConfirmResetData, User } from '@/types';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 class AuthService {
   async login(data: LoginData): Promise<AuthResponse> {
@@ -193,13 +193,13 @@ class AuthService {
         this.clearTokens();
         return null;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Error refreshing token:', error);
       
       // Log detailed error information
-      if (error.response) {
-        console.error('📊 Error status:', error.response.status);
-        console.error('📝 Error data:', error.response.data);
+      if (error instanceof AxiosError) {
+        console.error('📊 Error status:', error.response?.status);
+        console.error('📝 Error data:', error.response?.data);
       }
       
       this.clearTokens();

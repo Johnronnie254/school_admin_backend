@@ -79,17 +79,17 @@ export const superuserService = {
       
       console.log('✅ Schools fetch successful:', response.status);
       return response.data.results || response.data;
-    } catch (error: any) {
-      console.error('❌ Error fetching schools:', error.message);
-      if (error.response) {
-        console.error('📊 Error status:', error.response.status);
-        console.error('📝 Error data:', error.response.data);
-      }
-      
-      // If token is invalid, clear it to force a new login
-      if (error.response?.status === 401) {
-        console.log('🔒 Clearing invalid token');
-        localStorage.removeItem('access_token');
+    } catch (error: unknown) {
+      console.error('❌ Error fetching schools:', error instanceof Error ? error.message : 'Unknown error');
+      if (error instanceof AxiosError) {
+        console.error('📊 Error status:', error.response?.status);
+        console.error('📝 Error data:', error.response?.data);
+        
+        // If token is invalid, clear it to force a new login
+        if (error.response?.status === 401) {
+          console.log('🔒 Clearing invalid token');
+          localStorage.removeItem('access_token');
+        }
       }
       
       // Return empty array on error to prevent crashes
@@ -171,11 +171,11 @@ export const superuserService = {
       
       console.log('✅ Authentication test successful:', response.status);
       return true;
-    } catch (error: any) {
-      console.error('❌ Authentication test failed:', error.message);
-      if (error.response) {
-        console.error('📊 Test call status:', error.response.status);
-        console.error('📝 Test call data:', error.response.data);
+    } catch (error: unknown) {
+      console.error('❌ Authentication test failed:', error instanceof Error ? error.message : 'Unknown error');
+      if (error instanceof AxiosError) {
+        console.error('📊 Test call status:', error.response?.status);
+        console.error('📝 Test call data:', error.response?.data);
       }
       return false;
     }
