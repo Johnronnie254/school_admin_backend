@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { superuserService, AdminUser } from '@/services/superuserService';
+import { superuserService, AdminUserResponse } from '@/services/superuserService';
 import { School } from '@/types/school';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -12,10 +12,13 @@ import {
   AcademicCapIcon,
   UserIcon,
   UsersIcon,
-  XMarkIcon
+  XMarkIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import AdminForm from '@/components/forms/AdminForm';
+import AdminListModal from '@/components/modals/AdminListModal';
 import { Dialog } from '@/components/ui/dialog';
+import { AxiosError } from 'axios';
 
 interface SchoolStats {
   admin_count: number;
@@ -24,15 +27,18 @@ interface SchoolStats {
 }
 
 interface AdminData {
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
+  password_confirmation: string;
   phone_number: string;
   role?: string;
 }
 
 export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAdminListModalOpen, setIsAdminListModalOpen] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const queryClient = useQueryClient();
@@ -64,13 +70,13 @@ export default function UsersPage() {
   }, [router]);
 
   // Fetch schools
-  const { data: schools = [], isLoading: isLoadingSchools } = useQuery({
+  const { data: schools = [], isLoading: isLoadingSchools } = useQuery<School[]>({
     queryKey: ['schools'],
     queryFn: superuserService.getSchools,
     enabled: isAuthenticated === true,
     retry: 1,
     staleTime: 30000,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   });
 
   // Fetch school statistics for each school
@@ -87,30 +93,35 @@ export default function UsersPage() {
           stats[school.id] = {
             admin_count: 0,
             teacher_count: 0,
-            parent_count: 0
+            parent_count: 0,
           };
         }
       }
       return stats;
     },
     enabled: isAuthenticated === true && schools.length > 0,
-    retry: 1
+    retry: 1,
+  });
+
+  // Fetch admins for selected school
+  const { data: selectedSchoolAdmins = [] } = useQuery<AdminUserResponse[]>({
+    queryKey: ['schoolAdmins', selectedSchool?.id],
+    queryFn: () => selectedSchool ? superuserService.getSchoolAdmins(selectedSchool.id) : Promise.resolve([]),
+    enabled: isAuthenticated === true && isAdminListModalOpen && !!selectedSchool?.id,
   });
 
   // Create admin mutation
   const createAdminMutation = useMutation({
     mutationFn: (data: { schoolId: number; adminData: AdminData }) => {
-      // Transform AdminData into AdminUser
-      const [firstName, ...lastNameParts] = data.adminData.name.split(' ');
-      const adminUser: AdminUser = {
-        id: '', // This will be assigned by the server
-        first_name: firstName,
-        last_name: lastNameParts.join(' '),
+      return superuserService.createAdminForSchool(data.schoolId, {
+        first_name: data.adminData.first_name,
+        last_name: data.adminData.last_name,
         email: data.adminData.email,
         phone_number: data.adminData.phone_number,
+        password: data.adminData.password,
+        password_confirmation: data.adminData.password_confirmation,
         role: 'admin'
-      };
-      return superuserService.createAdminForSchool(data.schoolId, adminUser);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schoolStats'] });
@@ -118,8 +129,20 @@ export default function UsersPage() {
       setIsModalOpen(false);
       setSelectedSchool(null);
     },
-    onError: () => {
-      toast.error('Failed to create admin');
+    onError: (error: AxiosError) => {
+      if (error.response?.data) {
+        // Handle validation errors
+        const errors = error.response.data as Record<string, string[]>;
+        Object.entries(errors).forEach(([field, messages]) => {
+          if (Array.isArray(messages)) {
+            messages.forEach(message => {
+              toast.error(`${field}: ${message}`);
+            });
+          }
+        });
+      } else {
+        toast.error('Failed to create admin');
+      }
     },
   });
 
@@ -128,11 +151,24 @@ export default function UsersPage() {
     setIsModalOpen(true);
   };
 
+  const handleViewAdmins = (school: School) => {
+    setSelectedSchool(school);
+    setIsAdminListModalOpen(true);
+  };
+
   const handleCreateAdmin = async (adminData: AdminData) => {
     if (!selectedSchool) return;
     createAdminMutation.mutate({
       schoolId: selectedSchool.id,
-      adminData
+      adminData: {
+        first_name: adminData.first_name,
+        last_name: adminData.last_name,
+        email: adminData.email,
+        phone_number: adminData.phone_number,
+        password: adminData.password,
+        password_confirmation: adminData.password_confirmation,
+        role: 'admin'
+      }
     });
   };
 
@@ -181,13 +217,22 @@ export default function UsersPage() {
                         {stats?.admin_count || 0}
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleAddAdmin(school)}
-                      className="w-full mt-2 flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-800 bg-white border border-blue-200 rounded-md py-1.5 transition-colors"
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                      Add Administrator
-                    </button>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => handleViewAdmins(school)}
+                        className="flex-1 flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-800 bg-white border border-blue-200 rounded-md py-1.5 transition-colors"
+                      >
+                        <ChevronRightIcon className="h-4 w-4" />
+                        View Admins
+                      </button>
+                      <button
+                        onClick={() => handleAddAdmin(school)}
+                        className="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-800 bg-white border border-blue-200 rounded-md py-1.5 px-3 transition-colors"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                        Add
+                      </button>
+                    </div>
                   </div>
 
                   {/* Teachers Section */}
@@ -268,6 +313,19 @@ export default function UsersPage() {
           </Dialog.Panel>
         </div>
       </Dialog>
+
+      {/* Admin List Modal */}
+      {selectedSchool && (
+        <AdminListModal
+          isOpen={isAdminListModalOpen}
+          onClose={() => {
+            setIsAdminListModalOpen(false);
+            setSelectedSchool(null);
+          }}
+          admins={selectedSchoolAdmins}
+          schoolName={selectedSchool.name}
+        />
+      )}
     </div>
   );
 } 

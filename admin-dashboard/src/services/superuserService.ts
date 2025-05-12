@@ -18,22 +18,20 @@ export interface SchoolStats {
 }
 
 export interface AdminUser {
-  id: string;
   first_name: string;
   last_name: string;
   email: string;
   phone_number: string;
+  password: string;
+  password_confirmation: string;
   role: string;
 }
 
 export interface AdminUserResponse {
-  id: string;
-  email: string;
   first_name: string;
   last_name: string;
-  role: string;
-  created_at: string;
-  updated_at: string;
+  email: string;
+  password: string;
 }
 
 export interface User {
@@ -108,8 +106,32 @@ export const superuserService = {
     return response.data;
   },
 
+  getSchoolAdmins: async (schoolId: number): Promise<AdminUserResponse[]> => {
+    try {
+      console.log('👥 Fetching school admins');
+      const response = await apiClient.get(`superuser/${schoolId}/administrators/`);
+      console.log('✅ School admins fetch successful:', response.status);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching school admins:', error);
+      if (error instanceof AxiosError) {
+        console.error('📊 Error status:', error.response?.status);
+        console.error('📝 Error data:', error.response?.data);
+      }
+      return [];
+    }
+  },
+
   createAdminForSchool: async (schoolId: number, adminData: AdminUser): Promise<AdminUserResponse> => {
-    const response = await apiClient.post<AdminUserResponse>(`superuser/${schoolId}/create_admin_for_school/`, adminData);
+    const response = await apiClient.post<AdminUserResponse>(`superuser/${schoolId}/create_admin_for_school/`, {
+      first_name: adminData.first_name,
+      last_name: adminData.last_name,
+      email: adminData.email,
+      phone_number: adminData.phone_number,
+      password: adminData.password,
+      password_confirmation: adminData.password_confirmation,
+      role: adminData.role
+    });
     return response.data;
   },
 

@@ -3,9 +3,11 @@
 import { useForm } from 'react-hook-form';
 
 interface AdminData {
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
+  password_confirmation: string;
   phone_number: string;
   role?: string;
 }
@@ -17,32 +19,55 @@ interface AdminFormProps {
 }
 
 export default function AdminForm({ initialData, onSubmit, onCancel }: AdminFormProps) {
-  const { register, handleSubmit, formState: { errors } } = useForm<AdminData>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<AdminData>({
     defaultValues: {
-      name: initialData?.name || '',
+      first_name: initialData?.first_name || '',
+      last_name: initialData?.last_name || '',
       email: initialData?.email || '',
       password: initialData?.password || '',
+      password_confirmation: initialData?.password_confirmation || '',
       phone_number: initialData?.phone_number || ''
     }
   });
 
+  const password = watch('password');
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium text-black">
-          Full Name
-        </label>
-        <input
-          type="text"
-          id="name"
-          {...register('name', { required: 'Full name is required' })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
-          placeholder="Enter full name"
-          autoComplete="off"
-        />
-        {errors.name && (
-          <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-        )}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="first_name" className="block text-sm font-medium text-black">
+            First Name
+          </label>
+          <input
+            type="text"
+            id="first_name"
+            {...register('first_name', { required: 'First name is required' })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
+            placeholder="Enter first name"
+            autoComplete="off"
+          />
+          {errors.first_name && (
+            <p className="mt-1 text-sm text-red-600">{errors.first_name.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="last_name" className="block text-sm font-medium text-black">
+            Last Name
+          </label>
+          <input
+            type="text"
+            id="last_name"
+            {...register('last_name', { required: 'Last name is required' })}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
+            placeholder="Enter last name"
+            autoComplete="off"
+          />
+          {errors.last_name && (
+            <p className="mt-1 text-sm text-red-600">{errors.last_name.message}</p>
+          )}
+        </div>
       </div>
 
       <div>
@@ -90,6 +115,27 @@ export default function AdminForm({ initialData, onSubmit, onCancel }: AdminForm
         />
         {errors.password && (
           <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor="password_confirmation" className="block text-sm font-medium text-black">
+          Confirm Password
+        </label>
+        <input
+          type="password"
+          id="password_confirmation"
+          {...register('password_confirmation', {
+            required: 'Please confirm your password',
+            validate: value => value === password || 'The passwords do not match'
+          })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
+          placeholder="••••••••"
+          autoComplete="new-password"
+          data-form-type="other"
+        />
+        {errors.password_confirmation && (
+          <p className="mt-1 text-sm text-red-600">{errors.password_confirmation.message}</p>
         )}
       </div>
 

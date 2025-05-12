@@ -1728,3 +1728,24 @@ class SuperUserViewSet(viewsets.ViewSet):
             })
         except School.DoesNotExist:
             return Response({'error': 'School not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['get'])
+    def administrators(self, request, pk=None):
+        """Get all administrators for a specific school with their login credentials"""
+        try:
+            school = School.objects.get(pk=pk)
+            admins = User.objects.filter(school=school, role=Role.ADMIN)
+            admin_data = []
+            
+            for admin in admins:
+                admin_info = {                    
+                    'first_name': admin.first_name,
+                    'last_name': admin.last_name,
+                    'email': admin.email,
+                    'password': admin.password
+                }
+                admin_data.append(admin_info)
+            
+            return Response(admin_data)
+        except School.DoesNotExist:
+            return Response({'error': 'School not found'}, status=status.HTTP_404_NOT_FOUND)
