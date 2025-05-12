@@ -11,6 +11,7 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import SchoolForm from '@/components/forms/SchoolForm';
 
@@ -215,21 +216,42 @@ export default function SchoolsPage() {
 
       {/* School Form Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl">
-            <h2 className="text-lg font-bold text-black mb-4">
-              {editingSchool ? 'Edit School' : 'Add New School'}
-            </h2>
-            <SchoolForm
-              initialData={editingSchool}
-              onSubmit={handleSubmit}
-              onCancel={() => {
-                setIsModalOpen(false);
-                setEditingSchool(null);
-              }}
-            />
+        <>
+          <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+          <div className="fixed inset-0 flex items-center justify-center z-50">
+            <div className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl mx-4">
+              <div className="absolute right-4 top-4">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingSchool(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 mb-8">
+                <div className="rounded-full bg-blue-50 p-2">
+                  <BuildingLibraryIcon className="h-6 w-6 text-blue-600" />
+                </div>
+                <h2 className="text-lg font-semibold leading-6 text-gray-900">
+                  {editingSchool ? 'Edit School' : 'Add New School'}
+                </h2>
+              </div>
+
+              <SchoolForm
+                initialData={editingSchool}
+                onSubmit={handleSubmit}
+                onCancel={() => {
+                  setIsModalOpen(false);
+                  setEditingSchool(null);
+                }}
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

@@ -12,7 +12,8 @@ import {
   TrashIcon,
   AcademicCapIcon,
   UserIcon,
-  UsersIcon
+  UsersIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import AdminForm from '@/components/forms/AdminForm';
 
@@ -212,11 +213,29 @@ export default function UsersPage() {
 
       {/* Admin Creation Modal */}
       {isModalOpen && selectedSchool && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <h2 className="text-lg font-medium mb-4">
-              Add Administrator to {selectedSchool.name}
-            </h2>
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl mx-4">
+            <div className="absolute right-4 top-4">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedSchool(null);
+                }}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 mb-8">
+              <div className="rounded-full bg-blue-50 p-2">
+                <UserIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <h2 className="text-lg font-semibold leading-6 text-gray-900">
+                Add Administrator to {selectedSchool.name}
+              </h2>
+            </div>
+
             <AdminForm
               onSubmit={handleCreateAdmin}
               onCancel={() => {
