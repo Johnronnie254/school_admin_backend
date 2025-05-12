@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { superuserService } from '@/services/superuserService';
+import { superuserService, AdminUser } from '@/services/superuserService';
 import { School } from '@/types/school';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -28,7 +28,7 @@ interface AdminData {
   email: string;
   password: string;
   phone_number: string;
-  role: string;
+  role?: string;
 }
 
 export default function UsersPage() {
@@ -99,8 +99,19 @@ export default function UsersPage() {
 
   // Create admin mutation
   const createAdminMutation = useMutation({
-    mutationFn: (data: { schoolId: string; adminData: AdminData }) =>
-      superuserService.createAdminForSchool(data.schoolId, data.adminData),
+    mutationFn: (data: { schoolId: number; adminData: AdminData }) => {
+      // Transform AdminData into AdminUser
+      const [firstName, ...lastNameParts] = data.adminData.name.split(' ');
+      const adminUser: AdminUser = {
+        id: '', // This will be assigned by the server
+        first_name: firstName,
+        last_name: lastNameParts.join(' '),
+        email: data.adminData.email,
+        phone_number: data.adminData.phone_number,
+        role: 'admin'
+      };
+      return superuserService.createAdminForSchool(data.schoolId, adminUser);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schoolStats'] });
       toast.success('Admin created successfully');
@@ -121,7 +132,7 @@ export default function UsersPage() {
     if (!selectedSchool) return;
     createAdminMutation.mutate({
       schoolId: selectedSchool.id,
-      adminData: { ...adminData, role: 'admin' }
+      adminData
     });
   };
 

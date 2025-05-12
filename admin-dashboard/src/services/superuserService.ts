@@ -108,7 +108,7 @@ export const superuserService = {
     return response.data;
   },
 
-  createAdminForSchool: async (schoolId: string, adminData: AdminUser): Promise<AdminUserResponse> => {
+  createAdminForSchool: async (schoolId: number, adminData: AdminUser): Promise<AdminUserResponse> => {
     const response = await apiClient.post<AdminUserResponse>(`superuser/${schoolId}/create_admin_for_school/`, adminData);
     return response.data;
   },
