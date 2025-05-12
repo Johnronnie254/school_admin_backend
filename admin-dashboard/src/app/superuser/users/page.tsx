@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { superuserService } from '@/services/superuserService';
-import { School } from '@/services/superuserService';
+import { School } from '@/types/school';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import {
