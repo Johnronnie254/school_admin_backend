@@ -28,7 +28,15 @@ class SchoolSerializer(serializers.ModelSerializer):
 
     def validate_registration_number(self, value):
         """Ensure registration number is unique"""
-        if School.objects.filter(registration_number=value).exists():
+        # Get the current instance if this is an update operation
+        instance = getattr(self, 'instance', None)
+        
+        # Check if registration number exists, excluding the current instance
+        exists = School.objects.filter(registration_number=value)
+        if instance:
+            exists = exists.exclude(pk=instance.pk)
+            
+        if exists.exists():
             raise serializers.ValidationError("A school with this registration number already exists.")
         return value
 

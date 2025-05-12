@@ -15,7 +15,7 @@ export default function SchoolForm({ initialData, onSubmit, onCancel }: SchoolFo
       name: initialData?.name || '',
       address: initialData?.address || '',
       email: initialData?.email || '',
-      phone: initialData?.phone || '',
+      phone_number: initialData?.phone_number || '',
       website: initialData?.website || '',
       registration_number: initialData?.registration_number || '',
       is_active: initialData?.is_active ?? true,
@@ -91,17 +91,17 @@ export default function SchoolForm({ initialData, onSubmit, onCancel }: SchoolFo
       </div>
 
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-black">
-          Phone
+        <label htmlFor="phone_number" className="block text-sm font-medium text-black">
+          Phone Number
         </label>
         <input
           type="tel"
-          id="phone"
-          {...register('phone', { required: 'Phone number is required' })}
+          id="phone_number"
+          {...register('phone_number', { required: 'Phone number is required' })}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black py-2 px-3"
         />
-        {errors.phone && (
-          <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+        {errors.phone_number && (
+          <p className="mt-1 text-sm text-red-600">{errors.phone_number.message}</p>
         )}
       </div>
 

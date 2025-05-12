@@ -3,7 +3,7 @@ export interface School {
   name: string;
   registration_number: string;
   email: string;
-  phone: string;
+  phone_number: string;
   address: string;
   website?: string;
   is_active: boolean;
@@ -15,7 +15,7 @@ export interface CreateSchoolDto {
   name: string;
   registration_number: string;
   email: string;
-  phone: string;
+  phone_number: string;
   address: string;
   website?: string;
 }
