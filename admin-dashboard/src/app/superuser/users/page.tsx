@@ -9,18 +9,26 @@ import { useRouter } from 'next/navigation';
 import {
   UserGroupIcon,
   PlusIcon,
-  TrashIcon,
   AcademicCapIcon,
   UserIcon,
   UsersIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import AdminForm from '@/components/forms/AdminForm';
+import { Dialog } from '@/components/ui/dialog';
 
-interface SchoolUsers {
-  admins: any[];
-  teachers: any[];
-  parents: any[];
+interface SchoolStats {
+  admin_count: number;
+  teacher_count: number;
+  parent_count: number;
+}
+
+interface AdminData {
+  name: string;
+  email: string;
+  password: string;
+  phone_number: string;
+  role: string;
 }
 
 export default function UsersPage() {
@@ -66,17 +74,21 @@ export default function UsersPage() {
   });
 
   // Fetch school statistics for each school
-  const { data: schoolStats = {}, isLoading: isLoadingStats } = useQuery({
+  const { data: schoolStats = {} } = useQuery<Record<string, SchoolStats>>({
     queryKey: ['schoolStats'],
     queryFn: async () => {
-      const stats: Record<string, any> = {};
+      const stats: Record<string, SchoolStats> = {};
       for (const school of schools) {
         try {
           const schoolStat = await superuserService.getSchoolStats(school.id);
           stats[school.id] = schoolStat;
         } catch (error) {
           console.error(`Failed to fetch stats for school ${school.id}:`, error);
-          stats[school.id] = null;
+          stats[school.id] = {
+            admin_count: 0,
+            teacher_count: 0,
+            parent_count: 0
+          };
         }
       }
       return stats;
@@ -87,7 +99,7 @@ export default function UsersPage() {
 
   // Create admin mutation
   const createAdminMutation = useMutation({
-    mutationFn: (data: { schoolId: string; adminData: any }) =>
+    mutationFn: (data: { schoolId: string; adminData: AdminData }) =>
       superuserService.createAdminForSchool(data.schoolId, data.adminData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schoolStats'] });
@@ -117,7 +129,7 @@ export default function UsersPage() {
     setIsModalOpen(true);
   };
 
-  const handleCreateAdmin = async (adminData: any) => {
+  const handleCreateAdmin = async (adminData: AdminData) => {
     if (!selectedSchool) return;
     createAdminMutation.mutate({
       schoolId: selectedSchool.id,
@@ -212,9 +224,18 @@ export default function UsersPage() {
       </div>
 
       {/* Admin Creation Modal */}
-      {isModalOpen && selectedSchool && (
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl mx-4">
+      <Dialog
+        open={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedSchool(null);
+        }}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl">
             <div className="absolute right-4 top-4">
               <button
                 onClick={() => {
@@ -231,21 +252,23 @@ export default function UsersPage() {
               <div className="rounded-full bg-blue-50 p-2">
                 <UserIcon className="h-6 w-6 text-blue-600" />
               </div>
-              <h2 className="text-lg font-semibold leading-6 text-gray-900">
-                Add Administrator to {selectedSchool.name}
-              </h2>
+              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
+                {selectedSchool ? `Add Administrator to ${selectedSchool.name}` : 'Add Administrator'}
+              </Dialog.Title>
             </div>
 
-            <AdminForm
-              onSubmit={handleCreateAdmin}
-              onCancel={() => {
-                setIsModalOpen(false);
-                setSelectedSchool(null);
-              }}
-            />
-          </div>
+            {selectedSchool && (
+              <AdminForm
+                onSubmit={handleCreateAdmin}
+                onCancel={() => {
+                  setIsModalOpen(false);
+                  setSelectedSchool(null);
+                }}
+              />
+            )}
+          </Dialog.Panel>
         </div>
-      )}
+      </Dialog>
     </div>
   );
 } 
