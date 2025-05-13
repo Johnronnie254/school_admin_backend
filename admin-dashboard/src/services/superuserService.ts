@@ -136,6 +136,9 @@ export const superuserService = {
   },
 
   deleteAdmin: async (schoolId: number, adminId: string): Promise<void> => {
+    if (!schoolId || !adminId) {
+      throw new Error('School ID and Admin ID are required');
+    }
     await apiClient.post(`superuser/${schoolId}/delete_admin/`, {
       admin_id: adminId
     });

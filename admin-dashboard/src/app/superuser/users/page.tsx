@@ -184,11 +184,27 @@ export default function UsersPage() {
   };
 
   const handleDeleteAdmin = async (adminId: string) => {
-    if (!selectedSchool) return;
-    await deleteAdminMutation.mutateAsync({
-      schoolId: selectedSchool.id,
-      adminId
-    });
+    if (!selectedSchool || !adminId) {
+      toast.error('Invalid school or administrator ID');
+      return;
+    }
+
+    try {
+      await deleteAdminMutation.mutateAsync({
+        schoolId: selectedSchool.id,
+        adminId
+      });
+      toast.success('Administrator deleted successfully');
+      // Refresh the admin list
+      queryClient.invalidateQueries({ queryKey: ['schoolAdmins', selectedSchool.id] });
+    } catch (error) {
+      console.error('Delete admin error:', error);
+      if (error instanceof AxiosError && error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error('Failed to delete administrator');
+      }
+    }
   };
 
   if (isAuthenticated === null || isLoadingSchools) {

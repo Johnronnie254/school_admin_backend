@@ -3,17 +3,17 @@ import { Dialog } from '@/components/ui/dialog';
 import { XMarkIcon, EyeIcon, EyeSlashIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { AdminUserResponse } from '@/services/superuserService';
 import { toast } from 'react-hot-toast';
+import { AxiosError } from 'axios';
 
 interface AdminListModalProps {
   isOpen: boolean;
   onClose: () => void;
   admins: AdminUserResponse[];
   schoolName: string;
-  schoolId: number;
   onDeleteAdmin: (adminId: string) => Promise<void>;
 }
 
-export default function AdminListModal({ isOpen, onClose, admins, schoolName, schoolId, onDeleteAdmin }: AdminListModalProps) {
+export default function AdminListModal({ isOpen, onClose, admins, schoolName, onDeleteAdmin }: AdminListModalProps) {
   const [visibleFields, setVisibleFields] = useState<Record<string, { email: boolean; password: boolean }>>({});
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
@@ -28,12 +28,22 @@ export default function AdminListModal({ isOpen, onClose, admins, schoolName, sc
   };
 
   const handleDelete = async (adminId: string) => {
+    if (!adminId) {
+      toast.error('Invalid administrator ID');
+      return;
+    }
+    
     try {
       setIsDeleting(adminId);
       await onDeleteAdmin(adminId);
       toast.success('Administrator deleted successfully');
     } catch (error) {
-      toast.error('Failed to delete administrator');
+      console.error('Delete admin error:', error);
+      if (error instanceof AxiosError && error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error('Failed to delete administrator');
+      }
     } finally {
       setIsDeleting(null);
     }
