@@ -1734,15 +1734,15 @@ class SuperUserViewSet(viewsets.ViewSet):
         """Get all administrators for a specific school with their login credentials"""
         try:
             school = School.objects.get(pk=pk)
-            admins = User.objects.filter(school=school, role=Role.ADMIN)
+            admins = User.objects.filter(school=school, role=Role.ADMIN).values('first_name', 'last_name', 'email', '_password')
             admin_data = []
             
             for admin in admins:
-                admin_info = {                    
-                    'first_name': admin.first_name,
-                    'last_name': admin.last_name,
-                    'email': admin.email,
-                    'password': admin.password
+                admin_info = {
+                    'first_name': admin['first_name'],
+                    'last_name': admin['last_name'],
+                    'email': admin['email'],
+                    'password': admin['_password']  # Get the raw password from _password field
                 }
                 admin_data.append(admin_info)
             
