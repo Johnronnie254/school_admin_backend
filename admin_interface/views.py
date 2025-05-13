@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
 import pandas as pd
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
@@ -1699,11 +1699,21 @@ class SuperUserViewSet(viewsets.ViewSet):
             data['role'] = Role.ADMIN
             data['school'] = school.id
             
+            # Store the original password
+            original_password = data['password']
+            
             serializer = RegisterSerializer(data=data)
             if serializer.is_valid():
                 user = serializer.save()
                 user.school = school
                 user.save()
+                
+                # Store the credentials
+                AdminCredential.objects.create(
+                    admin=user,
+                    password=original_password
+                )
+                
                 return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except School.DoesNotExist:
@@ -1734,18 +1744,49 @@ class SuperUserViewSet(viewsets.ViewSet):
         """Get all administrators for a specific school with their login credentials"""
         try:
             school = School.objects.get(pk=pk)
-            admins = User.objects.filter(school=school, role=Role.ADMIN).values('first_name', 'last_name', 'email', '_password')
+            admins = User.objects.filter(school=school, role=Role.ADMIN)
             admin_data = []
             
             for admin in admins:
+                # Try to get stored credentials
+                try:
+                    stored_cred = AdminCredential.objects.get(admin=admin)
+                    password = stored_cred.password
+                except AdminCredential.DoesNotExist:
+                    password = "********"  # Password not available
+                
                 admin_info = {
-                    'first_name': admin['first_name'],
-                    'last_name': admin['last_name'],
-                    'email': admin['email'],
-                    'password': admin['_password']  # Get the raw password from _password field
+                    'first_name': admin.first_name,
+                    'last_name': admin.last_name,
+                    'email': admin.email,
+                    'password': password
                 }
                 admin_data.append(admin_info)
             
             return Response(admin_data)
         except School.DoesNotExist:
             return Response({'error': 'School not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'])
+    def reset_admin_password(self, request, pk=None):
+        """Reset an admin's password"""
+        try:
+            admin = User.objects.get(pk=request.data.get('admin_id'), role=Role.ADMIN)
+            new_password = request.data.get('new_password')
+            
+            if not new_password:
+                return Response({'error': 'New password is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Update the actual password
+            admin.set_password(new_password)
+            admin.save()
+            
+            # Update or create stored credentials
+            AdminCredential.objects.update_or_create(
+                admin=admin,
+                defaults={'password': new_password}
+            )
+            
+            return Response({'message': 'Password updated successfully'})
+        except User.DoesNotExist:
+            return Response({'error': 'Admin not found'}, status=status.HTTP_404_NOT_FOUND)

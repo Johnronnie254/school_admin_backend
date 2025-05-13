@@ -430,3 +430,13 @@ class PasswordResetToken(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class AdminCredential(models.Model):
+    """Temporary storage for admin credentials"""
+    admin = models.OneToOneField(User, on_delete=models.CASCADE)
+    password = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'admin_credentials'
