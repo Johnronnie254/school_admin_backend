@@ -146,6 +146,17 @@ export default function UsersPage() {
     },
   });
 
+  // Delete admin mutation
+  const deleteAdminMutation = useMutation({
+    mutationFn: async (data: { schoolId: number; adminId: string }) => {
+      await superuserService.deleteAdmin(data.schoolId, data.adminId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schoolStats'] });
+      queryClient.invalidateQueries({ queryKey: ['schoolAdmins'] });
+    },
+  });
+
   const handleAddAdmin = (school: School) => {
     setSelectedSchool(school);
     setIsModalOpen(true);
@@ -169,6 +180,14 @@ export default function UsersPage() {
         password_confirmation: adminData.password_confirmation,
         role: 'admin'
       }
+    });
+  };
+
+  const handleDeleteAdmin = async (adminId: string) => {
+    if (!selectedSchool) return;
+    await deleteAdminMutation.mutateAsync({
+      schoolId: selectedSchool.id,
+      adminId
     });
   };
 
@@ -315,7 +334,7 @@ export default function UsersPage() {
       </Dialog>
 
       {/* Admin List Modal */}
-      {selectedSchool && (
+      {selectedSchool && isAdminListModalOpen && (
         <AdminListModal
           isOpen={isAdminListModalOpen}
           onClose={() => {
@@ -324,6 +343,8 @@ export default function UsersPage() {
           }}
           admins={selectedSchoolAdmins}
           schoolName={selectedSchool.name}
+          schoolId={selectedSchool.id}
+          onDeleteAdmin={handleDeleteAdmin}
         />
       )}
     </div>

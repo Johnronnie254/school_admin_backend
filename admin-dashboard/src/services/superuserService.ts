@@ -28,6 +28,7 @@ export interface AdminUser {
 }
 
 export interface AdminUserResponse {
+  id: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -124,8 +125,7 @@ export const superuserService = {
 
   createAdminForSchool: async (schoolId: number, adminData: AdminUser): Promise<AdminUserResponse> => {
     const response = await apiClient.post<AdminUserResponse>(`superuser/${schoolId}/create_admin_for_school/`, {
-      first_name: adminData.first_name,
-      last_name: adminData.last_name,
+      name: `${adminData.first_name} ${adminData.last_name}`,
       email: adminData.email,
       phone_number: adminData.phone_number,
       password: adminData.password,
@@ -133,6 +133,12 @@ export const superuserService = {
       role: adminData.role
     });
     return response.data;
+  },
+
+  deleteAdmin: async (schoolId: number, adminId: string): Promise<void> => {
+    await apiClient.post(`superuser/${schoolId}/delete_admin/`, {
+      admin_id: adminId
+    });
   },
 
   getAllUsers: async (): Promise<User[]> => {

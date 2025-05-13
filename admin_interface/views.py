@@ -1756,6 +1756,7 @@ class SuperUserViewSet(viewsets.ViewSet):
                     password = "********"  # Password not available
                 
                 admin_info = {
+                    'id': admin.id,
                     'first_name': admin.first_name,
                     'last_name': admin.last_name,
                     'email': admin.email,
@@ -1790,3 +1791,26 @@ class SuperUserViewSet(viewsets.ViewSet):
             return Response({'message': 'Password updated successfully'})
         except User.DoesNotExist:
             return Response({'error': 'Admin not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'])
+    def delete_admin(self, request, pk=None):
+        """Delete an admin user from a school"""
+        try:
+            school = School.objects.get(pk=pk)
+            admin_id = request.data.get('admin_id')
+            
+            if not admin_id:
+                return Response({'error': 'Admin ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            try:
+                admin = User.objects.get(id=admin_id, role=Role.ADMIN, school=school)
+                # Delete associated credential first
+                AdminCredential.objects.filter(admin=admin).delete()
+                # Delete the admin user
+                admin.delete()
+                return Response({'message': 'Admin deleted successfully'})
+            except User.DoesNotExist:
+                return Response({'error': 'Admin not found'}, status=status.HTTP_404_NOT_FOUND)
+                
+        except School.DoesNotExist:
+            return Response({'error': 'School not found'}, status=status.HTTP_404_NOT_FOUND)

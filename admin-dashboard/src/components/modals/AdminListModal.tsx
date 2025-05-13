@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
-import { XMarkIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, EyeIcon, EyeSlashIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { AdminUserResponse } from '@/services/superuserService';
+import { toast } from 'react-hot-toast';
 
 interface AdminListModalProps {
   isOpen: boolean;
   onClose: () => void;
   admins: AdminUserResponse[];
   schoolName: string;
+  schoolId: number;
+  onDeleteAdmin: (adminId: string) => Promise<void>;
 }
 
-export default function AdminListModal({ isOpen, onClose, admins, schoolName }: AdminListModalProps) {
+export default function AdminListModal({ isOpen, onClose, admins, schoolName, schoolId, onDeleteAdmin }: AdminListModalProps) {
   const [visibleFields, setVisibleFields] = useState<Record<string, { email: boolean; password: boolean }>>({});
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const toggleFieldVisibility = (adminEmail: string, field: 'email' | 'password') => {
     setVisibleFields(prev => ({
@@ -21,6 +25,18 @@ export default function AdminListModal({ isOpen, onClose, admins, schoolName }: 
         [field]: !prev[adminEmail]?.[field]
       }
     }));
+  };
+
+  const handleDelete = async (adminId: string) => {
+    try {
+      setIsDeleting(adminId);
+      await onDeleteAdmin(adminId);
+      toast.success('Administrator deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete administrator');
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   return (
@@ -51,9 +67,18 @@ export default function AdminListModal({ isOpen, onClose, admins, schoolName }: 
                 className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="space-y-3">
-                  <h3 className="text-lg font-medium text-black">
-                    {admin.first_name} {admin.last_name}
-                  </h3>
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-lg font-medium text-black">
+                      {admin.first_name} {admin.last_name}
+                    </h3>
+                    <button
+                      onClick={() => handleDelete(admin.id)}
+                      disabled={isDeleting === admin.id}
+                      className={`text-red-600 hover:text-red-700 focus:outline-none ${isDeleting === admin.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                   
                   {/* Email Field */}
                   <div className="flex items-center gap-2">
