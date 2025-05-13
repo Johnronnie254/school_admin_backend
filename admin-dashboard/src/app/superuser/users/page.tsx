@@ -359,7 +359,6 @@ export default function UsersPage() {
           }}
           admins={selectedSchoolAdmins}
           schoolName={selectedSchool.name}
-          schoolId={selectedSchool.id}
           onDeleteAdmin={handleDeleteAdmin}
         />
       )}
