@@ -29,7 +29,8 @@ export interface Parent {
   id: string;
   name: string;
   email: string;
-  role: string;
+  phone_number: string;
+  created_at: string;
 }
 
 export const messageService = {
@@ -59,9 +60,9 @@ export const messageService = {
       const teachersResponse = await apiClient.get<PaginatedResponse<Teacher>>('/api/teachers/');
       const teachers = teachersResponse.data.results || [];
 
-      // Get parents (keeping existing endpoint for now)
-      const parentsResponse = await apiClient.get<{ parents: Parent[] }>('/api/admin/users/');
-      const parents = parentsResponse.data.parents || [];
+      // Get parents using the same endpoint as parents page
+      const parentsResponse = await apiClient.get<PaginatedResponse<Parent>>('/api/parents/');
+      const parents = parentsResponse.data.results || [];
 
       // Transform teachers to include role for UI consistency
       const teachersWithRole = teachers.map(teacher => ({
@@ -71,8 +72,16 @@ export const messageService = {
         role: 'teacher'
       }));
 
+      // Transform parents to include role for UI consistency
+      const parentsWithRole = parents.map(parent => ({
+        id: parent.id,
+        name: parent.name,
+        email: parent.email,
+        role: 'parent'
+      }));
+
       // Return combined array of teachers and parents
-      return [...teachersWithRole, ...parents];
+      return [...teachersWithRole, ...parentsWithRole];
     } catch (error) {
       console.error('Error fetching chat users:', error);
       return [];
