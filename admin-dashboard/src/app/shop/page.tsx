@@ -157,7 +157,13 @@ export default function ShopPage() {
       // For updates, don't include image in data if no new file is selected
       const imageFile = fileInputRef.current?.files?.[0];
       if (!imageFile) {
-        const { image: _, ...restData } = data;
+        // Create a new object without the image property
+        const restData = {
+          name: data.name,
+          description: data.description,
+          price: data.price,
+          stock: data.stock
+        };
         updateMutation.mutate({ ...restData, id: editingProduct.id });
       } else {
         updateMutation.mutate({ ...data, id: editingProduct.id });
