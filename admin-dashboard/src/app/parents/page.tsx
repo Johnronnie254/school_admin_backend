@@ -141,41 +141,80 @@ export default function ParentsPage() {
           <p className="mt-1 text-sm text-gray-500">Get started by adding a new parent.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {parentsData.results.map((parent: Parent) => (
-                <tr key={parent.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.phone_number}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <>
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {parentsData.results.map((parent: Parent) => (
+                    <tr key={parent.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.phone_number}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleEdit(parent)}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(parent.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          {/* Mobile Cards - Shown only on mobile */}
+          <div className="grid grid-cols-1 gap-4 sm:hidden">
+            {parentsData.results.map((parent: Parent) => (
+              <div key={parent.id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-base font-medium text-gray-900">{parent.name}</h3>
+                  <div className="flex space-x-2">
                     <button
                       onClick={() => handleEdit(parent)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-600 hover:text-blue-900"
                     >
-                      <PencilIcon className="h-5 w-5" />
+                      <PencilIcon className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleDelete(parent.id)}
                       className="text-red-600 hover:text-red-900"
                     >
-                      <TrashIcon className="h-5 w-5" />
+                      <TrashIcon className="w-5 h-5" />
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-1 text-sm">
+                  <p className="text-gray-600">
+                    <span className="font-medium text-gray-700">Email:</span> {parent.email}
+                  </p>
+                  <p className="text-gray-600">
+                    <span className="font-medium text-gray-700">Phone:</span> {parent.phone_number}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Parent Form Modal */}
@@ -188,11 +227,13 @@ export default function ParentsPage() {
         }}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        {/* Background blur - visible only on non-mobile */}
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
         
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl">
-            <div className="absolute right-4 top-4">
+        {/* Modal container - full screen on mobile */}
+        <div className="fixed inset-0 flex items-center justify-center sm:p-4">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+            <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
               <button
                 onClick={() => {
                   setIsModalOpen(false);
@@ -201,38 +242,38 @@ export default function ParentsPage() {
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-8">
-              <div className="rounded-full bg-blue-50 p-2">
-                <UserGroupIcon className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
+                <UserGroupIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
+              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
                 {editingParent ? 'Edit Parent Information' : 'Add New Parent'}
               </Dialog.Title>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
+              <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-8 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Full Name
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2">
+                  <div className="mt-1.5 sm:mt-2">
                     <input
                       type="text"
                       {...register('name', { 
                         required: 'Name is required',
                         minLength: { value: 2, message: 'Name must be at least 2 characters' }
                       })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                       placeholder="Enter parent's full name"
                     />
                     {errors.name && (
-                      <p className="mt-2 text-sm text-red-600">{errors.name.message}</p>
+                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
                     )}
                   </div>
                 </div>
@@ -242,7 +283,7 @@ export default function ParentsPage() {
                     Email
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2">
+                  <div className="mt-1.5 sm:mt-2">
                     <input
                       type="email"
                       {...register('email', { 
@@ -252,11 +293,11 @@ export default function ParentsPage() {
                           message: 'Please enter a valid email address'
                         }
                       })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                       placeholder="Enter email address"
                     />
                     {errors.email && (
-                      <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>
+                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>
                     )}
                   </div>
                 </div>
@@ -266,7 +307,7 @@ export default function ParentsPage() {
                     Phone Number
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2 relative">
+                  <div className="mt-1.5 sm:mt-2 relative">
                     <input
                       type="tel"
                       {...register('phone_number', { 
@@ -276,17 +317,17 @@ export default function ParentsPage() {
                           message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
                         }
                       })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                       placeholder="Enter phone number"
                     />
-                    <div className="absolute right-2 top-2 group">
-                      <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400" />
+                    <div className="absolute right-2 top-1.5 group">
+                      <QuestionMarkCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                       <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
                         Enter a valid phone number (format: 07XXXXXXXX)
                       </div>
                     </div>
                     {errors.phone_number && (
-                      <p className="mt-2 text-sm text-red-600">{errors.phone_number.message}</p>
+                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>
                     )}
                   </div>
                 </div>
@@ -299,18 +340,18 @@ export default function ParentsPage() {
                         Password
                         <span className="text-red-500 ml-1">*</span>
                       </label>
-                      <div className="mt-2">
+                      <div className="mt-1.5 sm:mt-2">
                         <input
                           type="password"
                           {...register('password', { 
                             required: !editingParent ? 'Password is required' : false,
                             minLength: { value: 6, message: 'Password must be at least 6 characters' }
                           })}
-                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                           placeholder="Enter password"
                         />
                         {errors.password && (
-                          <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>
+                          <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
                         )}
                       </div>
                     </div>
@@ -320,18 +361,18 @@ export default function ParentsPage() {
                         Confirm Password
                         <span className="text-red-500 ml-1">*</span>
                       </label>
-                      <div className="mt-2">
+                      <div className="mt-1.5 sm:mt-2">
                         <input
                           type="password"
                           {...register('password_confirmation', { 
                             required: !editingParent ? 'Please confirm your password' : false,
                             validate: value => !editingParent ? (value === password || 'Passwords do not match') : true
                           })}
-                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                           placeholder="Confirm password"
                         />
                         {errors.password_confirmation && (
-                          <p className="mt-2 text-sm text-red-600">{errors.password_confirmation.message}</p>
+                          <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
                         )}
                       </div>
                     </div>
@@ -339,7 +380,7 @@ export default function ParentsPage() {
                 )}
               </div>
 
-              <div className="mt-8 flex justify-end gap-3">
+              <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -347,18 +388,18 @@ export default function ParentsPage() {
                     setEditingParent(null);
                     reset();
                   }}
-                  className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 w-full sm:w-auto order-2 sm:order-1"
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
+                  className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   {createMutation.isPending || updateMutation.isPending ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center gap-2">
                       <svg className="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>

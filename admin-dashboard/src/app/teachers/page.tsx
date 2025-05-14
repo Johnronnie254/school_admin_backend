@@ -342,11 +342,13 @@ export default function TeachersPage() {
         }}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        {/* Background blur - visible only on non-mobile */}
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
         
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="absolute right-4 top-4">
+        {/* Modal container - full screen on mobile */}
+        <div className="fixed inset-0 flex items-center justify-center sm:p-4">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-lg sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+            <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
               <button
                 onClick={() => {
                   setIsModalOpen(false);
@@ -355,33 +357,34 @@ export default function TeachersPage() {
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-6 sm:mb-8">
-              <div className="rounded-full bg-blue-50 p-2">
-                <UserGroupIcon className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
+                <UserGroupIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
+              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
                 {editingTeacher ? 'Edit Teacher Information' : 'Add New Teacher'}
               </Dialog.Title>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
+              <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-6 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Name
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2">
+                  <div className="mt-1.5 sm:mt-2">
                     <input
                       type="text"
                       {...register('name', { required: 'Name is required' })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                      placeholder="Enter teacher's name"
                     />
-                    {errors.name && <p className="mt-2 text-sm text-red-600">{errors.name.message}</p>}
+                    {errors.name && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>}
                   </div>
                 </div>
 
@@ -390,13 +393,14 @@ export default function TeachersPage() {
                     Email
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2">
+                  <div className="mt-1.5 sm:mt-2">
                     <input
                       type="email"
                       {...register('email', { required: 'Email is required' })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                      placeholder="Enter email address"
                     />
-                    {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>}
+                    {errors.email && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>}
                   </div>
                 </div>
 
@@ -405,7 +409,7 @@ export default function TeachersPage() {
                     Phone Number
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2">
+                  <div className="mt-1.5 sm:mt-2">
                     <input
                       {...register('phone_number', { 
                         required: 'Phone number is required',
@@ -415,9 +419,9 @@ export default function TeachersPage() {
                         }
                       })}
                       placeholder="07XXXXXXXX"
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                     />
-                    {errors.phone_number && <p className="mt-2 text-sm text-red-600">{errors.phone_number.message}</p>}
+                    {errors.phone_number && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>}
                   </div>
                 </div>
 
@@ -425,22 +429,22 @@ export default function TeachersPage() {
                   <label className="block text-sm font-medium text-gray-700">
                     Class Assigned
                   </label>
-                  <div className="mt-2">
+                  <div className="mt-1.5 sm:mt-2">
                     <input
                       {...register('class_assigned')}
                       placeholder="e.g., Grade 7A"
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Subjects
                   <span className="text-red-500 ml-1">*</span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-2">
                   {AVAILABLE_SUBJECTS.map((subject) => (
                     <div key={subject} className="flex items-center">
                       <input
@@ -450,18 +454,18 @@ export default function TeachersPage() {
                         onChange={() => toggleSubject(subject)}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <label htmlFor={subject} className="ml-2 text-sm text-gray-700">
+                      <label htmlFor={subject} className="ml-2 text-xs sm:text-sm text-gray-700 truncate">
                         {subject}
                       </label>
                     </div>
                   ))}
                 </div>
                 {selectedSubjects.length === 0 && (
-                  <p className="mt-2 text-sm text-red-600">Please select at least one subject</p>
+                  <p className="mt-1.5 text-xs sm:text-sm text-red-600">Please select at least one subject</p>
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mt-6 sm:mt-8">
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-6 sm:mt-8">
                 <button
                   type="button"
                   onClick={() => {
@@ -470,14 +474,14 @@ export default function TeachersPage() {
                     setSelectedSubjects([]);
                     reset();
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 w-full sm:w-auto"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 w-full sm:w-auto order-2 sm:order-1"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={selectedSubjects.length === 0 || createMutation.isPending || updateMutation.isPending}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
                 >
                   {createMutation.isPending || updateMutation.isPending ? (
                     <div className="flex items-center justify-center">

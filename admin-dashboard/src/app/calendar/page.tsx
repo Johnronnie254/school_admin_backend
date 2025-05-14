@@ -207,24 +207,26 @@ export default function CalendarPage() {
         onClose={handleCloseModal}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        {/* Background blur - visible only on non-mobile */}
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
         
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl">
-            <div className="absolute right-4 top-4">
+        {/* Modal container - full screen on mobile */}
+        <div className="fixed inset-0 flex items-center justify-center sm:p-4">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+            <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
               <button
                 onClick={handleCloseModal}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-8">
-              <div className="rounded-full bg-blue-50 p-2">
-                <CalendarDaysIcon className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
+                <CalendarDaysIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
+              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
                 {editingEvent ? 'Edit Event' : 'Add New Event'}
               </Dialog.Title>
             </div>

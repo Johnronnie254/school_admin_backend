@@ -166,49 +166,101 @@ export default function ExamResultsPage() {
           <p className="mt-1 text-sm text-gray-500">Get started by adding a new exam result.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {examResults.map((result: ExamResult) => (
-                <tr key={result.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.student}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.exam_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.subject}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.marks}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.grade}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.term}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.year}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+        <>
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {examResults.map((result: ExamResult) => (
+                    <tr key={result.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">{result.student}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{result.exam_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{result.subject}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{result.marks}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{result.grade}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{result.term}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{result.year}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => handleEdit(result)}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(result.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          {/* Mobile Cards - Shown only on mobile */}
+          <div className="grid grid-cols-1 gap-4 sm:hidden">
+            {examResults.map((result: ExamResult) => (
+              <div key={result.id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="text-base font-medium text-gray-900">{result.student}</h3>
+                    <p className="text-sm text-gray-500">{result.exam_name}</p>
+                  </div>
+                  <div className="flex space-x-2">
                     <button
                       onClick={() => handleEdit(result)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-600 hover:text-blue-900"
                     >
-                      <PencilIcon className="h-5 w-5" />
+                      <PencilIcon className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => handleDelete(result.id)}
                       className="text-red-600 hover:text-red-900"
                     >
-                      <TrashIcon className="h-5 w-5" />
+                      <TrashIcon className="w-5 h-5" />
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+                
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Subject:</span>
+                    <p className="text-gray-600">{result.subject}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Marks:</span>
+                    <p className="text-gray-600">{result.marks}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Grade:</span>
+                    <p className="text-gray-600">{result.grade}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Term/Year:</span>
+                    <p className="text-gray-600">{result.term} - {result.year}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Exam Result Form Modal */}
@@ -221,11 +273,13 @@ export default function ExamResultsPage() {
         }}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        {/* Background blur - visible only on non-mobile */}
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
         
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl">
-            <div className="absolute right-4 top-4">
+        {/* Modal container - full screen on mobile */}
+        <div className="fixed inset-0 flex items-center justify-center sm:p-4">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+            <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
               <button
                 onClick={() => {
                   setIsModalOpen(false);
@@ -234,15 +288,15 @@ export default function ExamResultsPage() {
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-8">
-              <div className="rounded-full bg-blue-50 p-2">
-                <AcademicCapIcon className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
+                <AcademicCapIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
+              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
                 {editingResult ? 'Edit Exam Result' : 'Add New Exam Result'}
               </Dialog.Title>
             </div>

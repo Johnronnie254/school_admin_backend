@@ -35,16 +35,16 @@ export function InternetStatus() {
 
   return (
     <div
-      className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg flex items-center space-x-2 transition-all duration-300 ${
+      className={`fixed bottom-4 right-2 sm:right-4 p-3 sm:p-4 rounded-lg shadow-lg flex items-center space-x-2 transition-all duration-300 ${
         isOnline ? 'bg-green-500' : 'bg-red-500'
-      } text-white`}
+      } text-white max-w-[calc(100%-1rem)] sm:max-w-xs z-50`}
     >
       {isOnline ? (
-        <WifiIcon className="h-5 w-5" />
+        <WifiIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
       ) : (
-        <NoSymbolIcon className="h-5 w-5" />
+        <NoSymbolIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
       )}
-      <span className="font-medium">
+      <span className="text-sm sm:text-base font-medium truncate">
         {isOnline ? 'Back Online' : 'No Internet Connection'}
       </span>
     </div>

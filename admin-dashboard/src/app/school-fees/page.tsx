@@ -153,34 +153,70 @@ export default function SchoolFeesPage() {
           <p className="mt-1 text-sm text-gray-500">Add students to manage their fee payments.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guardian</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {students.map((student) => (
-                <tr 
-                  key={student.id} 
-                  onClick={() => handleStudentClick(student)}
-                  className="hover:bg-gray-50 cursor-pointer"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.guardian}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guardian</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {students.map((student) => (
+                    <tr 
+                      key={student.id} 
+                      onClick={() => handleStudentClick(student)}
+                      className="hover:bg-gray-50 cursor-pointer"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.guardian}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          {/* Mobile Cards - Shown only on mobile */}
+          <div className="grid grid-cols-1 gap-4 sm:hidden">
+            {students.map((student) => (
+              <div 
+                key={student.id}
+                onClick={() => handleStudentClick(student)}
+                className="bg-white rounded-lg shadow p-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100"
+              >
+                <h3 className="text-base font-medium text-gray-900 mb-2">{student.name}</h3>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-500">Grade:</span>
+                    <p className="text-gray-900">{student.grade}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Class:</span>
+                    <p className="text-gray-900">{student.class_assigned || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Guardian:</span>
+                    <p className="text-gray-900">{student.guardian}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Contact:</span>
+                    <p className="text-gray-900">{student.contact}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Payment Modal */}
@@ -192,11 +228,13 @@ export default function SchoolFeesPage() {
         }}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        {/* Background blur - visible only on non-mobile */}
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
         
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl">
-            <div className="absolute right-4 top-4">
+        {/* Modal container - full screen on mobile */}
+        <div className="fixed inset-0 flex items-center justify-center sm:p-4">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl overflow-y-auto">
+            <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
               <button
                 onClick={() => {
                   setIsModalOpen(false);
@@ -204,15 +242,15 @@ export default function SchoolFeesPage() {
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-8">
-              <div className="rounded-full bg-blue-50 p-2">
-                <BanknotesIcon className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
+                <BanknotesIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
+              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
                 {selectedStudent ? `Initiate Payment for ${selectedStudent.name}` : 'Initiate Payment'}
               </Dialog.Title>
             </div>
@@ -229,7 +267,7 @@ export default function SchoolFeesPage() {
                   <p className="text-sm text-gray-500">No fee records found for this student.</p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
+                    <table className="hidden sm:table min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Term</th>
@@ -257,6 +295,30 @@ export default function SchoolFeesPage() {
                         ))}
                       </tbody>
                     </table>
+                    
+                    {/* Mobile Fee Records - Shown only on mobile */}
+                    <div className="sm:hidden grid grid-cols-1 gap-3">
+                      {feeRecords.map((fee: SchoolFee) => (
+                        <div key={fee.id} className="border border-gray-200 rounded-md p-3">
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="font-medium">{fee.term}, {fee.year}</div>
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(fee.status)}`}>
+                              {fee.status}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-700">
+                            <div className="flex justify-between">
+                              <span>Amount:</span>
+                              <span className="font-medium">KES {fee.amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between mt-1">
+                              <span>Date:</span>
+                              <span>{new Date(fee.payment_date).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

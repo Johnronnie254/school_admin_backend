@@ -78,20 +78,20 @@ export function EventBanner() {
 
   return (
     <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 rounded-lg shadow-lg mb-6">
-      <div className="flex items-center space-x-4">
-        <div className="bg-white/20 rounded-full p-2">
-          <CalendarIcon className="h-6 w-6" />
+      <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+        <div className="bg-white/20 rounded-full p-2 w-fit">
+          <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold">{currentEvent.title}</h3>
-          <p className="text-sm text-white/80">{currentEvent.description}</p>
-          <div className="flex items-center space-x-4 mt-2 text-xs text-white/70">
+          <h3 className="font-semibold text-sm sm:text-base">{currentEvent.title}</h3>
+          <p className="text-xs sm:text-sm text-white/80">{currentEvent.description}</p>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-white/70">
             <span>From: {new Date(currentEvent.start_date).toLocaleDateString()}</span>
             <span>To: {new Date(currentEvent.end_date).toLocaleDateString()}</span>
             <span className="bg-white/20 px-2 py-1 rounded">{currentEvent.event_type}</span>
           </div>
         </div>
-        <div className="flex space-x-1">
+        <div className="flex space-x-1 justify-center sm:justify-start">
           {events.map((_, index) => (
             <div 
               key={index}

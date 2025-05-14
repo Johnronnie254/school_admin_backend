@@ -241,89 +241,161 @@ export default function ShopPage() {
           <p className="mt-1 text-sm text-gray-500">Get started by adding a new product to the shop.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-700 max-w-xs truncate">{product.description}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-700">
-                      <span className="inline-flex items-center">
-                        <CurrencyDollarIcon className="h-4 w-4 text-green-600 mr-1" />
-                        Ksh {typeof product.price === 'number' 
-                          ? product.price.toFixed(2) 
-                          : parseFloat(product.price || '0').toFixed(2)}
+        <>
+          {/* Desktop Table - Hidden on mobile */}
+          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {products.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-700 max-w-xs truncate">{product.description}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-700">
+                        <span className="inline-flex items-center">
+                          <CurrencyDollarIcon className="h-4 w-4 text-green-600 mr-1" />
+                          Ksh {typeof product.price === 'number' 
+                            ? product.price.toFixed(2) 
+                            : parseFloat(product.price || '0').toFixed(2)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        product.stock > 10 
+                          ? 'bg-green-100 text-green-800' 
+                          : product.stock > 0 
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {product.stock} in stock
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      product.stock > 10 
-                        ? 'bg-green-100 text-green-800' 
-                        : product.stock > 0 
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.stock} in stock
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {product.image ? (
+                        <div className="relative w-20 h-20">
+                          <Image 
+                            src={product.image} 
+                            alt={product.name} 
+                            fill
+                            sizes="80px"
+                            className="rounded-lg object-contain"
+                            style={{ objectFit: 'contain' }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-20 w-20 rounded-lg bg-gray-100 flex items-center justify-center">
+                          <PhotoIcon className="h-8 w-8 text-gray-400" />
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700"
+                        >
+                          <PencilIcon className="h-4 w-4 mr-1" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
+                        >
+                          <TrashIcon className="h-4 w-4 mr-1" />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Mobile Cards - Shown only on mobile */}
+          <div className="grid grid-cols-1 gap-4 sm:hidden">
+            {products.map((product) => (
+              <div key={product.id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex justify-between">
+                  <h3 className="text-base font-medium text-gray-900 mb-1">{product.name}</h3>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(product)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      <PencilIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <TrashIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex mt-2">
+                  {/* Image */}
+                  <div className="mr-3">
                     {product.image ? (
-                      <div className="relative w-20 h-20">
+                      <div className="relative w-16 h-16">
                         <Image 
                           src={product.image} 
                           alt={product.name} 
                           fill
-                          sizes="80px"
+                          sizes="64px"
                           className="rounded-lg object-contain"
                           style={{ objectFit: 'contain' }}
                         />
                       </div>
                     ) : (
-                      <div className="h-20 w-20 rounded-lg bg-gray-100 flex items-center justify-center">
-                        <PhotoIcon className="h-8 w-8 text-gray-400" />
+                      <div className="h-16 w-16 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <PhotoIcon className="h-6 w-6 text-gray-400" />
                       </div>
                     )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(product)}
-                        className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700"
-                      >
-                        <PencilIcon className="h-4 w-4 mr-1" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
-                      >
-                        <TrashIcon className="h-4 w-4 mr-1" />
-                        Delete
-                      </button>
+                  </div>
+                  
+                  {/* Info */}
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700 line-clamp-2 mb-2">{product.description}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900 flex items-center">
+                        <CurrencyDollarIcon className="h-4 w-4 text-green-600 mr-1" />
+                        Ksh {typeof product.price === 'number' 
+                          ? product.price.toFixed(2) 
+                          : parseFloat(product.price || '0').toFixed(2)}
+                      </span>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                        product.stock > 10 
+                          ? 'bg-green-100 text-green-800' 
+                          : product.stock > 0 
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {product.stock} in stock
+                      </span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       <Dialog
@@ -331,24 +403,26 @@ export default function ShopPage() {
         onClose={closeModal}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        {/* Background blur - visible only on non-mobile */}
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
 
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-6 py-8 shadow-xl transition-all sm:w-full sm:max-w-2xl">
-            <div className="absolute right-4 top-4">
+        {/* Modal container - full screen on mobile */}
+        <div className="fixed inset-0 flex items-center justify-center sm:p-4">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+            <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
               <button
                 onClick={closeModal}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="flex items-center gap-3 mb-8">
-              <div className="rounded-full bg-blue-50 p-2">
-                <ShoppingBagIcon className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
+                <ShoppingBagIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
               </div>
-              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
+              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
                 {editingProduct ? 'Edit Product' : 'Add New Product'}
               </Dialog.Title>
             </div>
