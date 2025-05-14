@@ -223,16 +223,16 @@ export default function LeaveApplicationsPage() {
               {deleteSelectedMutation.isPending ? 'Deleting...' : `Delete Selected (${selectedIds.size})`}
             </button>
           )}
-          
+
           {/* Clear All Button */}
-          <button
+          {/* <button
             onClick={handleClearAll}
             className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             disabled={applications.length === 0 || deleteAllMutation.isPending}
           >
             <TrashIcon className="h-5 w-5" />
             {deleteAllMutation.isPending ? 'Deleting...' : 'Delete All'}
-          </button>
+          </button> */}
         </div>
       </div>
 

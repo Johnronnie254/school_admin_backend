@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['educitebackend.co.ke'],
+    domains: ['educitebackend.co.ke', 'www.educitebackend.co.ke'],
   },
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://educitebackend.co.ke/api/:path*',
+        destination: 'https://www.educitebackend.co.ke/api/:path*',
       },
     ];
   },

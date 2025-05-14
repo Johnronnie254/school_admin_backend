@@ -21,10 +21,11 @@ export interface ErrorResponse {
 
 // API Configuration
 export const API_CONFIG = {
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://educitebackend.co.ke',
-  timeout: 10000,
+  baseURL: 'https://www.educitebackend.co.ke',
+  timeout: 15000, // Increased timeout
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
 };
 
@@ -34,43 +35,33 @@ export const apiClient = axios.create(API_CONFIG);
 // Add request interceptor for authentication
 apiClient.interceptors.request.use(
   (config) => {
-    console.log('INTERCEPTOR: Original config.url:', config.url);
-    console.log('INTERCEPTOR: Original config.baseURL:', config.baseURL);
+    console.log('🔄 Request starting:', config.url);
 
     const token = localStorage.getItem('access_token');
     if (token) {
-      console.log('INTERCEPTOR: Adding token...');
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      console.log('INTERCEPTOR: No token found.');
     }
 
-    // Make sure we're connecting to the right URL format for Django
-    if (config.url && config.baseURL && !config.url.startsWith('http')) {
-      // Ensure baseURL does NOT end with a slash
-      const base = config.baseURL.replace(/\/+$/, ''); 
+    // URL normalization
+    if (config.url && !config.url.startsWith('http')) {
+      // Remove any leading/trailing slashes from baseURL
+      const base = (config.baseURL || '').replace(/\/+$/, '');
       
-      // Prepare the path
-      let path = config.url.replace(/^\/+/g, ''); // Remove leading slashes
+      // Clean up the path
+      let path = config.url.replace(/^\/+/, '').replace(/\/+$/, '');
       
-      // Make sure path starts with api/
-      if (!path.startsWith('api/')) { 
-        path = `api/${path}`; // Add api/ prefix if missing
+      // Add api prefix if needed
+      if (!path.startsWith('api/')) {
+        path = `api/${path}`;
       }
       
-      // Make sure path ends with trailing slash for Django
-      if (!path.endsWith('/')) {
-        path = `${path}/`; // Add trailing slash if missing
-      }
+      // Add trailing slash for Django
+      path = `${path}/`;
       
-      // Set the full URL
+      // Construct final URL
       config.url = `${base}/${path}`;
-      console.log(`INTERCEPTOR: Constructed final URL: ${config.url}`);
-    } else {
-       console.log(`INTERCEPTOR: URL not modified (already absolute or missing base/url): ${config.url}`);
+      console.log('📡 Final URL:', config.url);
     }
-    
-    console.log('INTERCEPTOR: Final config object:', config);
 
     return config;
   },
@@ -80,107 +71,53 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Add response interceptor for handling token refresh
+// Add response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => {
-    console.log('✅ API request successful:', response.config.url);
+    console.log('✅ Request successful:', response.config.url);
     return response;
   },
   async (error) => {
-    console.log('⚠️ API request failed:', error.config?.url);
-    console.log('📊 Error status:', error.response?.status);
-    console.log('📝 Error data:', error.response?.data);
-
-    // Check if the request itself includes a noAuth flag to avoid auth handling
-    // This is useful for auth-related endpoints
-    if (error.config?._noAuth) {
-      console.log('🔓 Request marked as noAuth, skipping auth handling');
-      return Promise.reject(error);
+    if (!error.response) {
+      // Network error
+      console.error('🌐 Network Error:', error.message);
+      if (!navigator.onLine) {
+        console.log('📡 No internet connection');
+        return Promise.reject(new Error('No internet connection. Please check your network.'));
+      }
+      return Promise.reject(new Error('Unable to connect to the server. Please try again.'));
     }
 
-    const originalRequest = error.config;
-    
-    // Handle 401 errors by attempting token refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      console.log('🔄 Attempting token refresh due to 401 error');
-      originalRequest._retry = true;
+    console.log('⚠️ Response error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      data: error.response?.data
+    });
 
-      // Check if we actually have a refresh token before trying
+    // Handle 401 Unauthorized
+    if (error.response.status === 401 && !error.config?._retry) {
       const refreshToken = localStorage.getItem('refresh_token');
       if (!refreshToken) {
-        console.log('❌ No refresh token available to refresh');
-        clearAuthAndRedirect();
+        localStorage.clear();
+        window.location.href = '/login';
         return Promise.reject(error);
       }
 
       try {
-        console.log('📤 Calling refreshToken()');
-        // Import auth service dynamically to avoid circular dependency
         const { authService } = await import('@/services/auth.service');
-        const response = await authService.refreshToken();
-        
-        if (response) {
-          console.log('✅ Token refresh successful');
-          console.log('🔄 Retrying original request');
-          // Update the token in the original request
-          originalRequest.headers.Authorization = `Bearer ${localStorage.getItem('access_token')}`;
-          return apiClient(originalRequest);
-        } else {
-          console.log('❌ Token refresh failed - no response');
-          clearAuthAndRedirect();
-          return Promise.reject(error);
-        }
-      } catch (refreshError) {
-        console.error('❌ Token refresh error:', refreshError);
-        clearAuthAndRedirect();
+        await authService.refreshToken();
+        error.config._retry = true;
+        return apiClient(error.config);
+      } catch {
+        localStorage.clear();
+        window.location.href = '/login';
         return Promise.reject(error);
       }
     }
 
-    console.log('❌ Request failed without recovery');
     return Promise.reject(error);
   }
 );
-
-// Helper function to clear auth and redirect
-function clearAuthAndRedirect() {
-  // Create a flag to prevent duplicate redirects
-  if (window._isRedirecting) {
-    console.log('🚫 Redirect already in progress, skipping');
-    return;
-  }
-  window._isRedirecting = true;
-
-  // Clear tokens to prevent refresh loops
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user');
-  
-  // Determine the correct login route based on user role
-  let redirectTo = '/login';
-  if (localStorage.getItem('is_superuser') === 'true') {
-    localStorage.removeItem('is_superuser');
-    redirectTo = '/superuser/login';
-  }
-  
-  console.log(`🔄 Redirecting to ${redirectTo}`);
-  
-  // Use a timeout to allow current execution to complete
-  setTimeout(() => {
-    window.location.href = redirectTo;
-    // Reset the redirect flag after a delay
-    setTimeout(() => {
-      window._isRedirecting = false;
-    }, 1000);
-  }, 100);
-}
-
-// Add a type declaration for the global window object
-declare global {
-  interface Window {
-    _isRedirecting?: boolean;
-  }
-}
 
 // Admin API endpoints
 export const adminApi = {
