@@ -16,6 +16,7 @@ import {
 import shopService, { Product, CreateProductData } from '@/services/shopService';
 import { Dialog } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { AxiosError } from 'axios';
 
 export default function ShopPage() {
   const [isOpen, setIsOpen] = useState(false);
@@ -92,7 +93,32 @@ export default function ShopPage() {
       // Handle file upload for update
       const { id, ...productData } = data;
       
-      return shopService.updateProduct({ id, ...productData });
+      // Create FormData instance
+      const formData = new FormData();
+      
+      // Get the file from the input element
+      const imageFile = fileInputRef.current?.files?.[0];
+
+      // Append all non-image form fields
+      Object.entries(productData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && key !== 'image') {
+          if (typeof value === 'number') {
+            formData.append(key, value.toString());
+          } else if (typeof value === 'string') {
+            formData.append(key, value);
+          }
+        }
+      });
+
+      // Only append image if a new file is selected
+      if (imageFile) {
+        formData.append('image', imageFile);
+      } else if (!imageFile && editingProduct?.image) {
+        // If no new image but there's an existing image, send a flag to backend
+        formData.append('keep_existing_image', 'true');
+      }
+      
+      return shopService.updateProduct({ id, formData });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -105,7 +131,9 @@ export default function ShopPage() {
     onError: (error: unknown) => {
       console.error('Error updating product:', error);
       if (error instanceof Error) {
-        toast.error(error.message || 'Failed to update product');
+        const axiosError = error as AxiosError<{ image?: string[] }>;
+        const errorMessage = axiosError.response?.data?.image?.[0] || axiosError.message || 'Failed to update product';
+        toast.error(errorMessage);
       }
     }
   });
@@ -125,16 +153,15 @@ export default function ShopPage() {
   });
 
   const onSubmit = (data: CreateProductData) => {
-    // Get the file from the input element
-    const imageFile = fileInputRef.current?.files?.[0];
-    
-    // If there's a file, add it to the data
-    if (imageFile) {
-      data.image = imageFile;
-    }
-    
     if (editingProduct) {
-      updateMutation.mutate({ ...data, id: editingProduct.id });
+      // For updates, don't include image in data if no new file is selected
+      const imageFile = fileInputRef.current?.files?.[0];
+      if (!imageFile) {
+        const { image: _, ...restData } = data;
+        updateMutation.mutate({ ...restData, id: editingProduct.id });
+      } else {
+        updateMutation.mutate({ ...data, id: editingProduct.id });
+      }
     } else {
       createMutation.mutate(data);
     }
@@ -252,16 +279,19 @@ export default function ShopPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {product.image ? (
-                      <Image 
-                        src={product.image} 
-                        alt={product.name} 
-                        width={40}
-                        height={40}
-                        className="rounded-full object-cover"
-                      />
+                      <div className="relative w-20 h-20">
+                        <Image 
+                          src={product.image} 
+                          alt={product.name} 
+                          fill
+                          sizes="80px"
+                          className="rounded-lg object-contain"
+                          style={{ objectFit: 'contain' }}
+                        />
+                      </div>
                     ) : (
-                      <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                        <PhotoIcon className="h-6 w-6 text-gray-400" />
+                      <div className="h-20 w-20 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <PhotoIcon className="h-8 w-8 text-gray-400" />
                       </div>
                     )}
                   </td>

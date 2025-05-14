@@ -317,9 +317,18 @@ class LeaveApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ['teacher']
 
 class ProductSerializer(serializers.ModelSerializer):
+    """Serializer for products in the school shop"""
+    image = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = Product
         fields = '__all__'
+
+    def update(self, instance, validated_data):
+        # If no new image is provided and there's an existing image, keep the existing one
+        if 'image' not in validated_data and instance.image:
+            validated_data['image'] = instance.image
+        return super().update(instance, validated_data)
 
 class ExamPDFSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()

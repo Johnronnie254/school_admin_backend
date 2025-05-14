@@ -14,7 +14,12 @@ export interface CreateProductData {
   description: string;
   price: number;
   stock: number;
-  image?: File;
+  image?: File | string;
+}
+
+export interface UpdateProductData {
+  id: string;
+  formData: FormData;
 }
 
 export interface ApiError {
@@ -61,20 +66,7 @@ const shopService = {
   },
 
   // Update an existing product
-  updateProduct: async (data: CreateProductData & { id: string }) => {
-    const { id, ...productData } = data;
-    const formData = new FormData();
-    Object.entries(productData).forEach(([key, value]) => {
-      if (value !== undefined) {
-        if (value instanceof File) {
-          formData.append(key, value);
-        } else if (typeof value === 'number') {
-          formData.append(key, value.toString());
-        } else if (typeof value === 'string') {
-          formData.append(key, value);
-        }
-      }
-    });
+  updateProduct: async ({ id, formData }: UpdateProductData) => {
     const response = await apiClient.put<Product>(`/api/products/${id}/`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

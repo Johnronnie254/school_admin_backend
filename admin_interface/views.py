@@ -1467,8 +1467,40 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Handle the case where no new image is provided
+        if not request.FILES.get('image') and instance.image:
+            # If no new image is provided and keep_existing_image flag is set, don't update image
+            if request.data.get('keep_existing_image') == 'true':
+                data = request.data.copy()
+                if 'image' in data:
+                    del data['image']
+                serializer = self.get_serializer(instance, data=data, partial=partial)
+            else:
+                serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        else:
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def perform_create(self, serializer):
+        serializer.save()
 
 class TeacherExamViewSet(viewsets.ModelViewSet):
     """ViewSet for teacher exam PDFs"""
