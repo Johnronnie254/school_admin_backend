@@ -74,25 +74,6 @@ export default function LeaveApplicationsPage() {
     }
   });
 
-  const deleteAllMutation = useMutation({
-    mutationFn: async () => {
-      // Delete all applications one by one
-      const deletePromises = applications.map(app => 
-        leaveApplicationService.deleteLeaveApplication(app.id)
-      );
-      await Promise.all(deletePromises);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leaveApplications'] });
-      toast.success('All leave applications deleted successfully');
-      setSelectedIds(new Set());
-    },
-    onError: (error) => {
-      toast.error('Failed to delete leave applications');
-      console.error('Error deleting leave applications:', error);
-    }
-  });
-
   const deleteSelectedMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       // Delete selected applications one by one
@@ -112,6 +93,28 @@ export default function LeaveApplicationsPage() {
     }
   });
 
+  // Commenting out unused mutation
+  /*
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      // Delete all applications one by one
+      const deletePromises = applications.map(app => 
+        leaveApplicationService.deleteLeaveApplication(app.id)
+      );
+      await Promise.all(deletePromises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leaveApplications'] });
+      toast.success('All leave applications deleted successfully');
+      setSelectedIds(new Set());
+    },
+    onError: (error) => {
+      toast.error('Failed to delete leave applications');
+      console.error('Error deleting leave applications:', error);
+    }
+  });
+  */
+
   const deleteSingleMutation = useMutation({
     mutationFn: (id: string) => leaveApplicationService.deleteLeaveApplication(id),
     onSuccess: () => {
@@ -125,7 +128,8 @@ export default function LeaveApplicationsPage() {
   });
 
   // Confirm and delete all applications
-  const handleClearAll = () => {
+  // Commented out to fix ESLint error - function is not currently used
+  /* const handleClearAll = () => {
     if (applications.length === 0) {
       toast.error('No applications to delete');
       return;
@@ -134,7 +138,7 @@ export default function LeaveApplicationsPage() {
     if (window.confirm(`Are you sure you want to delete all ${applications.length} leave applications? This action cannot be undone.`)) {
       deleteAllMutation.mutate();
     }
-  };
+  }; */
 
   // Confirm and delete selected applications
   const handleDeleteSelected = () => {
