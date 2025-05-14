@@ -138,7 +138,7 @@ export const studentService = {
   },
 
   getStudentFeeRecords: async (studentId: string) => {
-    const response = await apiClient.get(`/api/students/${studentId}/fee-records/`);
+    const response = await apiClient.get(`/students/${studentId}/fee-records/`);
     return response.data;
   },
 

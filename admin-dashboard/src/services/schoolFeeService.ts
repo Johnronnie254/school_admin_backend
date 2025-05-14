@@ -1,6 +1,5 @@
-import axios, { AxiosError } from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://educitebackend.co.ke/api';
+import { apiClient } from '@/lib/api';
+import { AxiosError } from 'axios';
 
 export interface SchoolFee {
   id: string;
@@ -32,9 +31,9 @@ export interface PaymentInitiationResponse {
 export const schoolFeeService = {
   getSchoolFees: async () => {
     try {
-      const response = await axios.get(`${API_URL}/school-fees/`);
+      const response = await apiClient.get('/school-fees/');
       return response.data;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -44,9 +43,9 @@ export const schoolFeeService = {
 
   getSchoolFeeById: async (id: string) => {
     try {
-      const response = await axios.get(`${API_URL}/school-fees/${id}/`);
+      const response = await apiClient.get(`/school-fees/${id}/`);
       return response.data;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -56,9 +55,9 @@ export const schoolFeeService = {
 
   createSchoolFee: async (data: SchoolFeeFormData) => {
     try {
-      const response = await axios.post(`${API_URL}/fees/initiate/`, data);
+      const response = await apiClient.post('/fees/initiate/', data);
       return response.data;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -68,9 +67,9 @@ export const schoolFeeService = {
 
   updateSchoolFee: async (id: string, data: Partial<SchoolFeeFormData>) => {
     try {
-      const response = await axios.put(`${API_URL}/school-fees/${id}/`, data);
+      const response = await apiClient.put(`/school-fees/${id}/`, data);
       return response.data;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -80,9 +79,8 @@ export const schoolFeeService = {
 
   deleteSchoolFee: async (id: string) => {
     try {
-      const response = await axios.delete(`${API_URL}/school-fees/${id}/`);
-      return response.data;
-    } catch (error: unknown) {
+      await apiClient.delete(`/school-fees/${id}/`);
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -92,9 +90,9 @@ export const schoolFeeService = {
 
   getStudentFeeRecords: async (studentId: string) => {
     try {
-      const response = await axios.get(`${API_URL}/students/${studentId}/fee-records/`);
+      const response = await apiClient.get(`/students/${studentId}/fee-records/`);
       return response.data;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -104,11 +102,11 @@ export const schoolFeeService = {
 
   downloadFeeRecords: async () => {
     try {
-      const response = await axios.get(`${API_URL}/school-fees/download/`, {
+      const response = await apiClient.get('/school-fees/download/', {
         responseType: 'blob'
       });
       return response.data;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -118,9 +116,9 @@ export const schoolFeeService = {
 
   initiatePayment: async (studentId: string, data: SchoolFeeFormData) => {
     try {
-      const response = await axios.post(`${API_URL}/students/${studentId}/initiate_payment/`, data);
+      const response = await apiClient.post(`/students/${studentId}/initiate_payment/`, data);
       return response.data as PaymentInitiationResponse;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -130,11 +128,11 @@ export const schoolFeeService = {
 
   confirmPayment: async (transactionId: string) => {
     try {
-      const response = await axios.post(`${API_URL}/fees/confirm/`, {
+      const response = await apiClient.post('/fees/confirm/', {
         transaction_id: transactionId
       });
       return response.data;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }
@@ -144,9 +142,9 @@ export const schoolFeeService = {
 
   initiateFeePayment: async (data: SchoolFeeFormData) => {
     try {
-      const response = await axios.post(`${API_URL}/fees/initiate/`, data);
+      const response = await apiClient.post('/fees/initiate/', data);
       return response.data as PaymentInitiationResponse;
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof AxiosError) {
         throw error.response?.data || error.message;
       }

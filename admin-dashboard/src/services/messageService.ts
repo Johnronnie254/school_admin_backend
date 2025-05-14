@@ -1,4 +1,4 @@
-import { apiClient} from '@/lib/api';
+import { apiClient, PaginatedResponse } from '@/lib/api';
 
 export interface Message {
   id: string;
@@ -14,7 +14,18 @@ export interface MessageFormData {
   content: string;
 }
 
-export interface ChatUser {
+export interface Teacher {
+  id: string;
+  name: string;
+  email: string;
+  phone_number: string;
+  class_assigned: string | null;
+  subjects: string[];
+  profile_pic?: string;
+  school: string;
+}
+
+export interface Parent {
   id: string;
   name: string;
   email: string;
@@ -43,8 +54,28 @@ export const messageService = {
 
   // Get all users for messaging
   getChatUsers: async () => {
-    const response = await apiClient.get<{ teachers: ChatUser[], parents: ChatUser[] }>('/api/admin/users/');
-    // Combine teachers and parents into a single array
-    return [...response.data.teachers, ...response.data.parents];
+    try {
+      // Get teachers using the correct endpoint
+      const teachersResponse = await apiClient.get<PaginatedResponse<Teacher>>('/api/teachers/');
+      const teachers = teachersResponse.data.results || [];
+
+      // Get parents (keeping existing endpoint for now)
+      const parentsResponse = await apiClient.get<{ parents: Parent[] }>('/api/admin/users/');
+      const parents = parentsResponse.data.parents || [];
+
+      // Transform teachers to include role for UI consistency
+      const teachersWithRole = teachers.map(teacher => ({
+        id: teacher.id,
+        name: teacher.name,
+        email: teacher.email,
+        role: 'teacher'
+      }));
+
+      // Return combined array of teachers and parents
+      return [...teachersWithRole, ...parents];
+    } catch (error) {
+      console.error('Error fetching chat users:', error);
+      return [];
+    }
   }
 }; 

@@ -282,4 +282,4 @@ export interface SchoolSettings {
 export interface BulkPromoteStudentsData {
   grade: number;
   students: string[];
-} 
+}

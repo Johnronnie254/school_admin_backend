@@ -21,19 +21,19 @@ export default function SchoolFeesPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<SchoolFeeFormData>();
 
   // Fetch all students
-  const { data: students = [], isLoading: isLoadingStudents } = useQuery<Student[]>({
+  const {
+    data: studentsResponse, 
+    isLoading: isLoadingStudents,
+    error: studentsError 
+  } = useQuery({
     queryKey: ['students'],
-    queryFn: async () => {
-      try {
-        const response = await studentService.getStudents();
-        // Always return an array, even if the response is malformed
-        return Array.isArray(response?.results) ? response.results : [];
-      } catch (error) {
-        console.error('Error fetching students in school-fees page:', error);
-        return [];
-      }
-    }
+    queryFn: studentService.getStudents,
+    retry: 1,
+    staleTime: 30000,
   });
+
+  // Extract students array from the response
+  const students = studentsResponse?.results || [];
 
   // Fetch fee records for selected student
   const { data: feeRecords = [], isLoading: isLoadingFees } = useQuery<SchoolFee[]>({
@@ -41,14 +41,17 @@ export default function SchoolFeesPage() {
     queryFn: async () => {
       try {
         if (!selectedStudent) return [];
-        const response = await schoolFeeService.getStudentFeeRecords(selectedStudent.id);
+        const response = await studentService.getStudentFeeRecords(selectedStudent.id);
         return Array.isArray(response) ? response : [];
       } catch (error) {
         console.error('Error fetching fee records:', error);
+        toast.error('Failed to load fee records. Please try again.');
         return [];
       }
     },
-    enabled: !!selectedStudent
+    enabled: !!selectedStudent,
+    retry: 2,
+    retryDelay: 1000
   });
 
   // Initiate payment mutation
@@ -133,6 +136,15 @@ export default function SchoolFeesPage() {
       {isLoadingStudents ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <span className="ml-3 text-sm text-gray-600">Loading students...</span>
+        </div>
+      ) : studentsError ? (
+        <div className="text-center py-12">
+          <XMarkIcon className="mx-auto h-12 w-12 text-red-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Failed to load students</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {studentsError instanceof Error ? studentsError.message : 'Please try refreshing the page.'}
+          </p>
         </div>
       ) : students.length === 0 ? (
         <div className="text-center py-12">
