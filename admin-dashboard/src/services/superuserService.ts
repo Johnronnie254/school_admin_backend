@@ -103,8 +103,19 @@ export const superuserService = {
   },
 
   getSchoolStats: async (schoolId: number): Promise<SchoolStats> => {
-    const response = await apiClient.get(`superuser/${schoolId}/school_statistics/`);
-    return response.data;
+    try {
+      console.log('🔍 Fetching school stats for ID:', schoolId);
+      const response = await apiClient.get(`superuser/${schoolId}/school_statistics/`);
+      console.log('✅ School stats response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching school stats:', error);
+      if (error instanceof AxiosError) {
+        console.error('📊 Error status:', error.response?.status);
+        console.error('📝 Error data:', error.response?.data);
+      }
+      throw error;
+    }
   },
 
   getSchoolAdmins: async (schoolId: number): Promise<AdminUserResponse[]> => {

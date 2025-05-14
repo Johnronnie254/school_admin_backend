@@ -23,6 +23,7 @@ import { AxiosError } from 'axios';
 interface SchoolStats {
   admin_count: number;
   teacher_count: number;
+  student_count: number;
   parent_count: number;
 }
 
@@ -86,17 +87,21 @@ export default function UsersPage() {
       const stats: Record<string, SchoolStats> = {};
       for (const school of schools) {
         try {
+          console.log('🏫 Fetching stats for school:', school.id);
           const schoolStat = await superuserService.getSchoolStats(school.id);
+          console.log('📊 School stats received:', schoolStat);
           stats[school.id] = schoolStat;
         } catch (error) {
           console.error(`Failed to fetch stats for school ${school.id}:`, error);
           stats[school.id] = {
             admin_count: 0,
             teacher_count: 0,
-            parent_count: 0,
+            student_count: 0,
+            parent_count: 0
           };
         }
       }
+      console.log('📈 All school stats:', stats);
       return stats;
     },
     enabled: isAuthenticated === true && schools.length > 0,
@@ -279,6 +284,19 @@ export default function UsersPage() {
                       </div>
                       <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
                         {stats?.teacher_count || 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Students Section */}
+                  <div className="bg-yellow-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <UserGroupIcon className="h-5 w-5 text-yellow-600" />
+                        <h3 className="font-semibold text-black">Students</h3>
+                      </div>
+                      <span className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-medium">
+                        {stats?.student_count || 0}
                       </span>
                     </div>
                   </div>

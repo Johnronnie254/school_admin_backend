@@ -13,7 +13,6 @@ import {
   QuestionMarkCircleIcon 
 } from '@heroicons/react/24/outline';
 import { studentService, type Student, type StudentFormData } from '@/services/studentService';
-import { type PaginatedResponse } from '@/lib/api';
 import { Dialog } from '@/components/ui/dialog';
 
 const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -34,11 +33,20 @@ export default function StudentsPage() {
     } : {}
   });
 
-  const { data: students = [], isLoading: isLoadingStudents } = useQuery<PaginatedResponse<Student>, Error, Student[]>({
+  const {
+    data: studentsResponse,
+    isLoading: isLoadingStudents,
+    error: studentsError,
+    isError: isStudentsError
+  } = useQuery({
     queryKey: ['students'],
     queryFn: studentService.getStudents,
-    select: (data) => data.results
+    retry: 1,
+    staleTime: 30000,
   });
+
+  // Extract students array from the response
+  const students = studentsResponse?.results || [];
 
   const createMutation = useMutation<Student, Error, StudentFormData>({
     mutationFn: studentService.createStudent,
@@ -135,9 +143,18 @@ export default function StudentsPage() {
         </button>
       </div>
 
-      {isLoadingStudents || createMutation.isPending || updateMutation.isPending || deleteMutation.isPending ? (
+      {isLoadingStudents ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <span className="ml-3 text-sm text-gray-600">Loading students...</span>
+        </div>
+      ) : isStudentsError ? (
+        <div className="text-center py-12">
+          <XMarkIcon className="mx-auto h-12 w-12 text-red-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Failed to load students</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {studentsError instanceof Error ? studentsError.message : 'Please try refreshing the page.'}
+          </p>
         </div>
       ) : students.length === 0 ? (
         <div className="text-center py-12">
@@ -159,7 +176,7 @@ export default function StudentsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {students.map((student: Student) => (
+              {students.map((student) => (
                 <tr key={student.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.guardian}</td>
