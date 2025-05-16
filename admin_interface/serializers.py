@@ -185,31 +185,43 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "password": "Password fields didn't match."
             })
+        
+        # Check if email already exists in User model
+        if User.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({
+                "email": "A user with this email already exists."
+            })
+        
         return data
 
     def create(self, validated_data):
         # Remove password_confirmation from the data
         validated_data.pop('password_confirmation')
         password = validated_data.pop('password')
-        name = validated_data.pop('name')
-        email = validated_data.pop('email')
-
-        # Create User first
+        
+        # Create or get the Parent record
+        parent = Parent.objects.create(
+            name=validated_data['name'],
+            email=validated_data['email'],
+            phone_number=validated_data.get('phone_number', ''),
+            password=make_password(password)  # Properly hash the password
+        )
+        
+        # Also create a User account (this is the approach that works for teachers)
         user = User.objects.create_user(
-            email=email,
+            email=validated_data['email'],
             password=password,
             role=Role.PARENT,
-            first_name=name
+            first_name=validated_data['name']
         )
-
-        # Create Parent record
-        parent = Parent.objects.create(
-            user=user,
-            name=name,
-            email=email,
-            phone_number=validated_data.get('phone_number')
-        )
-
+        
+        # Link the user to the parent's school if applicable
+        if 'school' in validated_data and validated_data['school']:
+            user.school = validated_data['school']
+            parent.school = validated_data['school']
+            user.save()
+            parent.save()
+        
         return parent
 
 class ExamResultSerializer(serializers.ModelSerializer):

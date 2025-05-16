@@ -830,11 +830,31 @@ class ParentViewSet(viewsets.ModelViewSet):
             
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-        
+            
     def perform_create(self, serializer, school=None):
         """Save with school if provided"""
+        # Create the parent object with school if provided
         if school:
-            serializer.save(school=school)
+            parent_data = serializer.validated_data.copy()
+            
+            # Get password before popping out unnecessary fields
+            password = parent_data.pop('password', None)
+            parent_data.pop('password_confirmation', None)
+            
+            # Create the Parent record
+            parent = serializer.save(school=school)
+            
+            # Create a User record with the same information
+            if parent and password:
+                # Check if a User with this email already exists
+                if not User.objects.filter(email=parent.email).exists():
+                    User.objects.create_user(
+                        email=parent.email,
+                        password=password,
+                        role=Role.PARENT,
+                        first_name=parent.name,
+                        school=school
+                    )
         else:
             serializer.save()
 

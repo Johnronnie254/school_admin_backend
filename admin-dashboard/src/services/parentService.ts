@@ -16,8 +16,8 @@ export interface ParentFormData {
   password_confirmation: string;
 }
 
-export const parentService = {
-  getParents: async (): Promise<PaginatedResponse<Parent>> => {
+class ParentService {
+  async getParents(): Promise<PaginatedResponse<Parent>> {
     try {
       console.log('Fetching parents...');
       const response = await apiClient.get<PaginatedResponse<Parent>>('/api/parents/');
@@ -41,34 +41,34 @@ export const parentService = {
       // Return an empty paginated response instead of undefined
       return { count: 0, next: null, previous: null, results: [] };
     }
-  },
+  }
 
-  getParentById: async (id: string) => {
+  async getParentById(id: string) {
     const response = await apiClient.get<Parent>(`/api/parents/${id}/`);
     return response.data;
-  },
+  }
 
-  createParent: async (data: ParentFormData) => {
+  async createParent(data: ParentFormData) {
     console.log('Creating parent with data:', data);
-    const response = await apiClient.post<Parent>('/api/auth/register/', {
-      ...data,
-      role: 'parent'
-    });
+    // Use the /api/parents/ endpoint directly like the teacher service does
+    const response = await apiClient.post<Parent>('/api/parents/', data);
     console.log('Create parent response:', response.data);
     return response.data;
-  },
+  }
 
-  updateParent: async (id: string, data: Partial<ParentFormData>) => {
+  async updateParent(id: string, data: Partial<ParentFormData>) {
     const response = await apiClient.put<Parent>(`/api/parents/${id}/`, data);
     return response.data;
-  },
+  }
 
-  deleteParent: async (id: string) => {
+  async deleteParent(id: string) {
     await apiClient.delete(`/api/parents/${id}/`);
-  },
+  }
 
-  getParentChildren: async (parentId: string) => {
+  async getParentChildren(parentId: string) {
     const response = await apiClient.get(`/api/parents/${parentId}/children/`);
     return response.data;
   }
-}; 
+}
+
+export const parentService = new ParentService(); 
