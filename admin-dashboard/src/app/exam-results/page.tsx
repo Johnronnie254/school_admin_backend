@@ -170,48 +170,48 @@ export default function ExamResultsPage() {
           {/* Desktop Table - Hidden on mobile */}
           <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {examResults.map((result: ExamResult) => (
-                    <tr key={result.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{result.student}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{result.exam_name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{result.subject}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{result.marks}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{result.grade}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{result.term}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{result.year}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button
-                          onClick={() => handleEdit(result)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(result.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {examResults.map((result: ExamResult) => (
+                <tr key={result.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">{result.student}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{result.exam_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{result.subject}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{result.marks}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{result.grade}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{result.term}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{result.year}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <button
+                      onClick={() => handleEdit(result)}
+                      className="text-blue-600 hover:text-blue-900 mr-4"
+                    >
+                      <PencilIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(result.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
           </div>
           
           {/* Mobile Cards - Shown only on mobile */}

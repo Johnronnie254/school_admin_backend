@@ -11,23 +11,30 @@ class AuthService {
       console.log('🎫 Setting tokens in localStorage');
       this.setTokens(response.data.tokens);
 
+      // Get the full user object with school_id
+      const userWithSchool = {
+        ...response.data.user,
+        school_id: response.data.user.school?.id || null
+      };
+
       // Store user data in localStorage
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      console.log('👤 Stored user data in localStorage');
+      localStorage.setItem('user', JSON.stringify(userWithSchool));
+      console.log('👤 Stored user data in localStorage with school_id:', userWithSchool.school_id);
 
       // Convert the response to match our AuthResponse type
       const authResponse: AuthResponse = {
         tokens: response.data.tokens,
         user: {
-          id: response.data.user.id,
-          email: response.data.user.email,
-          name: response.data.user.name || `${response.data.user.first_name || ''} ${response.data.user.last_name || ''}`.trim(),
-          first_name: response.data.user.first_name || response.data.user.name?.split(' ')[0] || '',
-          last_name: response.data.user.last_name || response.data.user.name?.split(' ').slice(1).join(' ') || '',
-          role: response.data.user.role,
-          is_active: response.data.user.is_active !== undefined ? response.data.user.is_active : true,
-          created_at: response.data.user.created_at || new Date().toISOString(),
-          updated_at: response.data.user.updated_at || new Date().toISOString()
+          id: userWithSchool.id,
+          email: userWithSchool.email,
+          name: userWithSchool.name || `${userWithSchool.first_name || ''} ${userWithSchool.last_name || ''}`.trim(),
+          first_name: userWithSchool.first_name || userWithSchool.name?.split(' ')[0] || '',
+          last_name: userWithSchool.last_name || userWithSchool.name?.split(' ').slice(1).join(' ') || '',
+          role: userWithSchool.role,
+          is_active: userWithSchool.is_active !== undefined ? userWithSchool.is_active : true,
+          created_at: userWithSchool.created_at || new Date().toISOString(),
+          updated_at: userWithSchool.updated_at || new Date().toISOString(),
+          school_id: userWithSchool.school_id
         }
       };
 

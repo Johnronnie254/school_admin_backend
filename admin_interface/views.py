@@ -249,16 +249,26 @@ class TeacherViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
         
     def perform_create(self, serializer):
-        """Ensure teacher can only create profile with their own email"""
+        """Ensure teacher can only create profile with their own email and set the school"""
         user = self.request.user
         email = self.request.data.get('email')
         
         # Admin can create any teacher profile
         if user.role == Role.ADMIN:
-            serializer.save()
+            # Set the teacher's school to the admin's school
+            school = user.school
+            if school:
+                serializer.save(school=school)
+            else:
+                serializer.save()
         # Teacher can only create their own profile
         elif user.role == Role.TEACHER and user.email == email:
-            serializer.save()
+            # Set the teacher's school to the teacher's school
+            school = user.school
+            if school:
+                serializer.save(school=school)
+            else:
+                serializer.save()
         else:
             raise serializers.ValidationError({"error": "You can only create a teacher profile with your own email address"})
 
@@ -425,8 +435,18 @@ class StudentViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        if user.role == Role.ADMIN or user.role == Role.TEACHER:
-            return Student.objects.all()
+        if user.role == Role.ADMIN:
+            # Admin should only see students from their school
+            if user.school:
+                return Student.objects.filter(school=user.school)
+            else:
+                return Student.objects.all()
+        elif user.role == Role.TEACHER:
+            # Teacher should only see students from their school
+            if user.school:
+                return Student.objects.filter(school=user.school)
+            else:
+                return Student.objects.all()
         elif user.role == Role.PARENT:
             return Student.objects.filter(parent=user)
         return Student.objects.none()
@@ -515,7 +535,13 @@ class StudentViewSet(viewsets.ModelViewSet):
             # If parent is creating, automatically set parent field
             serializer.save(parent=self.request.user)
         else:
-            serializer.save()
+            # For admin or teacher users, set the school based on the admin's school
+            user = self.request.user
+            school = user.school
+            if school:
+                serializer.save(school=school)
+            else:
+                serializer.save()
 
     @action(detail=True, methods=['get'])
     def exam_results(self, request, pk=None):
@@ -754,6 +780,27 @@ class ParentViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    def create(self, request, *args, **kwargs):
+        """Override create to set the school automatically"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Set school for parent based on admin's school
+        if request.user.role == Role.ADMIN and request.user.school:
+            self.perform_create(serializer, school=request.user.school)
+        else:
+            self.perform_create(serializer)
+            
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+    def perform_create(self, serializer, school=None):
+        """Save with school if provided"""
+        if school:
+            serializer.save(school=school)
+        else:
+            serializer.save()
+
 class ExamResultViewSet(viewsets.ModelViewSet):
     """ViewSet for ExamResult operations"""
     queryset = ExamResult.objects.all()
@@ -862,7 +909,13 @@ class NotificationView(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        """Set the created_by and school fields for notification"""
+        user = self.request.user
+        school = user.school
+        if school:
+            serializer.save(created_by=user, school=school)
+        else:
+            serializer.save(created_by=user)
 
 class StudentDetailView(APIView):
     """Handles retrieving, updating, and deleting a student."""
@@ -1318,7 +1371,11 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
         if user.role == Role.TEACHER:
             try:
                 teacher = Teacher.objects.get(email=user.email)
-                serializer.save(teacher=teacher)
+                # Add the school field to the leave application
+                if user.school:
+                    serializer.save(teacher=teacher, school=user.school)
+                else:
+                    serializer.save(teacher=teacher)
             except Teacher.DoesNotExist:
                 raise serializers.ValidationError({"error": "Your teacher profile could not be found. Please contact an administrator."})
         elif user.role == Role.ADMIN:
@@ -1328,7 +1385,12 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
                 teacher = Teacher.objects.first()
                 if not teacher:
                     raise serializers.ValidationError({"error": "No teachers found in the system. Please create a teacher first."})
-                serializer.save(teacher=teacher)
+                
+                # Add the school field to the leave application
+                if user.school:
+                    serializer.save(teacher=teacher, school=user.school)
+                else:
+                    serializer.save(teacher=teacher)
             except Exception as e:
                 raise serializers.ValidationError({"error": f"Could not create leave application: {str(e)}"})
         else:
@@ -1500,7 +1562,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def perform_create(self, serializer):
-        serializer.save()
+        """Set the school for the product based on admin's school"""
+        user = self.request.user
+        if user.school:
+            serializer.save(school=user.school)
+        else:
+            serializer.save()
 
 class TeacherExamViewSet(viewsets.ModelViewSet):
     """ViewSet for teacher exam PDFs"""
@@ -1578,7 +1645,13 @@ class SchoolEventViewSet(viewsets.ModelViewSet):
         return queryset
         
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        """Set the created_by and school fields"""
+        user = self.request.user
+        school = user.school
+        if school:
+            serializer.save(created_by=user, school=school)
+        else:
+            serializer.save(created_by=user)
 
 @api_view(['GET', 'HEAD'])  # Add HEAD to allowed methods
 @permission_classes([AllowAny])
