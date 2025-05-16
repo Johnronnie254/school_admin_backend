@@ -1,9 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { teacherService, Teacher } from '@/services/teacherService';
-import { studentService, Student } from '@/services/studentService';
-import { parentService, Parent } from '@/services/parentService';
+import { schoolService } from '@/services/schoolService';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { EventBanner } from '@/components/EventBanner';
@@ -14,6 +12,7 @@ import {
   ChartBarIcon,
   CalendarIcon,
   ArrowRightOnRectangleIcon,
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
@@ -21,59 +20,25 @@ export default function DashboardPage() {
   const { logout } = useAuth();
   const isOnline = useOnlineStatus();
   
-  const { data: teachersData, isLoading: isLoadingTeachers } = useQuery<Teacher[]>({
-    queryKey: ['teachers'],
-    queryFn: async () => {
-      try {
-        const response = await teacherService.getTeachers();
-        // Always return an array, even if the response is malformed
-        return Array.isArray(response?.results) ? response.results : [];
-      } catch (error) {
-        console.error('Error fetching teachers in dashboard:', error);
-        return [];
-      }
-    },
+  // Fetch school statistics instead of individual counts
+  const { data: schoolStats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['schoolStatistics'],
+    queryFn: schoolService.getSchoolStatistics,
+  });
+  
+  // Fetch current school information for the banner
+  const { data: currentSchool, isLoading: isLoadingSchool } = useQuery({
+    queryKey: ['currentSchool'],
+    queryFn: schoolService.getCurrentSchool,
   });
 
-  const { data: studentsData, isLoading: isLoadingStudents } = useQuery<Student[]>({
-    queryKey: ['students'],
-    queryFn: async () => {
-      try {
-        const response = await studentService.getStudents();
-        // Always return an array, even if the response is malformed
-        return Array.isArray(response?.results) ? response.results : [];
-      } catch (error) {
-        console.error('Error fetching students in dashboard:', error);
-        return [];
-      }
-    },
-  });
+  const isLoading = isLoadingStats || isLoadingSchool;
 
-  const { data: parentsData, isLoading: isLoadingParents } = useQuery<Parent[]>({
-    queryKey: ['parents'],
-    queryFn: async () => {
-      try {
-        const response = await parentService.getParents();
-        // Always return an array, even if the response is malformed
-        return Array.isArray(response?.results) ? response.results : [];
-      } catch (error) {
-        console.error('Error fetching parents in dashboard:', error);
-        return [];
-      }
-    },
-  });
-
-  const isLoading = isLoadingTeachers || isLoadingStudents || isLoadingParents;
-  const teachers = teachersData || [];
-  const students = studentsData || [];
-  const parents = parentsData || [];
-
-  // Safe count function that converts NaN or undefined to 0
-  const safeCount = (arr: Array<unknown> | undefined | null): number => Array.isArray(arr) ? arr.length : 0;
-  const teacherCount = safeCount(teachers);
-  const studentCount = safeCount(students);
-  const parentCount = safeCount(parents);
-  const totalActiveUsers = teacherCount + studentCount + parentCount;
+  // Use school-specific counts from the statistics
+  const teacherCount = schoolStats?.total_teachers || 0;
+  const studentCount = schoolStats?.total_students || 0;
+  const parentCount = schoolStats?.total_parents || 0;
+  const totalActiveUsers = schoolStats?.active_users || 0;
 
   const stats = [
     {
@@ -97,14 +62,6 @@ export default function DashboardPage() {
       href: '/parents',
       color: 'bg-yellow-500',
     },
-    // {
-    //   name: 'Fee Collection',
-    //   value: schoolStats?.fee_collection || 0,
-    //   icon: CurrencyDollarIcon,
-    //   href: '/school-fees',
-    //   color: 'bg-red-500',
-    //   prefix: '$',
-    // },
     {
       name: 'Active Users',
       value: totalActiveUsers,
@@ -154,6 +111,28 @@ export default function DashboardPage() {
     <div className="container mx-auto px-4 py-4 sm:py-8">
       {/* Event Banner */}
       {isOnline && <EventBanner />}
+      
+      {/* School Banner */}
+      {currentSchool && (
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 sm:p-6 rounded-lg shadow-lg mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between">
+            <div className="flex items-center mb-4 sm:mb-0">
+              <AcademicCapIcon className="h-8 w-8 sm:h-10 sm:w-10 text-white mr-3" />
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold">{currentSchool.name}</h2>
+                <p className="text-sm sm:text-base text-blue-100">{currentSchool.registration_number}</p>
+              </div>
+            </div>
+            {currentSchool.logo && (
+              <img 
+                src={currentSchool.logo} 
+                alt={`${currentSchool.name} logo`} 
+                className="h-12 w-12 sm:h-16 sm:w-16 object-contain bg-white p-1 rounded-full"
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Dashboard Content */}
       <div className="p-4 sm:p-6">

@@ -238,6 +238,17 @@ class TeacherViewSet(viewsets.ModelViewSet):
     serializer_class = TeacherSerializer
     permission_classes = [IsAuthenticated]  # Changed from IsAdminUser to IsAuthenticated
 
+    def get_queryset(self):
+        """Filter teachers by school"""
+        user = self.request.user
+        queryset = Teacher.objects.all()
+        
+        # Filter by school if user has a school
+        if user.school:
+            queryset = queryset.filter(school=user.school)
+            
+        return queryset
+        
     def get_permissions(self):
         if self.action in ['create']:
             # Allow any authenticated user to create a teacher profile
@@ -628,11 +639,20 @@ class ParentViewSet(viewsets.ModelViewSet):
         return ParentSerializer
 
     def get_queryset(self):
-        """Get all parents, including those created through User model"""
+        """Get all parents, including those created through User model, filtered by school"""
+        user = self.request.user
+        
         # Get all Parent records
         parent_records = Parent.objects.all()
+        
+        # Filter by school if user has a school
+        if user.school:
+            parent_records = parent_records.filter(school=user.school)
+            
         # Get all User records with role=PARENT
         parent_users = User.objects.filter(role=Role.PARENT)
+        if user.school:
+            parent_users = parent_users.filter(school=user.school)
         
         # Combine both querysets
         combined_queryset = parent_records
@@ -644,7 +664,8 @@ class ParentViewSet(viewsets.ModelViewSet):
                         name=user.first_name,
                         email=user.email,
                         phone_number='',  # Empty phone number for now
-                        password=''  # Default empty password
+                        password='',  # Default empty password
+                        school=user.school
                     )
                     combined_queryset = combined_queryset | Parent.objects.filter(id=parent.id)
                 except IntegrityError:
@@ -997,19 +1018,63 @@ class TeachersBySubjectView(APIView):
         return Response(serializer.data)
 
 class SchoolStatisticsView(APIView):
-    """Get school statistics."""
+    """Get school statistics for the current user's school."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        stats = {
-            'total_teachers': Teacher.objects.count(),
-            'total_students': Student.objects.count(),
-            'students_per_grade': Student.objects.values('grade')
-                                       .annotate(count=models.Count('id')),
-            'recent_notifications': Notification.objects.order_by('-created_at')[:5]
-                                              .values('message', 'target_group', 'created_at')
-        }
-        return Response(stats, status=status.HTTP_200_OK)
+        """Get statistics related to the user's school"""
+        try:
+            # Get the user's school
+            school = request.user.school
+            if not school:
+                return Response(
+                    {"error": "No school associated with this user"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+            # Get teacher count for this school
+            total_teachers = Teacher.objects.filter(school=school).count()
+            
+            # Get student count for this school
+            total_students = Student.objects.filter(school=school).count()
+            
+            # Get parent count for this school
+            parent_count = Parent.objects.filter(school=school).count()
+            
+            # Calculate active users
+            active_users = total_teachers + total_students + parent_count
+            
+            # Get students per grade
+            students_per_grade = []
+            grades = Student.objects.filter(school=school).values('grade').distinct()
+            for grade_dict in grades:
+                grade = grade_dict['grade']
+                count = Student.objects.filter(school=school, grade=grade).count()
+                students_per_grade.append({'grade': grade, 'count': count})
+            
+            # Get recent notifications
+            recent_notifications = Notification.objects.filter(school=school).order_by('-created_at')[:5]
+            notification_list = []
+            for notification in recent_notifications:
+                notification_list.append({
+                    'message': notification.message,
+                    'target_group': notification.target_group,
+                    'created_at': notification.created_at.isoformat()
+                })
+            
+            # Return statistics
+            return Response({
+                'total_teachers': total_teachers,
+                'total_students': total_students,
+                'total_parents': parent_count,
+                'active_users': active_users,
+                'students_per_grade': students_per_grade,
+                'recent_notifications': notification_list,
+                'school_name': school.name
+            })
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ParentRegistrationView(APIView):
     """Handle parent registration"""
@@ -1619,9 +1684,13 @@ class SchoolEventViewSet(viewsets.ModelViewSet):
     ordering_fields = ['start_date', 'end_date', 'created_at']
 
     def get_queryset(self):
-        # Filter events based on user role
+        # Filter events based on user role and school
         user = self.request.user
         queryset = SchoolEvent.objects.all()
+        
+        # Filter by school if user has a school
+        if user.school:
+            queryset = queryset.filter(school=user.school)
         
         # Filter by date range if provided
         start = self.request.query_params.get('start', None)
@@ -1919,3 +1988,21 @@ class SuperUserViewSet(viewsets.ViewSet):
                 
         except School.DoesNotExist:
             return Response({'error': 'School not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class CurrentSchoolView(APIView):
+    """Get current school information for logged-in user"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = SchoolSerializer
+    
+    def get(self, request):
+        """Get school info for the current user"""
+        # Get the user's school
+        school = request.user.school
+        if not school:
+            return Response(
+                {"error": "No school associated with this user"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = self.serializer_class(school)
+        return Response(serializer.data)

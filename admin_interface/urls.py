@@ -13,7 +13,8 @@ from .views import (
     ProductViewSet, TeacherScheduleView, TeacherProfilePicView,
     TeacherExamViewSet, PasswordResetRequestView,
     PasswordResetConfirmView, TeacherParentAssociationViewSet,
-    SchoolViewSet, ParentViewSet, SchoolEventViewSet, SuperUserViewSet
+    SchoolViewSet, ParentViewSet, SchoolEventViewSet, SuperUserViewSet,
+    CurrentSchoolView
 )
 
 router = DefaultRouter()
@@ -40,6 +41,10 @@ urlpatterns = [
     path('auth/password/reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('auth/password/reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
 
+    # School
+    path('current-school/', CurrentSchoolView.as_view(), name='current-school'),
+    path('school/statistics/', SchoolStatisticsView.as_view(), name='school-statistics'),
+
     # Documents
     path('documents/upload/', DocumentUploadView.as_view(), name='document-upload'),
 
@@ -63,9 +68,6 @@ urlpatterns = [
     # Teachers
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),
     path('teacher/profile_pic/', TeacherProfilePicView.as_view(), name='teacher-profile-pic'),
-
-    # Statistics
-    path('statistics/', SchoolStatisticsView.as_view(), name='school-statistics'),
 
     # Notifications
     path('notifications/', NotificationView.as_view({
