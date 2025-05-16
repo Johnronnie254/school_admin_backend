@@ -44,6 +44,24 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             refresh = RefreshToken.for_user(user)
+            
+            # If registering a parent, also create a Parent record
+            if user.role == Role.PARENT:
+                try:
+                    # Create a Parent record linked to this user
+                    Parent.objects.get_or_create(
+                        email=user.email,
+                        defaults={
+                            'name': user.first_name,
+                            'phone_number': request.data.get('phone_number', ''),
+                            'password': '',  # Not needed since auth happens through User model
+                            'school': user.school  # Link to the same school
+                        }
+                    )
+                except Exception as e:
+                    print(f"Error creating parent record: {str(e)}")
+                    # Continue even if parent record creation fails
+            
             return Response({
                 'user': {
                     'id': user.id,
@@ -642,37 +660,35 @@ class ParentViewSet(viewsets.ModelViewSet):
         """Get all parents, including those created through User model, filtered by school"""
         user = self.request.user
         
-        # Get all Parent records
-        parent_records = Parent.objects.all()
-        
-        # Filter by school if user has a school
-        if user.school:
-            parent_records = parent_records.filter(school=user.school)
-            
-        # Get all User records with role=PARENT
+        # Get all User records with role=PARENT first
         parent_users = User.objects.filter(role=Role.PARENT)
         if user.school:
             parent_users = parent_users.filter(school=user.school)
         
-        # Combine both querysets
-        combined_queryset = parent_records
-        for user in parent_users:
-            if not parent_records.filter(email=user.email).exists():
-                try:
-                    # Create a Parent record for this user if it doesn't exist
-                    parent = Parent.objects.create(
-                        name=user.first_name,
-                        email=user.email,
-                        phone_number='',  # Empty phone number for now
-                        password='',  # Default empty password
-                        school=user.school
-                    )
-                    combined_queryset = combined_queryset | Parent.objects.filter(id=parent.id)
-                except IntegrityError:
-                    # If there's a conflict, skip this user
-                    continue
+        # Get all existing Parent records
+        parent_records = Parent.objects.all()
+        if user.school:
+            parent_records = parent_records.filter(school=user.school)
+            
+        # Ensure every parent User has a Parent record
+        with transaction.atomic():
+            for parent_user in parent_users:
+                Parent.objects.get_or_create(
+                    email=parent_user.email,
+                    defaults={
+                        'name': parent_user.first_name,
+                        'phone_number': '',
+                        'password': '',
+                        'school': parent_user.school
+                    }
+                )
         
-        return combined_queryset
+        # Now fetch the updated set of Parent records
+        updated_parent_records = Parent.objects.all()
+        if user.school:
+            updated_parent_records = updated_parent_records.filter(school=user.school)
+            
+        return updated_parent_records
 
     def destroy(self, request, *args, **kwargs):
         """Delete a parent and their associated User record"""
@@ -822,73 +838,19 @@ class ParentViewSet(viewsets.ModelViewSet):
         else:
             serializer.save()
 
-class ExamResultViewSet(viewsets.ModelViewSet):
-    """ViewSet for ExamResult operations"""
-    queryset = ExamResult.objects.all()
-    serializer_class = ExamResultSerializer
+class ExamResultView(APIView):
     permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['student__name', 'subject', 'exam_name']
-    ordering_fields = ['created_at', 'marks', 'year', 'term']
 
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsTeacher()]
-        return [IsAuthenticated()]
-
-    @action(detail=False, methods=['get'], permission_classes=[IsParent])
-    def download_results(self, request):
-        student_id = request.query_params.get('student_id')
-        year = request.query_params.get('year')
-        term = request.query_params.get('term')
-        
-        # Verify parent has access to this student
-        if not Student.objects.filter(id=student_id, parent=request.user).exists():
-            return Response(
-                {'error': 'Unauthorized access'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        results = ExamResult.objects.filter(
-            student_id=student_id,
-            year=year,
-            term=term
-        )
-        
-        # Convert to DataFrame and then to Excel
-        data = []
-        for result in results:
-            data.append({
-                'Subject': result.subject,
-                'Marks': result.marks,
-                'Grade': result.grade,
-                'Remarks': result.remarks
-            })
-            
-        df = pd.DataFrame(data)
-        response = HttpResponse(content_type='application/vnd.ms-excel')
-        response['Content-Disposition'] = f'attachment; filename=results_{year}_{term}.xlsx'
-        df.to_excel(response, index=False)
-        return response
-
-    @action(detail=True, methods=['patch'])
-    def edit_marks(self, request, pk=None):
-        """Edit exam marks and grade"""
-        result = self.get_object()
-        try:
-            if 'marks' in request.data:
-                result.marks = request.data['marks']
-            if 'grade' in request.data:
-                result.grade = request.data['grade']
-            if 'remarks' in request.data:
-                result.remarks = request.data['remarks']
-            result.save()
-            return Response({
-                'message': 'Exam result updated',
-                'result': ExamResultSerializer(result).data
-            })
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request):
+        serializer = ExamResultSerializer(data=request.data)
+        if serializer.is_valid():
+            # Set the school when creating a new exam result
+            if request.user.school:
+                serializer.save(school=request.user.school)
+            else:
+                serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SchoolFeeViewSet(viewsets.ModelViewSet):
     """ViewSet for SchoolFee operations"""
@@ -898,6 +860,25 @@ class SchoolFeeViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['student__name', 'transaction_id', 'status']
     ordering_fields = ['payment_date', 'amount', 'created_at']
+    
+    def get_queryset(self):
+        """Filter fee records by school"""
+        user = self.request.user
+        queryset = SchoolFee.objects.all()
+        
+        # Filter by school if user has a school
+        if user.school:
+            queryset = queryset.filter(school=user.school)
+            
+        return queryset
+        
+    def perform_create(self, serializer):
+        """Set the school field when creating new fee records"""
+        user = self.request.user
+        if user.school:
+            serializer.save(school=user.school)
+        else:
+            serializer.save()
 
     @action(detail=True, methods=['patch'])
     def edit_payment_status(self, request, pk=None):
@@ -1347,16 +1328,6 @@ class FeePaymentView(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-class ExamResultView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = ExamResultSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 class MessageViewSet(viewsets.ModelViewSet):
     """ViewSet for chat messages"""
     queryset = Message.objects.all()
@@ -1365,12 +1336,24 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if self.action == 'list':
-            return Message.objects.filter(Q(sender=user) | Q(receiver=user))
-        return Message.objects.all()
+        
+        # Base filter: messages where the user is sender or receiver
+        queryset = Message.objects.filter(Q(sender=user) | Q(receiver=user))
+        
+        # Further filter by school if user has a school
+        if user.school:
+            queryset = queryset.filter(school=user.school)
+            
+        return queryset
 
     def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+        """Save the message with sender and school"""
+        user = self.request.user
+        
+        if user.school:
+            serializer.save(sender=user, school=user.school)
+        else:
+            serializer.save(sender=user)
 
     @action(detail=False, methods=['get'])
     def get_chat_history(self, request, user_id):
@@ -1598,6 +1581,17 @@ class ProductViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']
 
+    def get_queryset(self):
+        """Filter products by school"""
+        user = self.request.user
+        queryset = Product.objects.all()
+        
+        # Filter by school if user has a school
+        if user.school:
+            queryset = queryset.filter(school=user.school)
+            
+        return queryset
+        
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()

@@ -141,8 +141,8 @@ class Parent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=15, unique=True)
-    password = models.CharField(max_length=255)  # Will store hashed password
+    phone_number = models.CharField(max_length=15, null=True, blank=True)
+    password = models.CharField(max_length=255, blank=True)  # Will store hashed password
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='parents', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

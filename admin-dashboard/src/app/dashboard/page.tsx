@@ -15,6 +15,7 @@ import {
   AcademicCapIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function DashboardPage() {
   const { logout } = useAuth();
@@ -109,45 +110,47 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-4 sm:py-8">
-      {/* Event Banner */}
-      {isOnline && <EventBanner />}
-      
-      {/* School Banner */}
+      {/* Navigation Bar with School Info */}
       {currentSchool && (
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 sm:p-6 rounded-lg shadow-lg mb-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between">
-            <div className="flex items-center mb-4 sm:mb-0">
-              <AcademicCapIcon className="h-8 w-8 sm:h-10 sm:w-10 text-white mr-3" />
+        <div className="bg-white shadow-sm rounded-lg p-3 mb-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <AcademicCapIcon className="h-6 w-6 text-blue-600 mr-2" />
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold">{currentSchool.name}</h2>
-                <p className="text-sm sm:text-base text-blue-100">{currentSchool.registration_number}</p>
+                <h2 className="text-lg font-bold text-gray-800">{currentSchool.name}</h2>
+                <p className="text-xs text-gray-500">{currentSchool.registration_number}</p>
               </div>
             </div>
-            {currentSchool.logo && (
-              <img 
-                src={currentSchool.logo} 
-                alt={`${currentSchool.name} logo`} 
-                className="h-12 w-12 sm:h-16 sm:w-16 object-contain bg-white p-1 rounded-full"
-              />
-            )}
+            <div className="flex items-center gap-4">
+              {currentSchool.logo && (
+                <Image
+                  src={currentSchool.logo}
+                  alt={`${currentSchool.name} logo`}
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 object-contain bg-white p-1 rounded-full border border-gray-200"
+                />
+              )}
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Event Banner */}
+      {isOnline && <EventBanner />}
+      
       {/* Main Dashboard Content */}
       <div className="p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Dashboard</h1>
-            <p className="mt-1 text-sm text-gray-500">School Administration</p>
-          </div>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 w-full sm:w-auto justify-center sm:justify-start"
-          >
-            <ArrowRightOnRectangleIcon className="h-5 w-5" />
-            Logout
-          </button>
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">School Administration</p>
         </div>
 
         {/* Stats Grid */}
