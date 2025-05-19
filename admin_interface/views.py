@@ -1370,11 +1370,26 @@ class MessageViewSet(viewsets.ModelViewSet):
         """Save the message with sender and school"""
         user = self.request.user
         
-        # The serializer will handle receiver validation
-        if user.school:
-            serializer.save(sender=user, school=user.school)
-        else:
-            serializer.save(sender=user)
+        try:
+            # Validate that the receiver exists and is of the correct role
+            receiver = serializer.validated_data.get('receiver')
+            if not receiver:
+                raise serializers.ValidationError({"receiver": "Receiver is required"})
+                
+            # Validate that teachers can only message parents and vice versa
+            if user.role == Role.TEACHER and receiver.role != Role.PARENT:
+                raise serializers.ValidationError({"receiver": "Teachers can only message parents"})
+            elif user.role == Role.PARENT and receiver.role != Role.TEACHER:
+                raise serializers.ValidationError({"receiver": "Parents can only message teachers"})
+            
+            # Save with school if available
+            if user.school:
+                serializer.save(sender=user, school=user.school)
+            else:
+                serializer.save(sender=user)
+                
+        except Exception as e:
+            raise serializers.ValidationError({"error": str(e)})
 
     @action(detail=False, methods=['get'])
     def get_chat_history(self, request, user_id=None):
@@ -1390,7 +1405,8 @@ class MessageViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            print(f"Looking up chat history with user_id: {user_id}")
+            # Convert user_id to string to handle UUID objects
+            user_id = str(user_id)
             
             # Find the corresponding User
             other_user = None
@@ -1402,37 +1418,33 @@ class MessageViewSet(viewsets.ModelViewSet):
                 # Try Teacher model
                 try:
                     teacher = Teacher.objects.get(id=user_id)
-                    try:
-                        other_user = User.objects.get(email=teacher.email)
-                    except User.DoesNotExist:
-                        # Create a User for this Teacher
-                        other_user = User.objects.create(
-                            email=teacher.email,
-                            first_name=teacher.name,
-                            role='teacher',
-                            school=teacher.school
-                        )
-                        # Set a random password
-                        temp_password = User.objects.make_random_password()
-                        other_user.set_password(temp_password)
+                    # Try to find or create User with matching email
+                    other_user, created = User.objects.get_or_create(
+                        email=teacher.email,
+                        defaults={
+                            'first_name': teacher.name,
+                            'role': Role.TEACHER,
+                            'school': teacher.school
+                        }
+                    )
+                    if created:
+                        other_user.set_password(User.objects.make_random_password())
                         other_user.save()
                 except Teacher.DoesNotExist:
                     # Try Parent model
                     try:
                         parent = Parent.objects.get(id=user_id)
-                        try:
-                            other_user = User.objects.get(email=parent.email)
-                        except User.DoesNotExist:
-                            # Create a User for this Parent
-                            other_user = User.objects.create(
-                                email=parent.email,
-                                first_name=parent.name,
-                                role='parent',
-                                school=parent.school
-                            )
-                            # Set a random password
-                            temp_password = User.objects.make_random_password()
-                            other_user.set_password(temp_password)
+                        # Try to find or create User with matching email
+                        other_user, created = User.objects.get_or_create(
+                            email=parent.email,
+                            defaults={
+                                'first_name': parent.name,
+                                'role': Role.PARENT,
+                                'school': parent.school
+                            }
+                        )
+                        if created:
+                            other_user.set_password(User.objects.make_random_password())
                             other_user.save()
                     except Parent.DoesNotExist:
                         return Response(
@@ -1444,6 +1456,18 @@ class MessageViewSet(viewsets.ModelViewSet):
                 return Response(
                     {"error": "Failed to find or create user account"},
                     status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Validate that teachers can only view chat history with parents and vice versa
+            if request.user.role == Role.TEACHER and other_user.role != Role.PARENT:
+                return Response(
+                    {"error": "Teachers can only view chat history with parents"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            elif request.user.role == Role.PARENT and other_user.role != Role.TEACHER:
+                return Response(
+                    {"error": "Parents can only view chat history with teachers"},
+                    status=status.HTTP_403_FORBIDDEN
                 )
             
             # Get messages exchanged between the current user and the other user

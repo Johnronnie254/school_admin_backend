@@ -291,7 +291,7 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = '__all__'
         read_only_fields = ['sender', 'created_at']
-        
+
     def validate_receiver(self, value):
         """Allow receiver to be specified as a Teacher or Parent ID"""
         # If it's already a User object, return it
@@ -299,7 +299,7 @@ class MessageSerializer(serializers.ModelSerializer):
             return value
             
         # If it's a string (ID), try to find the corresponding User/Teacher/Parent
-        receiver_id = value
+        receiver_id = str(value)  # Convert to string to handle UUID objects
         
         # First try User model
         try:
@@ -308,32 +308,38 @@ class MessageSerializer(serializers.ModelSerializer):
             # Try Teacher model
             try:
                 teacher = Teacher.objects.get(id=receiver_id)
-                # Try to find User with matching email
-                try:
-                    return User.objects.get(email=teacher.email)
-                except User.DoesNotExist:
-                    # Create a User for this Teacher
-                    return User.objects.create(
-                        email=teacher.email,
-                        first_name=teacher.name,
-                        role='teacher',
-                        school=teacher.school
-                    )
+                # Try to find or create User with matching email
+                user, created = User.objects.get_or_create(
+                    email=teacher.email,
+                    defaults={
+                        'first_name': teacher.name,
+                        'role': Role.TEACHER,
+                        'school': teacher.school
+                    }
+                )
+                if created:
+                    # Set a random password for new users
+                    user.set_password(User.objects.make_random_password())
+                    user.save()
+                return user
             except Teacher.DoesNotExist:
                 # Try Parent model
                 try:
                     parent = Parent.objects.get(id=receiver_id)
-                    # Try to find User with matching email
-                    try:
-                        return User.objects.get(email=parent.email)
-                    except User.DoesNotExist:
-                        # Create a User for this Parent
-                        return User.objects.create(
-                            email=parent.email,
-                            first_name=parent.name,
-                            role='parent',
-                            school=parent.school
-                        )
+                    # Try to find or create User with matching email
+                    user, created = User.objects.get_or_create(
+                        email=parent.email,
+                        defaults={
+                            'first_name': parent.name,
+                            'role': Role.PARENT,
+                            'school': parent.school
+                        }
+                    )
+                    if created:
+                        # Set a random password for new users
+                        user.set_password(User.objects.make_random_password())
+                        user.save()
+                    return user
                 except Parent.DoesNotExist:
                     raise serializers.ValidationError(f"No User, Teacher or Parent found with ID {receiver_id}")
         
