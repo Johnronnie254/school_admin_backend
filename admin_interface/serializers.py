@@ -206,7 +206,7 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
             phone_number=validated_data.get('phone_number', ''),
             password=make_password(password)  # Properly hash the password
         )
-        
+
         # Also create a User account (this is the approach that works for teachers)
         user = User.objects.create_user(
             email=validated_data['email'],
@@ -214,14 +214,14 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
             role=Role.PARENT,
             first_name=validated_data['name']
         )
-        
+
         # Link the user to the parent's school if applicable
         if 'school' in validated_data and validated_data['school']:
             user.school = validated_data['school']
             parent.school = validated_data['school']
             user.save()
             parent.save()
-        
+
         return parent
 
 class ExamResultSerializer(serializers.ModelSerializer):

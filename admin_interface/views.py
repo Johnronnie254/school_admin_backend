@@ -266,7 +266,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(school=user.school)
             
         return queryset
-        
+
     def get_permissions(self):
         if self.action in ['create']:
             # Allow any authenticated user to create a teacher profile
@@ -569,8 +569,8 @@ class StudentViewSet(viewsets.ModelViewSet):
             school = user.school
             if school:
                 serializer.save(school=school)
-            else:
-                serializer.save()
+        else:
+            serializer.save()
 
     @action(detail=True, methods=['get'])
     def exam_results(self, request, pk=None):
@@ -1371,6 +1371,9 @@ class MessageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         receiver_id = self.request.data.get('receiver')
         
+        if not receiver_id:
+            raise serializers.ValidationError({"error": "Receiver ID is required"})
+
         try:
             # Try to get the receiver as a User
             receiver = User.objects.get(id=receiver_id)
@@ -1387,6 +1390,10 @@ class MessageViewSet(viewsets.ModelViewSet):
                 except (Parent.DoesNotExist, User.DoesNotExist):
                     raise serializers.ValidationError({"error": "Receiver not found"})
         
+        content = self.request.data.get('content')
+        if not content:
+            raise serializers.ValidationError({"error": "Message content is required"})
+            
         if user.school:
             serializer.save(sender=user, receiver=receiver, school=user.school)
         else:
@@ -1405,6 +1412,8 @@ class MessageViewSet(viewsets.ModelViewSet):
                     {"error": "User ID is required"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+            
+            other_user = None
             
             try:
                 # Try to get the other user as a User
@@ -1425,6 +1434,12 @@ class MessageViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_404_NOT_FOUND
                         )
             
+            if not other_user:
+                return Response(
+                    {"error": "User not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
             messages = Message.objects.filter(
                 (Q(sender=request.user) & Q(receiver=other_user)) |
                 (Q(sender=other_user) & Q(receiver=request.user))
@@ -1437,9 +1452,9 @@ class MessageViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(messages, many=True)
             return Response(serializer.data)
             
-        except ValueError:
+        except Exception as e:
             return Response(
-                {"error": "Invalid user ID format"},
+                {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
