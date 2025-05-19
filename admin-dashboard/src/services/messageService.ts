@@ -47,8 +47,17 @@ export const messageService = {
   },
 
   sendMessage: async (data: MessageFormData) => {
-    const response = await apiClient.post<Message>('/api/messages/', data);
-    return response.data;
+    // Log the exact data being sent
+    console.log('🔍 SENDING MESSAGE WITH DATA:', JSON.stringify(data, null, 2));
+    try {
+      const response = await apiClient.post<Message>('/api/messages/', data);
+      console.log('✅ MESSAGE SENT SUCCESSFULLY:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ MESSAGE SEND ERROR:', error);
+      console.error('❌ REQUEST DATA WAS:', data);
+      throw error;
+    }
   },
 
   deleteMessage: async (messageId: string) => {

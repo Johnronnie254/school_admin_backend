@@ -1366,38 +1366,139 @@ class MessageViewSet(viewsets.ModelViewSet):
             
         return queryset
 
+    def create(self, request, *args, **kwargs):
+        """Override create to provide detailed error messages"""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        logger.error(f"💬 CREATE MESSAGE - REQUEST DATA: {request.data}")
+        
+        try:
+            # First validate the data using the serializer
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                logger.error(f"❌ VALIDATION ERROR: {serializer.errors}")
+                # Return detailed validation errors
+                return Response(
+                    {
+                        "error": "Validation error", 
+                        "details": serializer.errors,
+                        "request_data": request.data
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # If validation passed, perform the creation
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+        except serializers.ValidationError as e:
+            logger.error(f"❌ VALIDATION ERROR IN PERFORM_CREATE: {str(e)}")
+            # Return detailed validation errors
+            return Response(
+                {
+                    "error": "Validation error",
+                    "details": e.detail if hasattr(e, 'detail') else str(e),
+                    "request_data": request.data
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"❌ UNEXPECTED ERROR: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            # Return detailed error information
+            return Response(
+                {
+                    "error": "Unexpected error",
+                    "message": str(e),
+                    "traceback": traceback.format_exc(),
+                    "request_data": request.data
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     def perform_create(self, serializer):
         """Save the message with sender and school"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         user = self.request.user
+        logger.error(f"💬 PERFORM_CREATE MESSAGE - USER: {user.id}, {user.email}, ROLE: {user.role}")
         
         try:
             # Validate that the receiver exists and is of the correct role
             receiver = serializer.validated_data.get('receiver')
+            logger.error(f"🔍 RECEIVER FROM VALIDATED DATA: {receiver}")
+            
             if not receiver:
+                logger.error("❌ NO RECEIVER PROVIDED")
                 raise serializers.ValidationError({"receiver": "Receiver is required"})
                 
             # Check if sender and receiver are in the same school
-            if user.school and receiver.school and user.school.id != receiver.school.id:
-                raise serializers.ValidationError({"receiver": "You can only message users in your school"})
+            logger.error(f"🔍 USER SCHOOL: {user.school.id if user.school else None}")
+            logger.error(f"🔍 RECEIVER SCHOOL: {receiver.school.id if hasattr(receiver, 'school') and receiver.school else None}")
+            
+            if user.school and hasattr(receiver, 'school') and receiver.school and user.school.id != receiver.school.id:
+                logger.error("❌ SCHOOLS DO NOT MATCH")
+                raise serializers.ValidationError({
+                    "receiver": "You can only message users in your school",
+                    "user_school": str(user.school.id) if user.school else None,
+                    "receiver_school": str(receiver.school.id) if hasattr(receiver, 'school') and receiver.school else None
+                })
                 
             # Special handling for admin users - they can message both teachers and parents
             if user.role == Role.ADMIN:
-                if receiver.role not in [Role.TEACHER, Role.PARENT]:
-                    raise serializers.ValidationError({"receiver": "Admins can only message teachers and parents"})
+                logger.error(f"👑 USER IS ADMIN. RECEIVER ROLE: {receiver.role if hasattr(receiver, 'role') else 'unknown'}")
+                if not hasattr(receiver, 'role') or receiver.role not in [Role.TEACHER, Role.PARENT]:
+                    logger.error("❌ ADMIN CAN ONLY MESSAGE TEACHERS/PARENTS")
+                    raise serializers.ValidationError({
+                        "receiver": "Admins can only message teachers and parents",
+                        "receiver_role": receiver.role if hasattr(receiver, 'role') else "unknown"
+                    })
             # Validate that teachers can only message parents and vice versa
-            elif user.role == Role.TEACHER and receiver.role != Role.PARENT:
-                raise serializers.ValidationError({"receiver": "Teachers can only message parents"})
-            elif user.role == Role.PARENT and receiver.role != Role.TEACHER:
-                raise serializers.ValidationError({"receiver": "Parents can only message teachers"})
+            elif user.role == Role.TEACHER and (not hasattr(receiver, 'role') or receiver.role != Role.PARENT):
+                logger.error("❌ TEACHER CAN ONLY MESSAGE PARENTS")
+                raise serializers.ValidationError({
+                    "receiver": "Teachers can only message parents",
+                    "receiver_role": receiver.role if hasattr(receiver, 'role') else "unknown"
+                })
+            elif user.role == Role.PARENT and (not hasattr(receiver, 'role') or receiver.role != Role.TEACHER):
+                logger.error("❌ PARENT CAN ONLY MESSAGE TEACHERS")
+                raise serializers.ValidationError({
+                    "receiver": "Parents can only message teachers",
+                    "receiver_role": receiver.role if hasattr(receiver, 'role') else "unknown"
+                })
             
             # Save with school if available
             if user.school:
+                logger.error(f"✅ SAVING MESSAGE WITH SCHOOL: {user.school.id}")
                 serializer.save(sender=user, school=user.school)
             else:
+                logger.error("✅ SAVING MESSAGE WITHOUT SCHOOL")
                 serializer.save(sender=user)
                 
+            logger.error("✅ MESSAGE CREATED SUCCESSFULLY")
+                
+        except serializers.ValidationError as e:
+            logger.error(f"❌ VALIDATION ERROR: {str(e)}")
+            raise
         except Exception as e:
-            raise serializers.ValidationError({"error": str(e)})
+            logger.error(f"❌ UNEXPECTED ERROR: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise serializers.ValidationError({
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+                "context": {
+                    "user_id": str(user.id),
+                    "user_email": user.email,
+                    "user_role": user.role,
+                    "receiver_info": str(serializer.validated_data.get('receiver', 'None')),
+                    "data": serializer.validated_data
+                }
+            })
 
     @action(detail=False, methods=['get'])
     def get_chat_history(self, request, user_id=None):
