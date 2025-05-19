@@ -291,6 +291,53 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = '__all__'
         read_only_fields = ['sender', 'created_at']
+        
+    def validate_receiver(self, value):
+        """Allow receiver to be specified as a Teacher or Parent ID"""
+        # If it's already a User object, return it
+        if isinstance(value, User):
+            return value
+            
+        # If it's a string (ID), try to find the corresponding User/Teacher/Parent
+        receiver_id = value
+        
+        # First try User model
+        try:
+            return User.objects.get(id=receiver_id)
+        except User.DoesNotExist:
+            # Try Teacher model
+            try:
+                teacher = Teacher.objects.get(id=receiver_id)
+                # Try to find User with matching email
+                try:
+                    return User.objects.get(email=teacher.email)
+                except User.DoesNotExist:
+                    # Create a User for this Teacher
+                    return User.objects.create(
+                        email=teacher.email,
+                        first_name=teacher.name,
+                        role='teacher',
+                        school=teacher.school
+                    )
+            except Teacher.DoesNotExist:
+                # Try Parent model
+                try:
+                    parent = Parent.objects.get(id=receiver_id)
+                    # Try to find User with matching email
+                    try:
+                        return User.objects.get(email=parent.email)
+                    except User.DoesNotExist:
+                        # Create a User for this Parent
+                        return User.objects.create(
+                            email=parent.email,
+                            first_name=parent.name,
+                            role='parent',
+                            school=parent.school
+                        )
+                except Parent.DoesNotExist:
+                    raise serializers.ValidationError(f"No User, Teacher or Parent found with ID {receiver_id}")
+        
+        return value
 
 class TeacherParentAssociationSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source='teacher.name', read_only=True)
