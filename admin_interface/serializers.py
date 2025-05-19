@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School, TimeTable
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -185,7 +185,7 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "password": "Password fields didn't match."
             })
-        
+
         # Check if email already exists in User model
         if User.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError({
@@ -383,3 +383,8 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
                 "password": "Password fields didn't match."
             })
         return data
+
+class TimeTableSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TimeTable
+        fields = ['id', 'grade', 'day', 'period', 'subject', 'teacher', 'start_time', 'end_time', 'room', 'school']

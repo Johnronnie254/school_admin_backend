@@ -15,7 +15,7 @@ from .serializers import (
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
     ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
-    TeacherParentAssociationSerializer, SchoolSerializer
+    TeacherParentAssociationSerializer, SchoolSerializer, TimeTableSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -1374,70 +1374,23 @@ class MessageViewSet(viewsets.ModelViewSet):
         if not receiver_id:
             raise serializers.ValidationError({"error": "Receiver ID is required"})
             
-        # For debugging - log the receiver ID that we're looking for
         print(f"Creating message with receiver_id: {receiver_id}")
+
+        # Try to find the receiver - we need a User object
+        receiver = self._find_user_from_any_id(receiver_id)
         
-        # Lookup strategy: 
-        # 1. Try User model first (most messages will be between Users)
-        # 2. Then try Teacher model and map to User
-        # 3. Then try Parent model and map to User
-        
-        try:
-            # Try to get the receiver as a User
-            receiver = User.objects.get(id=receiver_id)
-            print(f"Found receiver directly in User model: {receiver.email}")
-        except User.DoesNotExist:
-            print(f"User with ID {receiver_id} not found, trying Teacher lookup")
-            
-            # Check if it's a Teacher ID and find corresponding User
-            try:
-                teacher = Teacher.objects.get(id=receiver_id)
-                print(f"Found teacher: {teacher.email}, looking for matching User")
-                
-                try:
-                    # Look for User with matching email
-                    receiver = User.objects.get(email=teacher.email)
-                    print(f"Found corresponding user: {receiver.email}")
-                except User.DoesNotExist:
-                    print(f"Teacher exists but no User with email {teacher.email}")
-                    # Create a User for the Teacher (if needed)
-                    # This is dangerous to do silently, better to return error
-                    raise serializers.ValidationError({
-                        "receiver": f"Teacher with email {teacher.email} exists but has no User account. Please contact administrator."
-                    })
-                    
-            except Teacher.DoesNotExist:
-                print(f"No Teacher with ID {receiver_id}, checking for Parent")
-                
-                # Check if it's a Parent ID and find corresponding User
-                try:
-                    parent = Parent.objects.get(id=receiver_id)
-                    print(f"Found parent: {parent.email}, looking for matching User")
-                    
-                    try:
-                        # Look for User with matching email
-                        receiver = User.objects.get(email=parent.email)
-                        print(f"Found corresponding user: {receiver.email}")
-                    except User.DoesNotExist:
-                        print(f"Parent exists but no User with email {parent.email}")
-                        raise serializers.ValidationError({
-                            "receiver": f"Parent with email {parent.email} exists but has no User account. Please contact administrator."
-                        })
-                        
-                except Parent.DoesNotExist:
-                    print(f"No User, Teacher or Parent found with ID {receiver_id}")
-                    
-                    # Most helpful error message
-                    raise serializers.ValidationError({
-                        "receiver": f"User with ID {receiver_id} not found. The user may have been deleted or doesn't exist."
-                    })
+        if not receiver:
+            raise serializers.ValidationError({
+                "receiver": f"No user record found with ID {receiver_id}. Make sure the ID exists and is valid."
+            })
         
         content = self.request.data.get('content')
         if not content or content.strip() == '':
             raise serializers.ValidationError({"error": "Message content is required and cannot be empty"})
             
         print(f"Saving message from {user.email} to {receiver.email}")
-        # Save the message with the sender, receiver, and school (if available)
+        
+        # Save with school if available
         if user.school:
             serializer.save(sender=user, receiver=receiver, school=user.school)
         else:
@@ -1445,7 +1398,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def get_chat_history(self, request, user_id=None):
-        """Get chat history with a specific user"""
+        """Get chat history with a specific user, teacher, or parent"""
         try:
             # Get user_id from URL parameters if not provided in the path
             if not user_id:
@@ -1457,55 +1410,14 @@ class MessageViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # For debugging - log the user ID that we're looking up
             print(f"Looking up chat history with user_id: {user_id}")
             
-            other_user = None
-            
-            # First try direct User lookup by ID
-            try:
-                other_user = User.objects.get(id=user_id)
-                print(f"Found user directly: {other_user.email}")
-            except User.DoesNotExist:
-                print(f"User with ID {user_id} not found, trying Teacher lookup")
-                try:
-                    # Try to get the other user as a Teacher and find corresponding User
-                    teacher = Teacher.objects.get(id=user_id)
-                    print(f"Found teacher: {teacher.email}, looking for matching User")
-                    try:
-                        other_user = User.objects.get(email=teacher.email)
-                        print(f"Found corresponding user: {other_user.email}")
-                    except User.DoesNotExist:
-                        print(f"No User record found for teacher email {teacher.email}")
-                        return Response(
-                            {"error": f"Teacher found but no matching User account with email {teacher.email}"},
-                            status=status.HTTP_404_NOT_FOUND
-                        )
-                except Teacher.DoesNotExist:
-                    print(f"Teacher with ID {user_id} not found, trying Parent lookup")
-                    try:
-                        # Try to get the other user as a Parent and find corresponding User
-                        parent = Parent.objects.get(id=user_id)
-                        print(f"Found parent: {parent.email}, looking for matching User")
-                        try:
-                            other_user = User.objects.get(email=parent.email)
-                            print(f"Found corresponding user: {other_user.email}")
-                        except User.DoesNotExist:
-                            print(f"No User record found for parent email {parent.email}")
-                            return Response(
-                                {"error": f"Parent found but no matching User account with email {parent.email}"},
-                                status=status.HTTP_404_NOT_FOUND
-                            )
-                    except Parent.DoesNotExist:
-                        print(f"No User, Teacher or Parent found with ID {user_id}")
-                        return Response(
-                            {"error": f"No user found with ID {user_id}. The user may have been deleted or doesn't exist."},
-                            status=status.HTTP_404_NOT_FOUND
-                        )
+            # Find the user, either directly or via Teacher/Parent
+            other_user = self._find_user_from_any_id(user_id)
             
             if not other_user:
                 return Response(
-                    {"error": "User not found after all lookups"},
+                    {"error": f"No user found with ID {user_id}. Please check the ID and try again."},
                     status=status.HTTP_404_NOT_FOUND
                 )
             
@@ -1530,6 +1442,88 @@ class MessageViewSet(viewsets.ModelViewSet):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+    
+    def _find_user_from_any_id(self, id_to_find):
+        """Helper method to find a User from User, Teacher, or Parent ID
+        Returns a User object or None if not found
+        """
+        # First try direct User lookup
+        try:
+            return User.objects.get(id=id_to_find)
+        except User.DoesNotExist:
+            pass
+            
+        # Try Teacher lookup and find associated User
+        try:
+            teacher = Teacher.objects.get(id=id_to_find)
+            
+            # Try to find User with matching email
+            try:
+                return User.objects.get(email=teacher.email)
+            except User.DoesNotExist:
+                # No matching User found for this Teacher - create one
+                print(f"Creating User account for teacher with email {teacher.email}")
+                user = self._create_user_for_teacher(teacher)
+                return user
+        except Teacher.DoesNotExist:
+            pass
+            
+        # Try Parent lookup and find associated User
+        try:
+            parent = Parent.objects.get(id=id_to_find)
+            
+            # Try to find User with matching email
+            try:
+                return User.objects.get(email=parent.email)
+            except User.DoesNotExist:
+                # No matching User found for this Parent - create one
+                print(f"Creating User account for parent with email {parent.email}")
+                user = self._create_user_for_parent(parent)
+                return user
+        except Parent.DoesNotExist:
+            pass
+            
+        # No matching record found
+        print(f"No User, Teacher or Parent found with ID {id_to_find}")
+        return None
+        
+    def _create_user_for_teacher(self, teacher):
+        """Create a User account for a Teacher"""
+        try:
+            user = User.objects.create(
+                email=teacher.email,
+                first_name=teacher.name,
+                role=Role.TEACHER,
+                school=teacher.school
+            )
+            # Set a random password - user will need to reset it
+            temp_password = User.objects.make_random_password()
+            user.set_password(temp_password)
+            user.save()
+            print(f"Created User account for teacher: {user.email}")
+            return user
+        except Exception as e:
+            print(f"Error creating User for Teacher: {str(e)}")
+            return None
+            
+    def _create_user_for_parent(self, parent):
+        """Create a User account for a Parent"""
+        try:
+            user = User.objects.create(
+                email=parent.email,
+                first_name=parent.name,
+                role=Role.PARENT,
+                school=parent.school
+            )
+            # Set a random password - user will need to reset it
+            temp_password = User.objects.make_random_password()
+            user.set_password(temp_password)
+            user.save()
+            print(f"Created User account for parent: {user.email}")
+            return user
+        except Exception as e:
+            print(f"Error creating User for Parent: {str(e)}")
+            return None
 
 class TeacherParentAssociationViewSet(viewsets.ModelViewSet):
     queryset = TeacherParentAssociation.objects.all()
