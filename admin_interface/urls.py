@@ -26,7 +26,6 @@ router.register(r'students', StudentViewSet, basename='student')
 router.register(r'parents', ParentViewSet, basename='parent')
 router.register(r'notifications', NotificationView, basename='notification')
 router.register(r'teacher/exams', TeacherExamViewSet, basename='teacher-exams')
-router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'teacher-parent-associations', TeacherParentAssociationViewSet, basename='teacher-parent-association')
 router.register(r'leave-applications', LeaveApplicationViewSet, basename='leave-application')
 router.register(r'school-events', SchoolEventViewSet, basename='school-event')
@@ -71,6 +70,19 @@ urlpatterns = [
     path('teacher/profile_pic/', TeacherProfilePicView.as_view(), name='teacher-profile-pic'),
     path('teacher/schedule/', TeacherScheduleView.as_view(), name='teacher-schedule'),
 
+    # Messages
+    path('messages/', MessageViewSet.as_view({
+        'get': 'list',
+        'post': 'create'
+    }), name='message-list'),
+    path('messages/<uuid:pk>/', MessageViewSet.as_view({
+        'get': 'retrieve',
+        'delete': 'destroy'
+    }), name='message-detail'),
+    path('messages/chat/<uuid:user_id>/', MessageViewSet.as_view({
+        'get': 'get_chat_history'
+    }), name='chat-history'),
+
     # Notifications
     path('notifications/', NotificationView.as_view({
         'get': 'list',
@@ -81,11 +93,6 @@ urlpatterns = [
         'put': 'update',
         'delete': 'destroy'
     }), name='notification-detail'),
-
-    # Messages
-    path('messages/chat/<uuid:user_id>/', MessageViewSet.as_view({
-        'get': 'get_chat_history'
-    }), name='chat-history'),
 
     # Leave Applications
     path('leave-applications/', LeaveApplicationViewSet.as_view({

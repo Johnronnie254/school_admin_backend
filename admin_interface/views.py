@@ -1369,11 +1369,28 @@ class MessageViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Save the message with sender and school"""
         user = self.request.user
+        receiver_id = self.request.data.get('receiver')
+        
+        try:
+            # Try to get the receiver as a User
+            receiver = User.objects.get(id=receiver_id)
+        except User.DoesNotExist:
+            try:
+                # Try to get the receiver as a Teacher
+                teacher = Teacher.objects.get(id=receiver_id)
+                receiver = User.objects.get(email=teacher.email)
+            except (Teacher.DoesNotExist, User.DoesNotExist):
+                try:
+                    # Try to get the receiver as a Parent
+                    parent = Parent.objects.get(id=receiver_id)
+                    receiver = User.objects.get(email=parent.email)
+                except (Parent.DoesNotExist, User.DoesNotExist):
+                    raise serializers.ValidationError({"error": "Receiver not found"})
         
         if user.school:
-            serializer.save(sender=user, school=user.school)
+            serializer.save(sender=user, receiver=receiver, school=user.school)
         else:
-            serializer.save(sender=user)
+            serializer.save(sender=user, receiver=receiver)
 
     @action(detail=False, methods=['get'])
     def get_chat_history(self, request, user_id=None):
@@ -1389,7 +1406,25 @@ class MessageViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            other_user = get_object_or_404(User, id=user_id)
+            try:
+                # Try to get the other user as a User
+                other_user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                try:
+                    # Try to get the other user as a Teacher
+                    teacher = Teacher.objects.get(id=user_id)
+                    other_user = User.objects.get(email=teacher.email)
+                except (Teacher.DoesNotExist, User.DoesNotExist):
+                    try:
+                        # Try to get the other user as a Parent
+                        parent = Parent.objects.get(id=user_id)
+                        other_user = User.objects.get(email=parent.email)
+                    except (Parent.DoesNotExist, User.DoesNotExist):
+                        return Response(
+                            {"error": "User not found"},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+            
             messages = Message.objects.filter(
                 (Q(sender=request.user) & Q(receiver=other_user)) |
                 (Q(sender=other_user) & Q(receiver=request.user))
@@ -1402,11 +1437,6 @@ class MessageViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(messages, many=True)
             return Response(serializer.data)
             
-        except User.DoesNotExist:
-            return Response(
-                {"error": "User not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
         except ValueError:
             return Response(
                 {"error": "Invalid user ID format"},
