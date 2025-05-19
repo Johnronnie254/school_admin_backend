@@ -30,6 +30,7 @@ router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'teacher-parent-associations', TeacherParentAssociationViewSet, basename='teacher-parent-association')
 router.register(r'leave-applications', LeaveApplicationViewSet, basename='leave-application')
 router.register(r'school-events', SchoolEventViewSet, basename='school-event')
+router.register(r'products', ProductViewSet, basename='product')
 
 urlpatterns = [
     # Authentication
@@ -68,6 +69,7 @@ urlpatterns = [
     # Teachers
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),
     path('teacher/profile_pic/', TeacherProfilePicView.as_view(), name='teacher-profile-pic'),
+    path('teacher/schedule/', TeacherScheduleView.as_view(), name='teacher-schedule'),
 
     # Notifications
     path('notifications/', NotificationView.as_view({
@@ -103,9 +105,6 @@ urlpatterns = [
         'put': 'update',
         'delete': 'destroy'
     }), name='leave-application-detail'),
-
-    # Teacher Schedule
-    path('teacher/schedule/', TeacherScheduleView.as_view(), name='teacher-schedule'),
 
     # School Shop
     path('products/', ProductViewSet.as_view({

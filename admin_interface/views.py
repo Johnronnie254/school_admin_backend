@@ -1376,15 +1376,42 @@ class MessageViewSet(viewsets.ModelViewSet):
             serializer.save(sender=user)
 
     @action(detail=False, methods=['get'])
-    def get_chat_history(self, request, user_id):
+    def get_chat_history(self, request, user_id=None):
         """Get chat history with a specific user"""
-        other_user = get_object_or_404(User, id=user_id)
-        messages = Message.objects.filter(
-            (Q(sender=request.user) & Q(receiver=other_user)) |
-            (Q(sender=other_user) & Q(receiver=request.user))
-        ).order_by('created_at')
-        serializer = self.get_serializer(messages, many=True)
-        return Response(serializer.data)
+        try:
+            # Get user_id from URL parameters if not provided in the path
+            if not user_id:
+                user_id = request.query_params.get('user_id')
+            
+            if not user_id:
+                return Response(
+                    {"error": "User ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            other_user = get_object_or_404(User, id=user_id)
+            messages = Message.objects.filter(
+                (Q(sender=request.user) & Q(receiver=other_user)) |
+                (Q(sender=other_user) & Q(receiver=request.user))
+            ).order_by('created_at')
+            
+            # Filter by school if user has a school
+            if request.user.school:
+                messages = messages.filter(school=request.user.school)
+                
+            serializer = self.get_serializer(messages, many=True)
+            return Response(serializer.data)
+            
+        except User.DoesNotExist:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except ValueError:
+            return Response(
+                {"error": "Invalid user ID format"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class TeacherParentAssociationViewSet(viewsets.ModelViewSet):
     queryset = TeacherParentAssociation.objects.all()
