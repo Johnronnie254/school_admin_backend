@@ -1376,8 +1376,16 @@ class MessageViewSet(viewsets.ModelViewSet):
             if not receiver:
                 raise serializers.ValidationError({"receiver": "Receiver is required"})
                 
+            # Check if sender and receiver are in the same school
+            if user.school and receiver.school and user.school.id != receiver.school.id:
+                raise serializers.ValidationError({"receiver": "You can only message users in your school"})
+                
+            # Special handling for admin users - they can message both teachers and parents
+            if user.role == Role.ADMIN:
+                if receiver.role not in [Role.TEACHER, Role.PARENT]:
+                    raise serializers.ValidationError({"receiver": "Admins can only message teachers and parents"})
             # Validate that teachers can only message parents and vice versa
-            if user.role == Role.TEACHER and receiver.role != Role.PARENT:
+            elif user.role == Role.TEACHER and receiver.role != Role.PARENT:
                 raise serializers.ValidationError({"receiver": "Teachers can only message parents"})
             elif user.role == Role.PARENT and receiver.role != Role.TEACHER:
                 raise serializers.ValidationError({"receiver": "Parents can only message teachers"})
@@ -1458,8 +1466,22 @@ class MessageViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
+            # Check if users are in the same school
+            if request.user.school and other_user.school and request.user.school.id != other_user.school.id:
+                return Response(
+                    {"error": "You can only view chat history with users in your school"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Special handling for admin users - they can view chat history with both teachers and parents
+            if request.user.role == Role.ADMIN:
+                if other_user.role not in [Role.TEACHER, Role.PARENT]:
+                    return Response(
+                        {"error": "Admins can only view chat history with teachers and parents"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
             # Validate that teachers can only view chat history with parents and vice versa
-            if request.user.role == Role.TEACHER and other_user.role != Role.PARENT:
+            elif request.user.role == Role.TEACHER and other_user.role != Role.PARENT:
                 return Response(
                     {"error": "Teachers can only view chat history with parents"},
                     status=status.HTTP_403_FORBIDDEN
