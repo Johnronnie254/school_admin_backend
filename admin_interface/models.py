@@ -339,7 +339,12 @@ class Message(models.Model):
     """Model for chat messages between teachers and parents"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages', null=True, blank=True)
+    
+    # Direct links to Teacher/Parent models
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='messages', null=True, blank=True)
+    parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='messages', null=True, blank=True)
+    
     content = models.TextField()
     is_read = models.BooleanField(default=False)
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='messages', null=True, blank=True)

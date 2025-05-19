@@ -1428,57 +1428,93 @@ class MessageViewSet(viewsets.ModelViewSet):
         logger.error(f"💬 PERFORM_CREATE MESSAGE - USER: {user.id}, {user.email}, ROLE: {user.role}")
         
         try:
-            # Validate that the receiver exists and is of the correct role
-            receiver = serializer.validated_data.get('receiver')
-            logger.error(f"🔍 RECEIVER FROM VALIDATED DATA: {receiver}")
+            # Extract special fields from request data
+            request_data = self.request.data.copy()
+            receiver_id = request_data.get('receiver')
+            receiver_email = request_data.get('receiver_email')
+            receiver_role = request_data.get('receiver_role')
             
-            if not receiver:
-                logger.error("❌ NO RECEIVER PROVIDED")
-                raise serializers.ValidationError({"receiver": "Receiver is required"})
-                
-            # Check if sender and receiver are in the same school
-            logger.error(f"🔍 USER SCHOOL: {user.school.id if user.school else None}")
-            logger.error(f"🔍 RECEIVER SCHOOL: {receiver.school.id if hasattr(receiver, 'school') and receiver.school else None}")
+            logger.error(f"🔍 RAW REQUEST DATA: {request_data}")
+            logger.error(f"🔍 RECEIVER ID: {receiver_id}")
+            logger.error(f"🔍 RECEIVER EMAIL: {receiver_email}")
+            logger.error(f"🔍 RECEIVER ROLE: {receiver_role}")
             
-            if user.school and hasattr(receiver, 'school') and receiver.school and user.school.id != receiver.school.id:
-                logger.error("❌ SCHOOLS DO NOT MATCH")
-                raise serializers.ValidationError({
-                    "receiver": "You can only message users in your school",
-                    "user_school": str(user.school.id) if user.school else None,
-                    "receiver_school": str(receiver.school.id) if hasattr(receiver, 'school') and receiver.school else None
-                })
-                
-            # Special handling for admin users - they can message both teachers and parents
-            if user.role == Role.ADMIN:
-                logger.error(f"👑 USER IS ADMIN. RECEIVER ROLE: {receiver.role if hasattr(receiver, 'role') else 'unknown'}")
-                if not hasattr(receiver, 'role') or receiver.role not in [Role.TEACHER, Role.PARENT]:
-                    logger.error("❌ ADMIN CAN ONLY MESSAGE TEACHERS/PARENTS")
-                    raise serializers.ValidationError({
-                        "receiver": "Admins can only message teachers and parents",
-                        "receiver_role": receiver.role if hasattr(receiver, 'role') else "unknown"
-                    })
-            # Validate that teachers can only message parents and vice versa
-            elif user.role == Role.TEACHER and (not hasattr(receiver, 'role') or receiver.role != Role.PARENT):
-                logger.error("❌ TEACHER CAN ONLY MESSAGE PARENTS")
-                raise serializers.ValidationError({
-                    "receiver": "Teachers can only message parents",
-                    "receiver_role": receiver.role if hasattr(receiver, 'role') else "unknown"
-                })
-            elif user.role == Role.PARENT and (not hasattr(receiver, 'role') or receiver.role != Role.TEACHER):
-                logger.error("❌ PARENT CAN ONLY MESSAGE TEACHERS")
-                raise serializers.ValidationError({
-                    "receiver": "Parents can only message teachers",
-                    "receiver_role": receiver.role if hasattr(receiver, 'role') else "unknown"
-                })
+            # Special handling - try to find Teacher/Parent directly
+            teacher = None
+            parent = None
             
-            # Save with school if available
-            if user.school:
-                logger.error(f"✅ SAVING MESSAGE WITH SCHOOL: {user.school.id}")
-                serializer.save(sender=user, school=user.school)
+            if receiver_role == 'teacher' and receiver_id:
+                try:
+                    teacher = Teacher.objects.get(id=receiver_id)
+                    logger.error(f"✅ FOUND TEACHER BY ID DIRECTLY: {teacher.id}")
+                except Teacher.DoesNotExist:
+                    logger.error(f"❌ NO TEACHER FOUND WITH ID: {receiver_id}")
+                    if receiver_email:
+                        try:
+                            teacher = Teacher.objects.get(email=receiver_email)
+                            logger.error(f"✅ FOUND TEACHER BY EMAIL: {teacher.id}")
+                        except Teacher.DoesNotExist:
+                            logger.error(f"❌ NO TEACHER FOUND WITH EMAIL: {receiver_email}")
+            
+            elif receiver_role == 'parent' and receiver_id:
+                try:
+                    parent = Parent.objects.get(id=receiver_id)
+                    logger.error(f"✅ FOUND PARENT BY ID DIRECTLY: {parent.id}")
+                except Parent.DoesNotExist:
+                    logger.error(f"❌ NO PARENT FOUND WITH ID: {receiver_id}")
+                    if receiver_email:
+                        try:
+                            parent = Parent.objects.get(email=receiver_email)
+                            logger.error(f"✅ FOUND PARENT BY EMAIL: {parent.id}")
+                        except Parent.DoesNotExist:
+                            logger.error(f"❌ NO PARENT FOUND WITH EMAIL: {receiver_email}")
+            
+            # Create or get associated User if we found a Teacher/Parent
+            receiver = None
+            if teacher:
+                # Get or create User for this teacher
+                receiver, created = User.objects.get_or_create(
+                    email=teacher.email,
+                    defaults={
+                        'first_name': teacher.name,
+                        'role': Role.TEACHER,
+                        'school': teacher.school
+                    }
+                )
+                logger.error(f"{'✅ CREATED' if created else '✅ FOUND'} USER FOR TEACHER: {receiver.id}")
+            elif parent:
+                # Get or create User for this parent
+                receiver, created = User.objects.get_or_create(
+                    email=parent.email,
+                    defaults={
+                        'first_name': parent.name,
+                        'role': Role.PARENT,
+                        'school': parent.school
+                    }
+                )
+                logger.error(f"{'✅ CREATED' if created else '✅ FOUND'} USER FOR PARENT: {receiver.id}")
+            
+            # Now create the message
+            if teacher:
+                logger.error(f"✅ SAVING MESSAGE WITH TEACHER: {teacher.id}")
+                if user.school:
+                    serializer.save(sender=user, teacher=teacher, receiver=receiver, school=user.school)
+                else:
+                    serializer.save(sender=user, teacher=teacher, receiver=receiver)
+            elif parent:
+                logger.error(f"✅ SAVING MESSAGE WITH PARENT: {parent.id}")
+                if user.school:
+                    serializer.save(sender=user, parent=parent, receiver=receiver, school=user.school)
+                else:
+                    serializer.save(sender=user, parent=parent, receiver=receiver)
             else:
-                logger.error("✅ SAVING MESSAGE WITHOUT SCHOOL")
-                serializer.save(sender=user)
-                
+                # Fallback to normal message
+                logger.error(f"✅ SAVING NORMAL MESSAGE")
+                if user.school:
+                    serializer.save(sender=user, school=user.school)
+                else:
+                    serializer.save(sender=user)
+            
             logger.error("✅ MESSAGE CREATED SUCCESSFULLY")
                 
         except serializers.ValidationError as e:
@@ -1495,8 +1531,8 @@ class MessageViewSet(viewsets.ModelViewSet):
                     "user_id": str(user.id),
                     "user_email": user.email,
                     "user_role": user.role,
-                    "receiver_info": str(serializer.validated_data.get('receiver', 'None')),
-                    "data": serializer.validated_data
+                    "receiver_info": str(receiver_id),
+                    "request_data": request_data
                 }
             })
 
@@ -1573,32 +1609,15 @@ class MessageViewSet(viewsets.ModelViewSet):
                     {"error": "You can only view chat history with users in your school"},
                     status=status.HTTP_403_FORBIDDEN
                 )
+
             
-            # Special handling for admin users - they can view chat history with both teachers and parents
-            if request.user.role == Role.ADMIN:
-                if other_user.role not in [Role.TEACHER, Role.PARENT]:
-                    return Response(
-                        {"error": "Admins can only view chat history with teachers and parents"},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-            # Validate that teachers can only view chat history with parents and vice versa
-            elif request.user.role == Role.TEACHER and other_user.role != Role.PARENT:
-                return Response(
-                    {"error": "Teachers can only view chat history with parents"},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            elif request.user.role == Role.PARENT and other_user.role != Role.TEACHER:
-                return Response(
-                    {"error": "Parents can only view chat history with teachers"},
-                    status=status.HTTP_403_FORBIDDEN
-                )
             
             # Get messages exchanged between the current user and the other user
             messages = Message.objects.filter(
                 (Q(sender=request.user) & Q(receiver=other_user)) |
                 (Q(sender=other_user) & Q(receiver=request.user))
             ).order_by('created_at')
-            
+                
             # Filter by school if user has a school
             if request.user.school:
                 messages = messages.filter(school=request.user.school)

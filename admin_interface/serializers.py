@@ -292,25 +292,32 @@ class MessageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Message
-        fields = '__all__'
+        fields = ['id', 'sender', 'receiver', 'teacher', 'parent', 'content', 'is_read', 'school', 'created_at', 'receiver_email', 'receiver_role']
         read_only_fields = ['sender', 'created_at']
         
-    def validate_receiver(self, value):
-        """Allow receiver to be specified as a Teacher or Parent ID"""
-        # If it's already a User object, return it
-        if isinstance(value, User):
-            return value
-            
-        # Get the email from the request data if available
-        receiver_email = self.initial_data.get('receiver_email')
-        receiver_role = self.initial_data.get('receiver_role')
+    def create(self, validated_data):
+        """Custom create method to handle teacher and parent direct connections"""
+        import logging
+        logger = logging.getLogger(__name__)
         
-        # If email is provided, try to find by email first
-        if receiver_email:
+        # Extract non-model fields
+        receiver_email = validated_data.pop('receiver_email', None)
+        receiver_role = validated_data.pop('receiver_role', None)
+        
+        logger.error(f"🔍 CREATE - RECEIVER EMAIL: {receiver_email}, ROLE: {receiver_role}")
+        
+        # Get receiver from validated data if it exists
+        receiver = validated_data.get('receiver', None)
+        
+        # If no direct receiver and we have email/role, try to find direct models
+        if not receiver and receiver_email and receiver_role:
             if receiver_role == 'teacher':
                 try:
+                    # Find teacher directly
                     teacher = Teacher.objects.get(email=receiver_email)
-                    # Try to find or create User with matching email
+                    logger.error(f"✅ FOUND TEACHER DIRECTLY: {teacher.id}")
+                    validated_data['teacher'] = teacher
+                    # Create a basic User if needed for compatibility
                     user, created = User.objects.get_or_create(
                         email=teacher.email,
                         defaults={
@@ -319,17 +326,25 @@ class MessageSerializer(serializers.ModelSerializer):
                             'school': teacher.school
                         }
                     )
-                    if created:
-                        user.set_password(User.objects.make_random_password())
-                        user.save()
-                    return user
+                    validated_data['receiver'] = user
                 except Teacher.DoesNotExist:
-                    pass
-            
+                    logger.error(f"❌ NO TEACHER FOUND WITH EMAIL: {receiver_email}")
+                    # Try by ID if provided in receiver field
+                    if 'receiver' in validated_data and validated_data['receiver']:
+                        try:
+                            teacher_id = validated_data['receiver']
+                            teacher = Teacher.objects.get(id=teacher_id)
+                            logger.error(f"✅ FOUND TEACHER BY ID: {teacher.id}")
+                            validated_data['teacher'] = teacher
+                        except Teacher.DoesNotExist:
+                            logger.error(f"❌ NO TEACHER FOUND WITH ID: {teacher_id}")
             elif receiver_role == 'parent':
                 try:
+                    # Find parent directly
                     parent = Parent.objects.get(email=receiver_email)
-                    # Try to find or create User with matching email
+                    logger.error(f"✅ FOUND PARENT DIRECTLY: {parent.id}")
+                    validated_data['parent'] = parent
+                    # Create a basic User if needed for compatibility
                     user, created = User.objects.get_or_create(
                         email=parent.email,
                         defaults={
@@ -338,66 +353,69 @@ class MessageSerializer(serializers.ModelSerializer):
                             'school': parent.school
                         }
                     )
-                    if created:
-                        user.set_password(User.objects.make_random_password())
-                        user.save()
-                    return user
+                    validated_data['receiver'] = user
                 except Parent.DoesNotExist:
-                    pass
-            
-            # If we have an email but no specific role or couldn't find by role,
-            # try to find by email in User model
+                    logger.error(f"❌ NO PARENT FOUND WITH EMAIL: {receiver_email}")
+                    # Try by ID if provided in receiver field
+                    if 'receiver' in validated_data and validated_data['receiver']:
+                        try:
+                            parent_id = validated_data['receiver']
+                            parent = Parent.objects.get(id=parent_id)
+                            logger.error(f"✅ FOUND PARENT BY ID: {parent.id}")
+                            validated_data['parent'] = parent
+                        except Parent.DoesNotExist:
+                            logger.error(f"❌ NO PARENT FOUND WITH ID: {parent_id}")
+        
+        # Create the message
+        message = Message.objects.create(**validated_data)
+        return message
+        
+    def validate_receiver(self, value):
+        """Allow receiver to be specified as a Teacher or Parent ID"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Log all initial data to see what's being sent
+        logger.error(f"🔍 VALIDATING RECEIVER - INITIAL DATA: {self.initial_data}")
+        logger.error(f"🔍 RECEIVER VALUE: {value}, TYPE: {type(value)}")
+        
+        receiver_email = self.initial_data.get('receiver_email')
+        receiver_role = self.initial_data.get('receiver_role')
+        receiver_id = str(value) if value else None
+        
+        # If we have a receiver ID, check if it's a Teacher or Parent ID directly
+        if receiver_id:
+            logger.error(f"🔍 CHECKING IF RECEIVER ID IS A TEACHER/PARENT: {receiver_id}")
             try:
-                return User.objects.get(email=receiver_email)
-            except User.DoesNotExist:
-                pass
-        
-        # If we couldn't find by email or no email provided, try by ID
-        receiver_id = str(value)  # Convert to string to handle UUID objects
-        
-        # Try Teacher model first
-        try:
-            teacher = Teacher.objects.get(id=receiver_id)
-            # Try to find or create User with matching email
-            user, created = User.objects.get_or_create(
-                email=teacher.email,
-                defaults={
-                    'first_name': teacher.name,
-                    'role': Role.TEACHER,
-                    'school': teacher.school
-                }
-            )
-            if created:
-                # Set a random password for new users
-                user.set_password(User.objects.make_random_password())
-                user.save()
-            return user
-        except Teacher.DoesNotExist:
-            # Try Parent model
+                teacher = Teacher.objects.get(id=receiver_id)
+                logger.error(f"✅ FOUND TEACHER DIRECTLY BY ID: {teacher.id}")
+                # We'll handle this in create() - just pass the value through
+                return value
+            except Teacher.DoesNotExist:
+                logger.error(f"❌ NOT A TEACHER ID")
+                
             try:
                 parent = Parent.objects.get(id=receiver_id)
-                # Try to find or create User with matching email
-                user, created = User.objects.get_or_create(
-                    email=parent.email,
-                    defaults={
-                        'first_name': parent.name,
-                        'role': Role.PARENT,
-                        'school': parent.school
-                    }
-                )
-                if created:
-                    # Set a random password for new users
-                    user.set_password(User.objects.make_random_password())
-                    user.save()
-                return user
+                logger.error(f"✅ FOUND PARENT DIRECTLY BY ID: {parent.id}")
+                # We'll handle this in create() - just pass the value through
+                return value
             except Parent.DoesNotExist:
-                # Finally try User model
-                try:
-                    return User.objects.get(id=receiver_id)
-                except User.DoesNotExist:
-                    raise serializers.ValidationError(f"No User, Teacher or Parent found with ID {receiver_id}")
+                logger.error(f"❌ NOT A PARENT ID")
         
-        return value
+        # If email is provided, just pass through and handle in create()
+        if receiver_email:
+            logger.error(f"🔍 EMAIL PROVIDED, WILL HANDLE IN CREATE(): {receiver_email}")
+            return value
+                
+        # Legacy behavior - try to find a User
+        try:
+            user = User.objects.get(id=receiver_id)
+            logger.error(f"✅ FOUND USER DIRECTLY: {user.id}")
+            return user
+        except User.DoesNotExist:
+            logger.error(f"❌ NOT A USER ID")
+            # Just pass the value through to be handled in create()
+            return value
 
 class TeacherParentAssociationSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source='teacher.name', read_only=True)
