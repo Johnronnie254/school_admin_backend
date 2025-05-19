@@ -291,7 +291,7 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = '__all__'
         read_only_fields = ['sender', 'created_at']
-
+        
     def validate_receiver(self, value):
         """Allow receiver to be specified as a Teacher or Parent ID"""
         # If it's already a User object, return it
@@ -301,20 +301,34 @@ class MessageSerializer(serializers.ModelSerializer):
         # If it's a string (ID), try to find the corresponding User/Teacher/Parent
         receiver_id = str(value)  # Convert to string to handle UUID objects
         
-        # First try User model
+        # Try Teacher model first
         try:
-            return User.objects.get(id=receiver_id)
-        except User.DoesNotExist:
-            # Try Teacher model
+            teacher = Teacher.objects.get(id=receiver_id)
+            # Try to find or create User with matching email
+            user, created = User.objects.get_or_create(
+                email=teacher.email,
+                defaults={
+                    'first_name': teacher.name,
+                    'role': Role.TEACHER,
+                    'school': teacher.school
+                }
+            )
+            if created:
+                # Set a random password for new users
+                user.set_password(User.objects.make_random_password())
+                user.save()
+            return user
+        except Teacher.DoesNotExist:
+            # Try Parent model
             try:
-                teacher = Teacher.objects.get(id=receiver_id)
+                parent = Parent.objects.get(id=receiver_id)
                 # Try to find or create User with matching email
                 user, created = User.objects.get_or_create(
-                    email=teacher.email,
+                    email=parent.email,
                     defaults={
-                        'first_name': teacher.name,
-                        'role': Role.TEACHER,
-                        'school': teacher.school
+                        'first_name': parent.name,
+                        'role': Role.PARENT,
+                        'school': parent.school
                     }
                 )
                 if created:
@@ -322,25 +336,11 @@ class MessageSerializer(serializers.ModelSerializer):
                     user.set_password(User.objects.make_random_password())
                     user.save()
                 return user
-            except Teacher.DoesNotExist:
-                # Try Parent model
+            except Parent.DoesNotExist:
+                # Finally try User model
                 try:
-                    parent = Parent.objects.get(id=receiver_id)
-                    # Try to find or create User with matching email
-                    user, created = User.objects.get_or_create(
-                        email=parent.email,
-                        defaults={
-                            'first_name': parent.name,
-                            'role': Role.PARENT,
-                            'school': parent.school
-                        }
-                    )
-                    if created:
-                        # Set a random password for new users
-                        user.set_password(User.objects.make_random_password())
-                        user.save()
-                    return user
-                except Parent.DoesNotExist:
+                    return User.objects.get(id=receiver_id)
+                except User.DoesNotExist:
                     raise serializers.ValidationError(f"No User, Teacher or Parent found with ID {receiver_id}")
         
         return value
