@@ -287,6 +287,9 @@ class TeacherRegistrationSerializer(serializers.ModelSerializer):
         return data
 
 class MessageSerializer(serializers.ModelSerializer):
+    receiver_email = serializers.EmailField(write_only=True, required=False)
+    receiver_role = serializers.CharField(write_only=True, required=False)
+    
     class Meta:
         model = Message
         fields = '__all__'
@@ -298,7 +301,58 @@ class MessageSerializer(serializers.ModelSerializer):
         if isinstance(value, User):
             return value
             
-        # If it's a string (ID), try to find the corresponding User/Teacher/Parent
+        # Get the email from the request data if available
+        receiver_email = self.initial_data.get('receiver_email')
+        receiver_role = self.initial_data.get('receiver_role')
+        
+        # If email is provided, try to find by email first
+        if receiver_email:
+            if receiver_role == 'teacher':
+                try:
+                    teacher = Teacher.objects.get(email=receiver_email)
+                    # Try to find or create User with matching email
+                    user, created = User.objects.get_or_create(
+                        email=teacher.email,
+                        defaults={
+                            'first_name': teacher.name,
+                            'role': Role.TEACHER,
+                            'school': teacher.school
+                        }
+                    )
+                    if created:
+                        user.set_password(User.objects.make_random_password())
+                        user.save()
+                    return user
+                except Teacher.DoesNotExist:
+                    pass
+            
+            elif receiver_role == 'parent':
+                try:
+                    parent = Parent.objects.get(email=receiver_email)
+                    # Try to find or create User with matching email
+                    user, created = User.objects.get_or_create(
+                        email=parent.email,
+                        defaults={
+                            'first_name': parent.name,
+                            'role': Role.PARENT,
+                            'school': parent.school
+                        }
+                    )
+                    if created:
+                        user.set_password(User.objects.make_random_password())
+                        user.save()
+                    return user
+                except Parent.DoesNotExist:
+                    pass
+            
+            # If we have an email but no specific role or couldn't find by role,
+            # try to find by email in User model
+            try:
+                return User.objects.get(email=receiver_email)
+            except User.DoesNotExist:
+                pass
+        
+        # If we couldn't find by email or no email provided, try by ID
         receiver_id = str(value)  # Convert to string to handle UUID objects
         
         # Try Teacher model first

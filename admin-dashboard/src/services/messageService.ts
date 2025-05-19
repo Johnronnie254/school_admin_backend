@@ -12,6 +12,8 @@ export interface Message {
 export interface MessageFormData {
   receiver: string;
   content: string;
+  receiver_email?: string;
+  receiver_role?: string;
 }
 
 export interface Teacher {

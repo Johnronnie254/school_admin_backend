@@ -26,6 +26,8 @@ interface Message {
 interface MessageFormData {
   content: string;
   receiver: string;
+  receiver_email: string;
+  receiver_role: string;
 }
 
 export default function MessagesPage() {
@@ -84,7 +86,12 @@ export default function MessagesPage() {
   const onSubmit = (data: MessageFormData) => {
     if (!selectedUser) return;
     console.log('Sending message to:', selectedUser);
-    sendMessageMutation.mutate({ ...data, receiver: selectedUser.id });
+    sendMessageMutation.mutate({ 
+      ...data, 
+      receiver: selectedUser.id,
+      receiver_email: selectedUser.email,
+      receiver_role: selectedUser.role 
+    });
   };
 
   // Get unique roles from users
