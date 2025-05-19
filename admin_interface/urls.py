@@ -82,15 +82,7 @@ urlpatterns = [
         'delete': 'destroy'
     }), name='notification-detail'),
 
-    # Messaging
-    path('messages/', MessageViewSet.as_view({
-        'get': 'list',
-        'post': 'create'
-    }), name='message-list'),
-    path('messages/<uuid:pk>/', MessageViewSet.as_view({
-        'get': 'retrieve',
-        'delete': 'destroy'
-    }), name='message-detail'),
+    # Messages
     path('messages/chat/<uuid:user_id>/', MessageViewSet.as_view({
         'get': 'get_chat_history'
     }), name='chat-history'),
