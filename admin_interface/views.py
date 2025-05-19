@@ -1381,19 +1381,26 @@ class MessageViewSet(viewsets.ModelViewSet):
             try:
                 # Try to get the receiver as a Teacher
                 teacher = Teacher.objects.get(id=receiver_id)
-                receiver = User.objects.get(email=teacher.email)
-            except (Teacher.DoesNotExist, User.DoesNotExist):
+                try:
+                    receiver = User.objects.get(email=teacher.email)
+                except User.DoesNotExist:
+                    raise serializers.ValidationError({"error": f"User with email {teacher.email} not found. Teacher exists but needs a User account."})
+            except Teacher.DoesNotExist:
                 try:
                     # Try to get the receiver as a Parent
                     parent = Parent.objects.get(id=receiver_id)
-                    receiver = User.objects.get(email=parent.email)
-                except (Parent.DoesNotExist, User.DoesNotExist):
-                    raise serializers.ValidationError({"error": "Receiver not found"})
+                    try:
+                        receiver = User.objects.get(email=parent.email)
+                    except User.DoesNotExist:
+                        raise serializers.ValidationError({"error": f"User with email {parent.email} not found. Parent exists but needs a User account."})
+                except Parent.DoesNotExist:
+                    raise serializers.ValidationError({"error": f"Receiver with ID {receiver_id} not found in Users, Teachers, or Parents"})
         
         content = self.request.data.get('content')
-        if not content:
-            raise serializers.ValidationError({"error": "Message content is required"})
+        if not content or content.strip() == '':
+            raise serializers.ValidationError({"error": "Message content is required and cannot be empty"})
             
+        # Save the message with the sender, receiver, and school (if available)
         if user.school:
             serializer.save(sender=user, receiver=receiver, school=user.school)
         else:
@@ -1440,6 +1447,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
+            # Get messages exchanged between the current user and the other user
             messages = Message.objects.filter(
                 (Q(sender=request.user) & Q(receiver=other_user)) |
                 (Q(sender=other_user) & Q(receiver=request.user))

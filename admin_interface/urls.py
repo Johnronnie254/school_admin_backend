@@ -82,6 +82,9 @@ urlpatterns = [
     path('messages/chat/<uuid:user_id>/', MessageViewSet.as_view({
         'get': 'get_chat_history'
     }), name='chat-history'),
+    path('messages/chat/', MessageViewSet.as_view({
+        'get': 'get_chat_history'
+    }), name='chat-history-query'),
 
     # Notifications
     path('notifications/', NotificationView.as_view({
