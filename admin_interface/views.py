@@ -569,8 +569,8 @@ class StudentViewSet(viewsets.ModelViewSet):
             school = user.school
             if school:
                 serializer.save(school=school)
-        else:
-            serializer.save()
+            else:
+                serializer.save()
 
     @action(detail=True, methods=['get'])
     def exam_results(self, request, pk=None):
