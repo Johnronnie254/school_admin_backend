@@ -10,7 +10,8 @@ import {
   PlusIcon, 
   XMarkIcon,
   UserGroupIcon,
-  QuestionMarkCircleIcon 
+  QuestionMarkCircleIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { studentService, type Student, type StudentFormData } from '@/services/studentService';
 import { Dialog } from '@/components/ui/dialog';
@@ -20,6 +21,9 @@ const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
 export default function StudentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const [isListVisible, setIsListVisible] = useState(false);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<StudentFormData>({
@@ -47,6 +51,27 @@ export default function StudentsPage() {
 
   // Extract students array from the response
   const students = studentsResponse?.results || [];
+
+  // Filter students based on search query
+  const filteredStudents = students.filter(student => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      student.name.toLowerCase().includes(query) ||
+      student.guardian.toLowerCase().includes(query) ||
+      student.contact.toLowerCase().includes(query) ||
+      (student.class_assigned && student.class_assigned.toLowerCase().includes(query)) ||
+      String(student.grade).includes(query)
+    );
+  });
+
+  // Only display students if search is active or list visibility is toggled
+  const shouldDisplayStudents = isListVisible || searchQuery.length > 0;
+  
+  // Limit displayed students unless "Show All" is clicked
+  const displayedStudents = shouldDisplayStudents ? 
+    (showAll ? filteredStudents : filteredStudents.slice(0, 5)) : 
+    [];
 
   const createMutation = useMutation<Student, Error, StudentFormData>({
     mutationFn: studentService.createStudent,
@@ -143,6 +168,54 @@ export default function StudentsPage() {
         </button>
       </div>
 
+      {/* Search bar and Show All button */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-grow">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            placeholder="Search students..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        {!isListVisible && !searchQuery && (
+          <button
+            onClick={() => setIsListVisible(true)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show All
+          </button>
+        )}
+        {isListVisible && !searchQuery && (
+          <button
+            onClick={() => setIsListVisible(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Hide All
+          </button>
+        )}
+        {shouldDisplayStudents && !showAll && filteredStudents.length > 5 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show More ({filteredStudents.length})
+          </button>
+        )}
+        {shouldDisplayStudents && showAll && filteredStudents.length > 5 && (
+          <button
+            onClick={() => setShowAll(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show Less
+          </button>
+        )}
+      </div>
+
       {isLoadingStudents ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -156,11 +229,27 @@ export default function StudentsPage() {
             {studentsError instanceof Error ? studentsError.message : 'Please try refreshing the page.'}
           </p>
         </div>
-      ) : students.length === 0 ? (
-        <div className="text-center py-12">
+      ) : !shouldDisplayStudents ? (
+        <div className="text-center p-12 bg-white rounded-lg shadow">
           <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No students</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by adding a new student.</p>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Search or show all students</h3>
+          <p className="mt-1 text-sm text-gray-500">Use the search bar above to find specific students or click &quot;Show All&quot; to view all students.</p>
+        </div>
+      ) : displayedStudents.length === 0 ? (
+        <div className="text-center py-12">
+          {searchQuery ? (
+            <>
+              <XMarkIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No results found</h3>
+              <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter to find what you&rsquo;re looking for.</p>
+            </>
+          ) : (
+            <>
+              <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No students</h3>
+              <p className="mt-1 text-sm text-gray-500">Get started by adding a new student.</p>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -179,7 +268,7 @@ export default function StudentsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-                  {students.map((student) => (
+                  {displayedStudents.map((student) => (
                 <tr key={student.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.guardian}</td>
@@ -209,7 +298,7 @@ export default function StudentsPage() {
           
           {/* Mobile Cards - Shown only on mobile */}
           <div className="grid grid-cols-1 gap-4 sm:hidden">
-            {students.map((student) => (
+            {displayedStudents.map((student) => (
               <div key={student.id} className="bg-white rounded-lg shadow p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-base font-medium text-gray-900">{student.name}</h3>

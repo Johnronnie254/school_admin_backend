@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, UserGroupIcon, EnvelopeIcon, PhoneIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, UserGroupIcon, EnvelopeIcon, PhoneIcon, AcademicCapIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { teacherService } from '@/services/teacherService';
 import { Dialog } from '@/components/ui/dialog';
@@ -54,6 +54,9 @@ export default function TeachersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const [isListVisible, setIsListVisible] = useState(false);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<TeacherFormData>();
@@ -75,6 +78,26 @@ export default function TeachersPage() {
       }
     }
   });
+
+  // Filter teachers based on search query
+  const filteredTeachers = teachers?.results.filter(teacher => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      teacher.name.toLowerCase().includes(query) ||
+      teacher.email.toLowerCase().includes(query) ||
+      teacher.phone_number.toLowerCase().includes(query) ||
+      (teacher.class_assigned && teacher.class_assigned.toLowerCase().includes(query))
+    );
+  }) || [];
+
+  // Only display teachers if search is active or list visibility is toggled
+  const shouldDisplayTeachers = isListVisible || searchQuery.length > 0;
+  
+  // Limit displayed teachers unless "Show All" is clicked
+  const displayedTeachers = shouldDisplayTeachers ? 
+    (showAll ? filteredTeachers : filteredTeachers.slice(0, 5)) : 
+    [];
 
   const createMutation = useMutation({
     mutationFn: (data: TeacherFormData) => teacherService.createTeacher({ ...data, subjects: selectedSubjects }),
@@ -177,7 +200,7 @@ export default function TeachersPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-2">
           <UserGroupIcon className="h-6 w-6 text-gray-600" />
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Teachers Management</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Teachers</h1>
         </div>
         <button
           onClick={() => {
@@ -193,18 +216,80 @@ export default function TeachersPage() {
         </button>
       </div>
 
+      {/* Search bar and Show All button */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-grow">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            placeholder="Search teachers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        {!isListVisible && !searchQuery && (
+          <button
+            onClick={() => setIsListVisible(true)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show All
+          </button>
+        )}
+        {isListVisible && !searchQuery && (
+          <button
+            onClick={() => setIsListVisible(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Hide All
+          </button>
+        )}
+        {shouldDisplayTeachers && !showAll && filteredTeachers.length > 5 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show More ({filteredTeachers.length})
+          </button>
+        )}
+        {shouldDisplayTeachers && showAll && filteredTeachers.length > 5 && (
+          <button
+            onClick={() => setShowAll(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show Less
+          </button>
+        )}
+      </div>
+
       {/* Table for desktop, Cards for mobile */}
       {isLoading ? (
         <div className="flex justify-center p-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      ) : !teachers?.results || teachers.results.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-center py-8">
-            <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No teachers</h3>
-            <p className="mt-1 text-sm text-gray-500">Get started by adding a new teacher.</p>
-          </div>
+      ) : !shouldDisplayTeachers ? (
+        <div className="text-center p-12 bg-white rounded-lg shadow">
+          <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Search or show all teachers</h3>
+          <p className="mt-1 text-sm text-gray-500">Use the search bar above to find specific teachers or click &quot;Show All&quot; to view all teachers.</p>
+        </div>
+      ) : displayedTeachers.length === 0 ? (
+        <div className="text-center p-12 bg-white rounded-lg shadow">
+          {searchQuery ? (
+            <>
+              <XMarkIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No results found</h3>
+              <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter to find what you&rsquo;re looking for.</p>
+            </>
+          ) : (
+            <>
+              <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No teachers</h3>
+              <p className="mt-1 text-sm text-gray-500">Get started by adding a new teacher.</p>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -235,7 +320,7 @@ export default function TeachersPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {teachers.results.map((teacher: Teacher) => (
+                  {displayedTeachers.map((teacher: Teacher) => (
                     <tr key={teacher.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.email}</td>
@@ -276,7 +361,7 @@ export default function TeachersPage() {
           
           {/* Mobile Cards - Shown only on mobile */}
           <div className="grid grid-cols-1 gap-4 sm:hidden">
-            {teachers.results.map((teacher: Teacher) => (
+            {displayedTeachers.map((teacher: Teacher) => (
               <div key={teacher.id} className="bg-white rounded-lg shadow p-4">
                 <div className="flex justify-between items-start">
                   <h3 className="text-lg font-medium text-gray-900">{teacher.name}</h3>

@@ -10,7 +10,8 @@ import {
   PlusIcon, 
   XMarkIcon,
   UserGroupIcon,
-  QuestionMarkCircleIcon 
+  QuestionMarkCircleIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { parentService, type Parent, type ParentFormData } from '@/services/parentService';
 import { Dialog } from '@/components/ui/dialog';
@@ -19,6 +20,9 @@ import type { PaginatedResponse } from '@/types';
 export default function ParentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingParent, setEditingParent] = useState<Parent | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const [isListVisible, setIsListVisible] = useState(false);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<ParentFormData>();
@@ -51,6 +55,25 @@ export default function ParentsPage() {
       return response;
     }
   });
+
+  // Filter parents based on search query
+  const filteredParents = parentsData?.results?.filter(parent => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      parent.name.toLowerCase().includes(query) ||
+      parent.email.toLowerCase().includes(query) ||
+      (parent.phone_number && parent.phone_number.toLowerCase().includes(query))
+    );
+  }) || [];
+
+  // Only display parents if search is active or list visibility is toggled
+  const shouldDisplayParents = isListVisible || searchQuery.length > 0;
+  
+  // Limit displayed parents unless "Show All" is clicked
+  const displayedParents = shouldDisplayParents ? 
+    (showAll ? filteredParents : filteredParents.slice(0, 5)) : 
+    [];
 
   const createMutation = useMutation<Parent, Error, ParentFormData>({
     mutationFn: parentService.createParent,
@@ -130,15 +153,79 @@ export default function ParentsPage() {
         </button>
       </div>
 
+      {/* Search bar and Show All button */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-grow">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            placeholder="Search parents..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        {!isListVisible && !searchQuery && (
+          <button
+            onClick={() => setIsListVisible(true)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show All
+          </button>
+        )}
+        {isListVisible && !searchQuery && (
+          <button
+            onClick={() => setIsListVisible(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Hide All
+          </button>
+        )}
+        {shouldDisplayParents && !showAll && filteredParents.length > 5 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show More ({filteredParents.length})
+          </button>
+        )}
+        {shouldDisplayParents && showAll && filteredParents.length > 5 && (
+          <button
+            onClick={() => setShowAll(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Show Less
+          </button>
+        )}
+      </div>
+
       {isLoading || createMutation.isPending || updateMutation.isPending || deleteMutation.isPending ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      ) : !parentsData?.results || parentsData.results.length === 0 ? (
-        <div className="text-center py-12">
+      ) : !shouldDisplayParents ? (
+        <div className="text-center p-12 bg-white rounded-lg shadow">
           <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No parents</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by adding a new parent.</p>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Search or show all parents</h3>
+          <p className="mt-1 text-sm text-gray-500">Use the search bar above to find specific parents or click &quot;Show All&quot; to view all parents.</p>
+        </div>
+      ) : !displayedParents.length ? (
+        <div className="text-center py-12">
+          {searchQuery ? (
+            <>
+              <XMarkIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No results found</h3>
+              <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter to find what you&rsquo;re looking for.</p>
+            </>
+          ) : (
+            <>
+              <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No parents</h3>
+              <p className="mt-1 text-sm text-gray-500">Get started by adding a new parent.</p>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -155,7 +242,7 @@ export default function ParentsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {parentsData.results.map((parent: Parent) => (
+                  {displayedParents.map((parent: Parent) => (
                     <tr key={parent.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.email}</td>
@@ -183,7 +270,7 @@ export default function ParentsPage() {
           
           {/* Mobile Cards - Shown only on mobile */}
           <div className="grid grid-cols-1 gap-4 sm:hidden">
-            {parentsData.results.map((parent: Parent) => (
+            {displayedParents.map((parent: Parent) => (
               <div key={parent.id} className="bg-white rounded-lg shadow p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-base font-medium text-gray-900">{parent.name}</h3>
