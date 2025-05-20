@@ -3,6 +3,7 @@ from .models import User, Teacher, Student, Notification, Parent, ExamResult, Sc
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
+import uuid
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User (Admins)"""
@@ -130,6 +131,36 @@ class TeacherSerializer(serializers.ModelSerializer):
         if Teacher.objects.filter(email=value).exclude(id=instance.id if instance else None).exists():
             raise serializers.ValidationError("A teacher with this email already exists.")
         return value
+        
+    def create(self, validated_data):
+        """Override create to ensure a User record is created with the same UUID"""
+        # First create the Teacher record
+        email = validated_data.get('email')
+        name = validated_data.get('name')
+        school = validated_data.get('school')
+        
+        # Check if a User already exists with this email
+        try:
+            user = User.objects.get(email=email)
+            # If user exists, use their UUID for the teacher
+            teacher_id = user.id
+        except User.DoesNotExist:
+            # Generate UUID for both Teacher and User
+            teacher_id = uuid.uuid4()
+            # Create User with same UUID
+            user = User.objects.create_user(
+                id=teacher_id,
+                email=email,
+                password=User.objects.make_random_password(),
+                role=Role.TEACHER,
+                first_name=name,
+                school=school
+            )
+        
+        # Create Teacher with the same UUID
+        validated_data['id'] = teacher_id
+        teacher = Teacher.objects.create(**validated_data)
+        return teacher
 
 class StudentSerializer(serializers.ModelSerializer):
     """Serializer for Students"""
@@ -199,28 +230,29 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('password_confirmation')
         password = validated_data.pop('password')
         
-        # Create or get the Parent record
+        # Generate a UUID to use for both Parent and User
+        parent_id = uuid.uuid4()
+        
+        # Create the Parent record with the specified UUID
+        validated_data['id'] = parent_id
         parent = Parent.objects.create(
-            name=validated_data['name'],
-            email=validated_data['email'],
-            phone_number=validated_data.get('phone_number', ''),
+            **validated_data,
             password=make_password(password)  # Properly hash the password
         )
 
-        # Also create a User account (this is the approach that works for teachers)
+        # Create a User account with the same UUID
         user = User.objects.create_user(
-            email=validated_data['email'],
+            id=parent_id,  # Use the same UUID
+            email=parent.email,
             password=password,
             role=Role.PARENT,
-            first_name=validated_data['name']
+            first_name=parent.name
         )
 
         # Link the user to the parent's school if applicable
         if 'school' in validated_data and validated_data['school']:
             user.school = validated_data['school']
-            parent.school = validated_data['school']
             user.save()
-            parent.save()
 
         return parent
 

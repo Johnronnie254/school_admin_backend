@@ -1439,82 +1439,59 @@ class MessageViewSet(viewsets.ModelViewSet):
             logger.error(f"🔍 RECEIVER EMAIL: {receiver_email}")
             logger.error(f"🔍 RECEIVER ROLE: {receiver_role}")
             
-            # Special handling - try to find Teacher/Parent directly
-            teacher = None
-            parent = None
-            
-            if receiver_role == 'teacher' and receiver_id:
-                try:
-                    teacher = Teacher.objects.get(id=receiver_id)
-                    logger.error(f"✅ FOUND TEACHER BY ID DIRECTLY: {teacher.id}")
-                except Teacher.DoesNotExist:
-                    logger.error(f"❌ NO TEACHER FOUND WITH ID: {receiver_id}")
-                    if receiver_email:
-                        try:
-                            teacher = Teacher.objects.get(email=receiver_email)
-                            logger.error(f"✅ FOUND TEACHER BY EMAIL: {teacher.id}")
-                        except Teacher.DoesNotExist:
-                            logger.error(f"❌ NO TEACHER FOUND WITH EMAIL: {receiver_email}")
-            
-            elif receiver_role == 'parent' and receiver_id:
-                try:
-                    parent = Parent.objects.get(id=receiver_id)
-                    logger.error(f"✅ FOUND PARENT BY ID DIRECTLY: {parent.id}")
-                except Parent.DoesNotExist:
-                    logger.error(f"❌ NO PARENT FOUND WITH ID: {receiver_id}")
-                    if receiver_email:
-                        try:
-                            parent = Parent.objects.get(email=receiver_email)
-                            logger.error(f"✅ FOUND PARENT BY EMAIL: {parent.id}")
-                        except Parent.DoesNotExist:
-                            logger.error(f"❌ NO PARENT FOUND WITH EMAIL: {receiver_email}")
-            
-            # Create or get associated User if we found a Teacher/Parent
+            # First try to find a User with the provided ID - this should work if UUID synchronization is in place
             receiver = None
-            if teacher:
-                # Get or create User for this teacher
-                receiver, created = User.objects.get_or_create(
-                    email=teacher.email,
-                    defaults={
-                        'first_name': teacher.name,
-                        'role': Role.TEACHER,
-                        'school': teacher.school
-                    }
-                )
-                logger.error(f"{'✅ CREATED' if created else '✅ FOUND'} USER FOR TEACHER: {receiver.id}")
-            elif parent:
-                # Get or create User for this parent
-                receiver, created = User.objects.get_or_create(
-                    email=parent.email,
-                    defaults={
-                        'first_name': parent.name,
-                        'role': Role.PARENT,
-                        'school': parent.school
-                    }
-                )
-                logger.error(f"{'✅ CREATED' if created else '✅ FOUND'} USER FOR PARENT: {receiver.id}")
+            try:
+                receiver = User.objects.get(id=receiver_id)
+                logger.error(f"✅ FOUND USER DIRECTLY BY ID: {receiver.id}")
+            except User.DoesNotExist:
+                logger.error(f"❌ NO USER FOUND WITH ID: {receiver_id}")
+                # If no user found with this ID, look up Teacher/Parent and create User
+                if receiver_role == 'teacher':
+                    try:
+                        teacher = Teacher.objects.get(id=receiver_id)
+                        logger.error(f"✅ FOUND TEACHER DIRECTLY BY ID: {teacher.id}")
+                        # Create a User with the SAME ID as the Teacher
+                        receiver = User.objects.create_user(
+                            id=teacher.id,  # IMPORTANT: Use the same ID as teacher
+                            email=teacher.email,
+                            password=User.objects.make_random_password(),
+                            first_name=teacher.name,
+                            role=Role.TEACHER,
+                            school=teacher.school
+                        )
+                        logger.error(f"✅ CREATED USER FOR TEACHER WITH SAME ID: {receiver.id}")
+                    except Teacher.DoesNotExist:
+                        logger.error(f"❌ NO TEACHER FOUND WITH ID: {receiver_id}")
+                elif receiver_role == 'parent':
+                    try:
+                        parent = Parent.objects.get(id=receiver_id)
+                        logger.error(f"✅ FOUND PARENT DIRECTLY BY ID: {parent.id}")
+                        # Create a User with the SAME ID as the Parent
+                        receiver = User.objects.create_user(
+                            id=parent.id,  # IMPORTANT: Use the same ID as parent
+                            email=parent.email,
+                            password=User.objects.make_random_password(),
+                            first_name=parent.name,
+                            role=Role.PARENT,
+                            school=parent.school
+                        )
+                        logger.error(f"✅ CREATED USER FOR PARENT WITH SAME ID: {receiver.id}")
+                    except Parent.DoesNotExist:
+                        logger.error(f"❌ NO PARENT FOUND WITH ID: {receiver_id}")
             
-            # Now create the message
-            if teacher:
-                logger.error(f"✅ SAVING MESSAGE WITH TEACHER: {teacher.id}")
+            # If we found or created a receiver, save the message
+            if receiver:
+                logger.error(f"✅ SAVING MESSAGE WITH RECEIVER: {receiver.id}")
                 if user.school:
-                    serializer.save(sender=user, teacher=teacher, receiver=receiver, school=user.school)
+                    serializer.save(sender=user, receiver=receiver, school=user.school)
                 else:
-                    serializer.save(sender=user, teacher=teacher, receiver=receiver)
-            elif parent:
-                logger.error(f"✅ SAVING MESSAGE WITH PARENT: {parent.id}")
-                if user.school:
-                    serializer.save(sender=user, parent=parent, receiver=receiver, school=user.school)
-                else:
-                    serializer.save(sender=user, parent=parent, receiver=receiver)
+                    serializer.save(sender=user, receiver=receiver)
             else:
-                # Fallback to normal message
-                logger.error(f"✅ SAVING NORMAL MESSAGE")
-                if user.school:
-                    serializer.save(sender=user, school=user.school)
-                else:
-                    serializer.save(sender=user)
-            
+                # Fallback error if we couldn't find a receiver
+                logger.error(f"❌ COULD NOT FIND RECEIVER FOR ID: {receiver_id}")
+                raise serializers.ValidationError({"receiver": f"Could not find any user, teacher or parent with ID {receiver_id}"})
+                
             logger.error("✅ MESSAGE CREATED SUCCESSFULLY")
                 
         except serializers.ValidationError as e:
@@ -1609,22 +1586,20 @@ class MessageViewSet(viewsets.ModelViewSet):
                     {"error": "You can only view chat history with users in your school"},
                     status=status.HTTP_403_FORBIDDEN
                 )
-
-            
             
             # Get messages exchanged between the current user and the other user
             messages = Message.objects.filter(
                 (Q(sender=request.user) & Q(receiver=other_user)) |
                 (Q(sender=other_user) & Q(receiver=request.user))
             ).order_by('created_at')
-                
+            
             # Filter by school if user has a school
             if request.user.school:
                 messages = messages.filter(school=request.user.school)
-                
+            
             serializer = self.get_serializer(messages, many=True)
             return Response(serializer.data)
-            
+
         except Exception as e:
             print(f"Error in get_chat_history: {str(e)}")
             import traceback
