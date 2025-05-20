@@ -51,23 +51,14 @@ export const messageService = {
     // Log the exact data being sent
     console.log('🔍 SENDING MESSAGE WITH DATA:', JSON.stringify(data, null, 2));
     try {
-      const response = await apiClient.post<Message>('/api/messages/', data);
+      // Use direct_message endpoint directly
+      const response = await apiClient.post<Message>('/api/messages/direct_message/', data);
       console.log('✅ MESSAGE SENT SUCCESSFULLY:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ MESSAGE SEND ERROR:', error);
       console.error('❌ REQUEST DATA WAS:', data);
-      
-      // Try direct message endpoint as a fallback
-      try {
-        console.log('🔄 ATTEMPTING DIRECT MESSAGE FALLBACK');
-        const directResponse = await messageService.sendDirectMessage(data);
-        console.log('✅ DIRECT MESSAGE SENT SUCCESSFULLY:', directResponse);
-        return directResponse;
-      } catch (directError) {
-        console.error('❌ DIRECT MESSAGE ALSO FAILED:', directError);
-        throw error; // Re-throw the original error
-      }
+      throw error;
     }
   },
 
@@ -108,19 +99,5 @@ export const messageService = {
       console.error('Error fetching chat users:', error);
       return [];
     }
-  },
-
-  // New direct message function that bypasses model validation
-  sendDirectMessage: async (data: MessageFormData) => {
-    console.log('🔍 SENDING DIRECT MESSAGE WITH DATA:', JSON.stringify(data, null, 2));
-    try {
-      const response = await apiClient.post<Message>('/api/messages/direct_message/', data);
-      console.log('✅ DIRECT MESSAGE SENT SUCCESSFULLY:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('❌ DIRECT MESSAGE ERROR:', error);
-      console.error('❌ DIRECT MESSAGE REQUEST DATA WAS:', data);
-      throw error;
-    }
   }
-}; 
+};

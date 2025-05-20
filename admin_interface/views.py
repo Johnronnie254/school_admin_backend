@@ -862,6 +862,29 @@ class ParentViewSet(viewsets.ModelViewSet):
 class ExamResultView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        """Retrieve all exam results, optionally filtered by school"""
+        queryset = ExamResult.objects.all()
+        
+        # Filter by school if user has a school
+        if request.user.school:
+            queryset = queryset.filter(school=request.user.school)
+            
+        # Optional query parameters for filtering
+        year = request.query_params.get('year')
+        term = request.query_params.get('term')
+        student_id = request.query_params.get('student_id')
+        
+        if year:
+            queryset = queryset.filter(year=year)
+        if term:
+            queryset = queryset.filter(term=term)
+        if student_id:
+            queryset = queryset.filter(student_id=student_id)
+            
+        serializer = ExamResultSerializer(queryset, many=True)
+        return Response(serializer.data)
+
     def post(self, request):
         serializer = ExamResultSerializer(data=request.data)
         if serializer.is_valid():
