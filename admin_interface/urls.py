@@ -79,6 +79,10 @@ urlpatterns = [
         'get': 'get_chat_history'
     }), name='chat-history-query'),
     
+    path('messages/direct_message/', MessageViewSet.as_view({
+        'post': 'direct_message'
+    }), name='direct-message'),
+    
     path('messages/', MessageViewSet.as_view({
         'get': 'list',
         'post': 'create'
