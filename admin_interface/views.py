@@ -948,10 +948,18 @@ class NotificationView(viewsets.ModelViewSet):
     ordering_fields = ['created_at']
 
     def get_queryset(self):
+        user = self.request.user
         queryset = super().get_queryset()
+        
+        # Filter by school if user has a school
+        if user.school:
+            queryset = queryset.filter(school=user.school)
+            
+        # Filter by target_group if provided in query params
         target_group = self.request.query_params.get('target_group', None)
         if target_group:
             queryset = queryset.filter(target_group=target_group)
+            
         return queryset
 
     def perform_create(self, serializer):

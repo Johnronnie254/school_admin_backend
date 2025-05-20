@@ -24,7 +24,7 @@ export interface NotificationResponse {
 export const notificationService = {
   getNotifications: async () => {
     try {
-      const response = await api.get<NotificationResponse>('/notifications/');
+      const response = await api.get<NotificationResponse>('/api/notifications/');
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -36,7 +36,7 @@ export const notificationService = {
 
   getNotificationById: async (id: string) => {
     try {
-      const response = await api.get(`/notifications/${id}/`);
+      const response = await api.get(`/api/notifications/${id}/`);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -48,7 +48,7 @@ export const notificationService = {
 
   createNotification: async (data: NotificationFormData) => {
     try {
-      const response = await api.post('/notifications/', data);
+      const response = await api.post('/api/notifications/', data);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -60,7 +60,7 @@ export const notificationService = {
 
   updateNotification: async (id: string, data: Partial<NotificationFormData>) => {
     try {
-      const response = await api.put(`/notifications/${id}/`, data);
+      const response = await api.put(`/api/notifications/${id}/`, data);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
@@ -72,7 +72,7 @@ export const notificationService = {
 
   deleteNotification: async (id: string) => {
     try {
-      const response = await api.delete(`/notifications/${id}/`);
+      const response = await api.delete(`/api/notifications/${id}/`);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof AxiosError) {

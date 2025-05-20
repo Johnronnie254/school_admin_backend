@@ -93,16 +93,7 @@ urlpatterns = [
         'delete': 'destroy'
     }), name='message-detail'),
 
-    # Notifications
-    path('notifications/', NotificationView.as_view({
-        'get': 'list',
-        'post': 'create'
-    }), name='notification-list'),
-    path('notifications/<uuid:pk>/', NotificationView.as_view({
-        'get': 'retrieve',
-        'put': 'update',
-        'delete': 'destroy'
-    }), name='notification-detail'),
+    # Notifications registered via router
 
     # Leave Applications
     path('leave-applications/', LeaveApplicationViewSet.as_view({
