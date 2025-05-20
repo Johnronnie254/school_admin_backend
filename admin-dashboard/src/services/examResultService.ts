@@ -70,11 +70,13 @@ export const examResultService = {
     return response.data;
   },
 
-  updateExamResult: async (_id: string, _data: Partial<ExamResultFormData>) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  updateExamResult: async (id: string, data: Partial<ExamResultFormData>) => {
     throw new Error('Update exam result endpoint not implemented in backend');
   },
 
-  deleteExamResult: async (_id: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  deleteExamResult: async (id: string) => {
     throw new Error('Delete exam result endpoint not implemented in backend');
   },
 
