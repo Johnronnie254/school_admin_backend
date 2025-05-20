@@ -1,4 +1,4 @@
-import { apiClient, PaginatedResponse } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 
 export interface ExamResult {
   id: string;
@@ -70,11 +70,11 @@ export const examResultService = {
     return response.data;
   },
 
-  updateExamResult: async (id: string, data: Partial<ExamResultFormData>) => {
+  updateExamResult: async (_id: string, _data: Partial<ExamResultFormData>) => {
     throw new Error('Update exam result endpoint not implemented in backend');
   },
 
-  deleteExamResult: async (id: string) => {
+  deleteExamResult: async (_id: string) => {
     throw new Error('Delete exam result endpoint not implemented in backend');
   },
 
