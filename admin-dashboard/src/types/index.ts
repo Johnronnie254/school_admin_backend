@@ -17,6 +17,8 @@ export interface User {
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;
+  school?: { id: string | number };
+  school_id?: string | number | null;
 }
 
 export interface AuthResponse {

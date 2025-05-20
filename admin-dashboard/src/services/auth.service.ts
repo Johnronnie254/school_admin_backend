@@ -129,7 +129,8 @@ class AuthService {
           role: userData.role,
           is_active: userData.is_active !== undefined ? userData.is_active : true,
           created_at: userData.created_at || new Date().toISOString(),
-          updated_at: userData.updated_at || new Date().toISOString()
+          updated_at: userData.updated_at || new Date().toISOString(),
+          school_id: userData.school_id || null
         };
       } catch (error) {
         console.error('❌ Error decoding JWT token:', error);
