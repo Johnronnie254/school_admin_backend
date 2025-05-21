@@ -26,6 +26,8 @@ interface TeacherFormData {
   phone_number: string;
   class_assigned: string;
   subjects: string[];
+  password?: string;
+  password_confirmation?: string;
 }
 
 interface PaginatedResponse<T> {
@@ -57,9 +59,12 @@ export default function TeachersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [isListVisible, setIsListVisible] = useState(false);
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<TeacherFormData>();
+  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<TeacherFormData>();
+
+  const password = watch('password');
 
   const { data: teachers, isLoading } = useQuery<PaginatedResponse<Teacher>>({
     queryKey: ['teachers'],
@@ -101,12 +106,19 @@ export default function TeachersPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: TeacherFormData) => teacherService.createTeacher({ ...data, subjects: selectedSubjects }),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      // Store the password for display
+      if (variables.password) {
+        setCreatedPassword(variables.password);
+      }
       toast.success('Teacher created successfully');
-      setIsModalOpen(false);
-      reset();
-      setSelectedSubjects([]);
+      // Don't close modal immediately if we have a password to show
+      if (!variables.password) {
+        setIsModalOpen(false);
+        reset();
+        setSelectedSubjects([]);
+      }
     },
     onError: (error: AxiosError | Error) => {
       console.error('Error creating teacher:', error);
@@ -194,6 +206,21 @@ export default function TeachersPage() {
     );
   };
 
+  const handleAddTeacher = () => {
+    // Clear all form data and selections
+    setIsModalOpen(true);
+    setEditingTeacher(null);
+    setSelectedSubjects([]);
+    reset({
+      name: '',
+      email: '',
+      phone_number: '',
+      class_assigned: '',
+      password: '',
+      password_confirmation: ''
+    });
+  };
+
   return (
     <div className="p-4 sm:p-6">
       {/* Header */}
@@ -203,12 +230,7 @@ export default function TeachersPage() {
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Teachers</h1>
         </div>
         <button
-          onClick={() => {
-            setIsModalOpen(true);
-            setEditingTeacher(null);
-            setSelectedSubjects([]);
-            reset();
-          }}
+          onClick={handleAddTeacher}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
           <PlusIcon className="w-5 h-5 mr-2" />
@@ -423,6 +445,7 @@ export default function TeachersPage() {
         onClose={() => {
           setIsModalOpen(false);
           setEditingTeacher(null);
+          setCreatedPassword(null);
           reset();
         }}
         className="relative z-50"
@@ -438,6 +461,7 @@ export default function TeachersPage() {
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingTeacher(null);
+                  setCreatedPassword(null);
                   reset();
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -455,135 +479,223 @@ export default function TeachersPage() {
               </Dialog.Title>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-              <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-6 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Name
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-1.5 sm:mt-2">
-                    <input
-                      type="text"
-                      {...register('name', { required: 'Name is required' })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter teacher's name"
-                    />
-                    {errors.name && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>}
-                  </div>
+            {/* Password display after successful teacher creation */}
+            {createdPassword && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+                <h3 className="text-sm font-medium text-green-800 mb-2">Teacher created successfully!</h3>
+                <p className="text-sm text-green-700 mb-2">Please note down this temporary password. It will be shown only once:</p>
+                <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
+                  <code className="text-sm font-mono text-green-900">{createdPassword}</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdPassword);
+                      toast.success('Password copied to clipboard');
+                    }}
+                    className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                  >
+                    Copy
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Email
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-1.5 sm:mt-2">
-                    <input
-                      type="email"
-                      {...register('email', { required: 'Email is required' })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter email address"
-                    />
-                    {errors.email && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Phone Number
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-1.5 sm:mt-2">
-                    <input
-                      {...register('phone_number', { 
-                        required: 'Phone number is required',
-                        pattern: {
-                          value: /^07\d{8}$/,
-                          message: "Phone number must be in format '07XXXXXXXX'"
-                        }
-                      })}
-                      placeholder="07XXXXXXXX"
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                    />
-                    {errors.phone_number && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Class Assigned
-                  </label>
-                  <div className="mt-1.5 sm:mt-2">
-                    <input
-                      {...register('class_assigned')}
-                      placeholder="e.g., Grade 7A"
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                    />
-                  </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setCreatedPassword(null);
+                      reset();
+                      setSelectedSubjects([]);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
+            )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
-                  Subjects
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-2">
-                  {AVAILABLE_SUBJECTS.map((subject) => (
-                    <div key={subject} className="flex items-center">
+            {!createdPassword && (
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6" autoComplete="off">
+                <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-6 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Name
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="mt-1.5 sm:mt-2">
                       <input
-                        type="checkbox"
-                        id={subject}
-                        checked={selectedSubjects.includes(subject)}
-                        onChange={() => toggleSubject(subject)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        type="text"
+                        autoComplete="off"
+                        {...register('name', { required: 'Name is required' })}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                        placeholder="Enter teacher's name"
                       />
-                      <label htmlFor={subject} className="ml-2 text-xs sm:text-sm text-gray-700 truncate">
-                        {subject}
-                      </label>
+                      {errors.name && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>}
                     </div>
-                  ))}
-                </div>
-                {selectedSubjects.length === 0 && (
-                  <p className="mt-1.5 text-xs sm:text-sm text-red-600">Please select at least one subject</p>
-                )}
-              </div>
+                  </div>
 
-              <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-6 sm:mt-8">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingTeacher(null);
-                    setSelectedSubjects([]);
-                    reset();
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 w-full sm:w-auto order-2 sm:order-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={selectedSubjects.length === 0 || createMutation.isPending || updateMutation.isPending}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
-                >
-                  {createMutation.isPending || updateMutation.isPending ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin -ml-1 mr-2 h-4 w-4 text-white">
-                        <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                      </div>
-                      {editingTeacher ? 'Updating...' : 'Creating...'}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Email
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="mt-1.5 sm:mt-2">
+                      <input
+                        type="email"
+                        autoComplete="off"
+                        {...register('email', { required: 'Email is required' })}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                        placeholder="Enter email address"
+                      />
+                      {errors.email && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>}
                     </div>
-                  ) : (
-                    editingTeacher ? 'Update Teacher' : 'Create Teacher'
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Phone Number
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="mt-1.5 sm:mt-2">
+                      <input
+                        autoComplete="off"
+                        {...register('phone_number', { 
+                          required: 'Phone number is required',
+                          pattern: {
+                            value: /^07\d{8}$/,
+                            message: "Phone number must be in format '07XXXXXXXX'"
+                          }
+                        })}
+                        placeholder="07XXXXXXXX"
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                      />
+                      {errors.phone_number && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Class Assigned
+                    </label>
+                    <div className="mt-1.5 sm:mt-2">
+                      <input
+                        autoComplete="off"
+                        {...register('class_assigned')}
+                        placeholder="e.g., Grade 7A"
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Password fields - only show when creating new teacher */}
+                  {!editingTeacher && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Password
+                          <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <div className="mt-1.5 sm:mt-2">
+                          <input
+                            type="password"
+                            autoComplete="new-password"
+                            {...register('password', { 
+                              required: !editingTeacher ? 'Password is required' : false,
+                              minLength: { value: 6, message: 'Password must be at least 6 characters' }
+                            })}
+                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                            placeholder="Enter password"
+                          />
+                          {errors.password && (
+                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Confirm Password
+                          <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <div className="mt-1.5 sm:mt-2">
+                          <input
+                            type="password"
+                            autoComplete="new-password"
+                            {...register('password_confirmation', { 
+                              required: !editingTeacher ? 'Please confirm your password' : false,
+                              validate: value => !editingTeacher ? (value === password || 'Passwords do not match') : true
+                            })}
+                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                            placeholder="Confirm password"
+                          />
+                          {errors.password_confirmation && (
+                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
+                          )}
+                        </div>
+                      </div>
+                    </>
                   )}
-                </button>
-              </div>
-            </form>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                    Subjects
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-2">
+                    {AVAILABLE_SUBJECTS.map((subject) => (
+                      <div key={subject} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={subject}
+                          checked={selectedSubjects.includes(subject)}
+                          onChange={() => toggleSubject(subject)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor={subject} className="ml-2 text-xs sm:text-sm text-gray-700 truncate">
+                          {subject}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedSubjects.length === 0 && (
+                    <p className="mt-1.5 text-xs sm:text-sm text-red-600">Please select at least one subject</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-6 sm:mt-8">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setEditingTeacher(null);
+                      setSelectedSubjects([]);
+                      reset();
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 w-full sm:w-auto order-2 sm:order-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={selectedSubjects.length === 0 || createMutation.isPending || updateMutation.isPending}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
+                  >
+                    {createMutation.isPending || updateMutation.isPending ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin -ml-1 mr-2 h-4 w-4 text-white">
+                          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
+                        {editingTeacher ? 'Updating...' : 'Creating...'}
+                      </div>
+                    ) : (
+                      editingTeacher ? 'Update Teacher' : 'Create Teacher'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </Dialog.Panel>
         </div>
       </Dialog>

@@ -17,6 +17,8 @@ export interface TeacherFormData {
   phone_number: string;
   class_assigned: string;
   subjects: string[];
+  password?: string;
+  password_confirmation?: string;
 }
 
 class TeacherService {

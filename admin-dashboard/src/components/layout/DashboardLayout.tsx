@@ -24,7 +24,7 @@ const navigation = [
   { name: 'Students', href: '/students', icon: UsersIcon },
   { name: 'Parents', href: '/parents', icon: UsersIcon },
   { name: 'Exam Results', href: '/exam-results', icon: DocumentTextIcon },
-  { name: 'School Fees', href: '/school-fees', icon: CurrencyDollarIcon },
+  // { name: 'School Fees', href: '/school-fees', icon: CurrencyDollarIcon },
   { name: 'Notifications', href: '/notifications', icon: BellIcon },
   { name: 'Messages', href: '/messages', icon: ChatBubbleLeftRightIcon },
   { name: 'Leave Applications', href: '/leave-applications', icon: ClipboardDocumentListIcon },

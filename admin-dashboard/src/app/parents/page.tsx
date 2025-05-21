@@ -23,11 +23,25 @@ export default function ParentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [isListVisible, setIsListVisible] = useState(false);
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<ParentFormData>();
 
   const password = watch('password');
+
+  // Handle adding a new parent - clear all form fields
+  const handleAddParent = () => {
+    setEditingParent(null);
+    reset({
+      name: '',
+      email: '',
+      phone_number: '',
+      password: '',
+      password_confirmation: '',
+    });
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     if (editingParent) {
@@ -35,14 +49,6 @@ export default function ParentsPage() {
         name: editingParent.name,
         email: editingParent.email,
         phone_number: editingParent.phone_number,
-      });
-    } else {
-      reset({
-        name: '',
-        email: '',
-        phone_number: '',
-        password: '',
-        password_confirmation: '',
       });
     }
   }, [editingParent, reset]);
@@ -77,11 +83,18 @@ export default function ParentsPage() {
 
   const createMutation = useMutation<Parent, Error, ParentFormData>({
     mutationFn: parentService.createParent,
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['parents'] });
-      setIsModalOpen(false);
-      reset();
+      // Store the password for display
+      if (variables.password) {
+        setCreatedPassword(variables.password);
+      }
       toast.success('Parent created successfully');
+      // Don't close modal immediately if we have a password to show
+      if (!variables.password) {
+        setIsModalOpen(false);
+        reset();
+      }
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create parent');
@@ -140,11 +153,7 @@ export default function ParentsPage() {
           <h1 className="text-2xl font-semibold text-gray-800">Parents</h1>
         </div>
         <button
-          onClick={() => {
-            setEditingParent(null);
-            reset();
-            setIsModalOpen(true);
-          }}
+          onClick={handleAddParent}
           disabled={createMutation.isPending || updateMutation.isPending}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
@@ -310,6 +319,7 @@ export default function ParentsPage() {
         onClose={() => {
           setIsModalOpen(false);
           setEditingParent(null);
+          setCreatedPassword(null);
           reset();
         }}
         className="relative z-50"
@@ -325,6 +335,7 @@ export default function ParentsPage() {
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingParent(null);
+                  setCreatedPassword(null);
                   reset();
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -342,163 +353,203 @@ export default function ParentsPage() {
               </Dialog.Title>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
-              <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-8 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Full Name
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-1.5 sm:mt-2">
-                    <input
-                      type="text"
-                      {...register('name', { 
-                        required: 'Name is required',
-                        minLength: { value: 2, message: 'Name must be at least 2 characters' }
-                      })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter parent's full name"
-                    />
-                    {errors.name && (
-                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
-                    )}
-                  </div>
+            {/* Password display after successful parent creation */}
+            {createdPassword && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+                <h3 className="text-sm font-medium text-green-800 mb-2">Parent created successfully!</h3>
+                <p className="text-sm text-green-700 mb-2">Please note down this temporary password. It will be shown only once:</p>
+                <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
+                  <code className="text-sm font-mono text-green-900">{createdPassword}</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdPassword);
+                      toast.success('Password copied to clipboard');
+                    }}
+                    className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                  >
+                    Copy
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Email
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-1.5 sm:mt-2">
-                    <input
-                      type="email"
-                      {...register('email', { 
-                        required: 'Email is required',
-                        pattern: {
-                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: 'Please enter a valid email address'
-                        }
-                      })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter email address"
-                    />
-                    {errors.email && (
-                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>
-                    )}
-                  </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setCreatedPassword(null);
+                      reset();
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  >
+                    Close
+                  </button>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Phone Number
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-1.5 sm:mt-2 relative">
-                    <input
-                      type="tel"
-                      {...register('phone_number', { 
-                        required: 'Phone number is required',
-                        pattern: {
-                          value: /^07[0-9]{8}$/,
-                          message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
-                        }
-                      })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter phone number"
-                    />
-                    <div className="absolute right-2 top-1.5 group">
-                      <QuestionMarkCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                      <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
-                        Enter a valid phone number (format: 07XXXXXXXX)
-                      </div>
-                    </div>
-                    {errors.phone_number && (
-                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Password fields - only show when creating new parent */}
-                {!editingParent && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Password
-                        <span className="text-red-500 ml-1">*</span>
-                      </label>
-                      <div className="mt-1.5 sm:mt-2">
-                        <input
-                          type="password"
-                          {...register('password', { 
-                            required: !editingParent ? 'Password is required' : false,
-                            minLength: { value: 6, message: 'Password must be at least 6 characters' }
-                          })}
-                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                          placeholder="Enter password"
-                        />
-                        {errors.password && (
-                          <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Confirm Password
-                        <span className="text-red-500 ml-1">*</span>
-                      </label>
-                      <div className="mt-1.5 sm:mt-2">
-                        <input
-                          type="password"
-                          {...register('password_confirmation', { 
-                            required: !editingParent ? 'Please confirm your password' : false,
-                            validate: value => !editingParent ? (value === password || 'Passwords do not match') : true
-                          })}
-                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                          placeholder="Confirm password"
-                        />
-                        {errors.password_confirmation && (
-                          <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
               </div>
+            )}
 
-              <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingParent(null);
-                    reset();
-                  }}
-                  className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 w-full sm:w-auto order-2 sm:order-1"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {createMutation.isPending || updateMutation.isPending ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      {editingParent ? 'Updating...' : 'Creating...'}
+            {!createdPassword && (
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6" autoComplete="off">
+                <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-8 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Full Name
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="mt-1.5 sm:mt-2">
+                      <input
+                        type="text"
+                        autoComplete="off"
+                        {...register('name', { 
+                          required: 'Name is required',
+                          minLength: { value: 2, message: 'Name must be at least 2 characters' }
+                        })}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                        placeholder="Enter parent's full name"
+                      />
+                      {errors.name && (
+                        <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
+                      )}
                     </div>
-                  ) : (
-                    <>{editingParent ? 'Update Parent' : 'Create Parent'}</>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Email
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="mt-1.5 sm:mt-2">
+                      <input
+                        type="email"
+                        autoComplete="off"
+                        {...register('email', { 
+                          required: 'Email is required',
+                          pattern: {
+                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                            message: 'Please enter a valid email address'
+                          }
+                        })}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                        placeholder="Enter email address"
+                      />
+                      {errors.email && (
+                        <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Phone Number
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="mt-1.5 sm:mt-2 relative">
+                      <input
+                        type="tel"
+                        autoComplete="off"
+                        {...register('phone_number', { 
+                          required: 'Phone number is required',
+                          pattern: {
+                            value: /^07[0-9]{8}$/,
+                            message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
+                          }
+                        })}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                        placeholder="Enter phone number"
+                      />
+                      <div className="absolute right-2 top-1.5 group">
+                        <QuestionMarkCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                        <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
+                          Enter a valid phone number (format: 07XXXXXXXX)
+                        </div>
+                      </div>
+                      {errors.phone_number && (
+                        <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Password fields - only show when creating new parent */}
+                  {!editingParent && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Password
+                          <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <div className="mt-1.5 sm:mt-2">
+                          <input
+                            type="password"
+                            autoComplete="new-password"
+                            {...register('password', { 
+                              required: !editingParent ? 'Password is required' : false,
+                              minLength: { value: 6, message: 'Password must be at least 6 characters' }
+                            })}
+                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                            placeholder="Enter password"
+                          />
+                          {errors.password && (
+                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Confirm Password
+                          <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <div className="mt-1.5 sm:mt-2">
+                          <input
+                            type="password"
+                            autoComplete="new-password"
+                            {...register('password_confirmation', { 
+                              required: !editingParent ? 'Please confirm your password' : false,
+                              validate: value => !editingParent ? (value === password || 'Passwords do not match') : true
+                            })}
+                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                            placeholder="Confirm password"
+                          />
+                          {errors.password_confirmation && (
+                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
+                          )}
+                        </div>
+                      </div>
+                    </>
                   )}
-                </button>
-              </div>
-            </form>
+                </div>
+
+                <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setEditingParent(null);
+                      setCreatedPassword(null);
+                      reset();
+                    }}
+                    className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 w-full sm:w-auto order-2 sm:order-1"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                  >
+                    {createMutation.isPending || updateMutation.isPending ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {editingParent ? 'Updating...' : 'Creating...'}
+                      </div>
+                    ) : (
+                      <>{editingParent ? 'Update Parent' : 'Create Parent'}</>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </Dialog.Panel>
         </div>
       </Dialog>
