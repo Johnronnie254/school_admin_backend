@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 interface LoginForm {
   email: string;
@@ -42,7 +42,7 @@ export default function LoginPage() {
             Access the school management dashboard
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)} autoComplete="off">
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -57,6 +57,7 @@ export default function LoginPage() {
                   },
                 })}
                 type="email"
+                autoComplete="off"
                 className="appearance-none rounded-t-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Admin email address"
               />
@@ -79,6 +80,7 @@ export default function LoginPage() {
                   },
                 })}
                 type="password"
+                autoComplete="new-password"
                 className="appearance-none rounded-b-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
               />
@@ -92,19 +94,8 @@ export default function LoginPage() {
 
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <Link
-                href="/forgot-password"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
+              <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
                 Forgot your password?
-              </Link>
-            </div>
-            <div className="text-sm">
-              <Link
-                href="/register"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Register
               </Link>
             </div>
           </div>
