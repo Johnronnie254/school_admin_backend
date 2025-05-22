@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { teacherService } from '@/services/teacherService';
 import { Dialog } from '@/components/ui/dialog';
 import { AxiosError } from 'axios';
+import TeacherListModal from '@/components/modals/TeacherListModal';
 
 interface Teacher {
   id: string;
@@ -60,6 +61,8 @@ export default function TeachersPage() {
   const [showAll, setShowAll] = useState(false);
   const [isListVisible, setIsListVisible] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{email: string, password: string} | null>(null);
+  const [isTeacherListModalOpen, setIsTeacherListModalOpen] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<TeacherFormData>();
@@ -225,6 +228,12 @@ export default function TeachersPage() {
     });
   };
 
+  // Handle viewing a specific teacher
+  const handleViewTeacher = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setIsTeacherListModalOpen(true);
+  };
+
   return (
     <div className="p-4 sm:p-6">
       {/* Header */}
@@ -311,9 +320,9 @@ export default function TeachersPage() {
             </>
           ) : (
             <>
-              <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No teachers</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by adding a new teacher.</p>
+            <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No teachers</h3>
+            <p className="mt-1 text-sm text-gray-500">Get started by adding a new teacher.</p>
             </>
           )}
         </div>
@@ -347,7 +356,15 @@ export default function TeachersPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {displayedTeachers.map((teacher: Teacher) => (
-                    <tr key={teacher.id}>
+                    <tr 
+                      key={teacher.id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={(e) => {
+                        // Prevent click when clicking action buttons
+                        if ((e.target as HTMLElement).closest('button')) return;
+                        handleViewTeacher(teacher);
+                      }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.phone_number}</td>
@@ -366,13 +383,19 @@ export default function TeachersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
-                          onClick={() => handleEdit(teacher)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(teacher);
+                          }}
                           className="text-blue-600 hover:text-blue-900 mr-4"
                         >
                           <PencilIcon className="w-5 h-5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(teacher.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(teacher.id);
+                          }}
                           className="text-red-600 hover:text-red-900"
                         >
                           <TrashIcon className="w-5 h-5" />
@@ -388,18 +411,32 @@ export default function TeachersPage() {
           {/* Mobile Cards - Shown only on mobile */}
           <div className="grid grid-cols-1 gap-4 sm:hidden">
             {displayedTeachers.map((teacher: Teacher) => (
-              <div key={teacher.id} className="bg-white rounded-lg shadow p-4">
+              <div 
+                key={teacher.id} 
+                className="bg-white rounded-lg shadow p-4 cursor-pointer"
+                onClick={(e) => {
+                  // Prevent click when clicking action buttons
+                  if ((e.target as HTMLElement).closest('button')) return;
+                  handleViewTeacher(teacher);
+                }}
+              >
                 <div className="flex justify-between items-start">
                   <h3 className="text-lg font-medium text-gray-900">{teacher.name}</h3>
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => handleEdit(teacher)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(teacher);
+                      }}
                       className="text-blue-600 hover:text-blue-900"
                     >
                       <PencilIcon className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(teacher.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(teacher.id);
+                      }}
                       className="text-red-600 hover:text-red-900"
                     >
                       <TrashIcon className="w-5 h-5" />
@@ -542,73 +579,73 @@ export default function TeachersPage() {
             {!createdCredentials && (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6" autoComplete="off">
                 <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-6 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Name
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Name
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
                     <div className="mt-1.5 sm:mt-2">
-                      <input
-                        type="text"
+                    <input
+                      type="text"
                         autoComplete="off"
-                        {...register('name', { required: 'Name is required' })}
+                      {...register('name', { required: 'Name is required' })}
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                         placeholder="Enter teacher's name"
-                      />
+                    />
                       {errors.name && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>}
                     </div>
-                  </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Email
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
                     <div className="mt-1.5 sm:mt-2">
-                      <input
-                        type="email"
+                    <input
+                      type="email"
                         autoComplete="off"
-                        {...register('email', { required: 'Email is required' })}
+                      {...register('email', { required: 'Email is required' })}
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                         placeholder="Enter email address"
-                      />
+                    />
                       {errors.email && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>}
                     </div>
-                  </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Phone Number
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Phone Number
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
                     <div className="mt-1.5 sm:mt-2">
-                      <input
+                    <input
                         autoComplete="off"
-                        {...register('phone_number', { 
-                          required: 'Phone number is required',
-                          pattern: {
-                            value: /^07\d{8}$/,
-                            message: "Phone number must be in format '07XXXXXXXX'"
-                          }
-                        })}
-                        placeholder="07XXXXXXXX"
+                      {...register('phone_number', { 
+                        required: 'Phone number is required',
+                        pattern: {
+                          value: /^07\d{8}$/,
+                          message: "Phone number must be in format '07XXXXXXXX'"
+                        }
+                      })}
+                      placeholder="07XXXXXXXX"
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      />
+                    />
                       {errors.phone_number && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>}
                     </div>
-                  </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Class Assigned
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Class Assigned
+                  </label>
                     <div className="mt-1.5 sm:mt-2">
-                      <input
+                    <input
                         autoComplete="off"
-                        {...register('class_assigned')}
-                        placeholder="e.g., Grade 7A"
+                      {...register('class_assigned')}
+                      placeholder="e.g., Grade 7A"
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      />
+                    />
                     </div>
                   </div>
                   
@@ -634,10 +671,10 @@ export default function TeachersPage() {
                           {errors.password && (
                             <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
                           )}
-                        </div>
-                      </div>
+                </div>
+              </div>
 
-                      <div>
+              <div>
                         <label className="block text-sm font-medium text-gray-700">
                           Confirm Password
                           <span className="text-red-500 ml-1">*</span>
@@ -664,68 +701,81 @@ export default function TeachersPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
-                    Subjects
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
+                  Subjects
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-2">
-                    {AVAILABLE_SUBJECTS.map((subject) => (
-                      <div key={subject} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={subject}
-                          checked={selectedSubjects.includes(subject)}
-                          onChange={() => toggleSubject(subject)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
+                  {AVAILABLE_SUBJECTS.map((subject) => (
+                    <div key={subject} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={subject}
+                        checked={selectedSubjects.includes(subject)}
+                        onChange={() => toggleSubject(subject)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
                         <label htmlFor={subject} className="ml-2 text-xs sm:text-sm text-gray-700 truncate">
-                          {subject}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  {selectedSubjects.length === 0 && (
-                    <p className="mt-1.5 text-xs sm:text-sm text-red-600">Please select at least one subject</p>
-                  )}
+                        {subject}
+                      </label>
+                    </div>
+                  ))}
                 </div>
+                {selectedSubjects.length === 0 && (
+                    <p className="mt-1.5 text-xs sm:text-sm text-red-600">Please select at least one subject</p>
+                )}
+              </div>
 
                 <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-6 sm:mt-8">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setEditingTeacher(null);
-                      setSelectedSubjects([]);
-                      reset();
-                    }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingTeacher(null);
+                    setSelectedSubjects([]);
+                    reset();
+                  }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 w-full sm:w-auto order-2 sm:order-1"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={selectedSubjects.length === 0 || createMutation.isPending || updateMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={selectedSubjects.length === 0 || createMutation.isPending || updateMutation.isPending}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
-                  >
-                    {createMutation.isPending || updateMutation.isPending ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin -ml-1 mr-2 h-4 w-4 text-white">
-                          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        </div>
-                        {editingTeacher ? 'Updating...' : 'Creating...'}
+                >
+                  {createMutation.isPending || updateMutation.isPending ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin -ml-1 mr-2 h-4 w-4 text-white">
+                        <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
                       </div>
-                    ) : (
-                      editingTeacher ? 'Update Teacher' : 'Create Teacher'
-                    )}
-                  </button>
-                </div>
-              </form>
+                      {editingTeacher ? 'Updating...' : 'Creating...'}
+                    </div>
+                  ) : (
+                    editingTeacher ? 'Update Teacher' : 'Create Teacher'
+                  )}
+                </button>
+              </div>
+            </form>
             )}
           </Dialog.Panel>
         </div>
       </Dialog>
+
+      {/* Teacher Detail Modal */}
+      {selectedTeacher && (
+        <TeacherListModal
+          isOpen={isTeacherListModalOpen}
+          onClose={() => {
+            setIsTeacherListModalOpen(false);
+            setSelectedTeacher(null);
+          }}
+          teachers={[selectedTeacher]}
+          readOnly={true}
+        />
+      )}
     </div>
   );
 } 

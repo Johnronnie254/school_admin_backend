@@ -16,6 +16,7 @@ import {
 import { parentService, type Parent, type ParentFormData } from '@/services/parentService';
 import { Dialog } from '@/components/ui/dialog';
 import type { PaginatedResponse } from '@/types';
+import ParentListModal from '@/components/modals/ParentListModal';
 
 export default function ParentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,6 +25,8 @@ export default function ParentsPage() {
   const [showAll, setShowAll] = useState(false);
   const [isListVisible, setIsListVisible] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{email: string, password: string} | null>(null);
+  const [isParentListModalOpen, setIsParentListModalOpen] = useState(false);
+  const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<ParentFormData>();
@@ -142,6 +145,12 @@ export default function ParentsPage() {
     }
   };
 
+  // Handle viewing a specific parent
+  const handleViewParent = (parent: Parent) => {
+    setSelectedParent(parent);
+    setIsParentListModalOpen(true);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -227,9 +236,9 @@ export default function ParentsPage() {
             </>
           ) : (
             <>
-              <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No parents</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by adding a new parent.</p>
+          <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No parents</h3>
+          <p className="mt-1 text-sm text-gray-500">Get started by adding a new parent.</p>
             </>
           )}
         </div>
@@ -238,57 +247,85 @@ export default function ParentsPage() {
           {/* Desktop Table - Hidden on mobile */}
           <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
                   {displayedParents.map((parent: Parent) => (
-                    <tr key={parent.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.phone_number}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(parent)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(parent.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                <tr 
+                  key={parent.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={(e) => {
+                    // Prevent click when clicking action buttons
+                    if ((e.target as HTMLElement).closest('button')) return;
+                    handleViewParent(parent);
+                  }}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.phone_number}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(parent);
+                      }}
+                      className="text-blue-600 hover:text-blue-900 mr-4"
+                    >
+                      <PencilIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(parent.id);
+                      }}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
           </div>
           
           {/* Mobile Cards - Shown only on mobile */}
           <div className="grid grid-cols-1 gap-4 sm:hidden">
             {displayedParents.map((parent: Parent) => (
-              <div key={parent.id} className="bg-white rounded-lg shadow p-4">
+              <div 
+                key={parent.id} 
+                className="bg-white rounded-lg shadow p-4 cursor-pointer"
+                onClick={(e) => {
+                  // Prevent click when clicking action buttons
+                  if ((e.target as HTMLElement).closest('button')) return;
+                  handleViewParent(parent);
+                }}
+              >
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-base font-medium text-gray-900">{parent.name}</h3>
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => handleEdit(parent)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(parent);
+                      }}
                       className="text-blue-600 hover:text-blue-900"
                     >
                       <PencilIcon className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(parent.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(parent.id);
+                      }}
                       className="text-red-600 hover:text-red-900"
                     >
                       <TrashIcon className="w-5 h-5" />
@@ -408,171 +445,184 @@ export default function ParentsPage() {
             {!createdCredentials && (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6" autoComplete="off">
                 <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-8 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Full Name
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Full Name
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
                     <div className="mt-1.5 sm:mt-2">
-                      <input
-                        type="text"
+                    <input
+                      type="text"
                         autoComplete="off"
-                        {...register('name', { 
-                          required: 'Name is required',
-                          minLength: { value: 2, message: 'Name must be at least 2 characters' }
-                        })}
+                      {...register('name', { 
+                        required: 'Name is required',
+                        minLength: { value: 2, message: 'Name must be at least 2 characters' }
+                      })}
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                        placeholder="Enter parent's full name"
-                      />
-                      {errors.name && (
+                      placeholder="Enter parent's full name"
+                    />
+                    {errors.name && (
                         <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
-                      )}
-                    </div>
+                    )}
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Email
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
                     <div className="mt-1.5 sm:mt-2">
-                      <input
-                        type="email"
+                    <input
+                      type="email"
                         autoComplete="off"
-                        {...register('email', { 
-                          required: 'Email is required',
-                          pattern: {
-                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                            message: 'Please enter a valid email address'
-                          }
-                        })}
+                      {...register('email', { 
+                        required: 'Email is required',
+                        pattern: {
+                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                          message: 'Please enter a valid email address'
+                        }
+                      })}
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                        placeholder="Enter email address"
-                      />
-                      {errors.email && (
+                      placeholder="Enter email address"
+                    />
+                    {errors.email && (
                         <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>
-                      )}
-                    </div>
+                    )}
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Phone Number
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Phone Number
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
                     <div className="mt-1.5 sm:mt-2 relative">
-                      <input
-                        type="tel"
+                    <input
+                      type="tel"
                         autoComplete="off"
-                        {...register('phone_number', { 
-                          required: 'Phone number is required',
-                          pattern: {
-                            value: /^07[0-9]{8}$/,
-                            message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
-                          }
-                        })}
+                      {...register('phone_number', { 
+                        required: 'Phone number is required',
+                        pattern: {
+                          value: /^07[0-9]{8}$/,
+                          message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
+                        }
+                      })}
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                        placeholder="Enter phone number"
-                      />
+                      placeholder="Enter phone number"
+                    />
                       <div className="absolute right-2 top-1.5 group">
                         <QuestionMarkCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                        <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
-                          Enter a valid phone number (format: 07XXXXXXXX)
-                        </div>
+                      <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
+                        Enter a valid phone number (format: 07XXXXXXXX)
                       </div>
-                      {errors.phone_number && (
-                        <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>
-                      )}
                     </div>
+                    {errors.phone_number && (
+                        <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>
+                    )}
                   </div>
-
-                  {/* Password fields - only show when creating new parent */}
-                  {!editingParent && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Password
-                          <span className="text-red-500 ml-1">*</span>
-                        </label>
-                        <div className="mt-1.5 sm:mt-2">
-                          <input
-                            type="password"
-                            autoComplete="new-password"
-                            {...register('password', { 
-                              required: !editingParent ? 'Password is required' : false,
-                              minLength: { value: 6, message: 'Password must be at least 6 characters' }
-                            })}
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                            placeholder="Enter password"
-                          />
-                          {errors.password && (
-                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Confirm Password
-                          <span className="text-red-500 ml-1">*</span>
-                        </label>
-                        <div className="mt-1.5 sm:mt-2">
-                          <input
-                            type="password"
-                            autoComplete="new-password"
-                            {...register('password_confirmation', { 
-                              required: !editingParent ? 'Please confirm your password' : false,
-                              validate: value => !editingParent ? (value === password || 'Passwords do not match') : true
-                            })}
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                            placeholder="Confirm password"
-                          />
-                          {errors.password_confirmation && (
-                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
+
+                {/* Password fields - only show when creating new parent */}
+                {!editingParent && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Password
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                        <div className="mt-1.5 sm:mt-2">
+                        <input
+                          type="password"
+                            autoComplete="new-password"
+                          {...register('password', { 
+                            required: !editingParent ? 'Password is required' : false,
+                            minLength: { value: 6, message: 'Password must be at least 6 characters' }
+                          })}
+                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                          placeholder="Enter password"
+                        />
+                        {errors.password && (
+                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Confirm Password
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                        <div className="mt-1.5 sm:mt-2">
+                        <input
+                          type="password"
+                            autoComplete="new-password"
+                          {...register('password_confirmation', { 
+                            required: !editingParent ? 'Please confirm your password' : false,
+                            validate: value => !editingParent ? (value === password || 'Passwords do not match') : true
+                          })}
+                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                          placeholder="Confirm password"
+                        />
+                        {errors.password_confirmation && (
+                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
 
                 <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setEditingParent(null);
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingParent(null);
                       setCreatedCredentials(null);
-                      reset();
-                    }}
+                    reset();
+                  }}
                     className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 w-full sm:w-auto order-2 sm:order-1"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
                     className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {createMutation.isPending || updateMutation.isPending ? (
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  {createMutation.isPending || updateMutation.isPending ? (
                       <div className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        {editingParent ? 'Updating...' : 'Creating...'}
-                      </div>
-                    ) : (
-                      <>{editingParent ? 'Update Parent' : 'Create Parent'}</>
-                    )}
-                  </button>
-                </div>
-              </form>
+                      <svg className="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      {editingParent ? 'Updating...' : 'Creating...'}
+                    </div>
+                  ) : (
+                    <>{editingParent ? 'Update Parent' : 'Create Parent'}</>
+                  )}
+                </button>
+              </div>
+            </form>
             )}
           </Dialog.Panel>
         </div>
       </Dialog>
+
+      {/* Parent Detail Modal */}
+      {selectedParent && (
+        <ParentListModal
+          isOpen={isParentListModalOpen}
+          onClose={() => {
+            setIsParentListModalOpen(false);
+            setSelectedParent(null);
+          }}
+          parents={[selectedParent]}
+          readOnly={true}
+        />
+      )}
     </div>
   );
 } 
