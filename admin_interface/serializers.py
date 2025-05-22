@@ -487,7 +487,7 @@ class LeaveApplicationSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     """Serializer for products in the school shop"""
-    image = serializers.ImageField(required=False, allow_null=True)
+    image = serializers.ImageField(required=True, allow_null=False)
 
     class Meta:
         model = Product

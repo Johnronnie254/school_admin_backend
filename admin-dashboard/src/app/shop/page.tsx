@@ -295,6 +295,10 @@ export default function ShopPage() {
                             sizes="80px"
                             className="rounded-lg object-contain"
                             style={{ objectFit: 'contain' }}
+                            onError={(e) => {
+                              console.error(`Error loading image for product ${product.id} (${product.name}):`, e);
+                              e.currentTarget.src = '/placeholder-image.png';
+                            }}
                           />
                         </div>
                       ) : (
@@ -361,6 +365,10 @@ export default function ShopPage() {
                           sizes="64px"
                           className="rounded-lg object-contain"
                           style={{ objectFit: 'contain' }}
+                          onError={(e) => {
+                            console.error(`Error loading mobile image for product ${product.id} (${product.name}):`, e);
+                            e.currentTarget.src = '/placeholder-image.png';
+                          }}
                         />
                       </div>
                     ) : (
@@ -525,6 +533,10 @@ export default function ShopPage() {
                           width={128}
                           height={128}
                           className="object-cover w-full h-full"
+                          onError={(e) => {
+                            console.error('Error loading preview image:', e);
+                            e.currentTarget.src = '/placeholder-image.png';
+                          }}
                         />
                       ) : (
                         <div className="text-center p-4">
