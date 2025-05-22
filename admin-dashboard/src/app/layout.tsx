@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ConnectivityProvider } from '@/contexts/ConnectivityContext';
 import ConnectivityStatus from '@/components/ui/ConnectivityStatus';
+import { Analytics } from '@vercel/analytics/react';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -55,6 +56,7 @@ export default function RootLayout({
                 }}
               />
               <ConnectivityStatus />
+              <Analytics />
             </ConnectivityProvider>
           </AuthProvider>
         </QueryClientProvider>
