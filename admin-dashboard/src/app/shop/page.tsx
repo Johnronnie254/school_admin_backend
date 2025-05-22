@@ -18,6 +18,70 @@ import { Dialog } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { AxiosError } from 'axios';
 
+// Helper function to compress images
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new globalThis.Image();
+      img.src = event.target?.result as string;
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // Calculate the new dimensions while maintaining aspect ratio
+        const maxDimension = 1200; // Max width or height
+        if (width > height && width > maxDimension) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else if (height > maxDimension) {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Convert to blob with reduced quality
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas to Blob conversion failed'));
+              return;
+            }
+            
+            console.log(`Original size: ${file.size / 1024 / 1024} MB, Compressed size: ${blob.size / 1024 / 1024} MB`);
+            
+            // Create a new file from the blob
+            const newFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            
+            resolve(newFile);
+          },
+          'image/jpeg',
+          0.7 // Quality (0.7 = 70% quality)
+        );
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Error loading image'));
+      };
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Error reading file'));
+    };
+  });
+};
+
 export default function ShopPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -27,15 +91,37 @@ export default function ShopPage() {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateProductData>();
 
-  // Handle image preview
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle image preview with compression
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Show loading state
+        toast.loading('Processing image...');
+        
+        // Check file size
+        const fileSizeMB = file.size / 1024 / 1024;
+        console.log(`Original image size: ${fileSizeMB.toFixed(2)} MB`);
+        
+        if (fileSizeMB > 10) {
+          toast.error('Image is too large. Maximum size is 10MB');
+          toast.dismiss();
+          return;
+        }
+        
+        // Create preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        
+        toast.dismiss();
+      } catch (error) {
+        console.error('Error processing image:', error);
+        toast.error('Error processing image');
+        toast.dismiss();
+      }
     } else {
       setPreviewUrl(null);
     }
@@ -47,21 +133,44 @@ export default function ShopPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: CreateProductData) => {
+    mutationFn: (data: CreateProductData | FormData) => {
+      console.log('Creating product with data:', data);
       // Ensure we're properly handling the file upload
       const formData = new FormData();
+      
+      // If data is already FormData, use it directly
+      if (data instanceof FormData) {
+        return shopService.createProduct(data);
+      }
+      
+      // Log the file object to see what's coming in
+      if (data.image) {
+        console.log('Image data type:', typeof data.image);
+        console.log('Image is FileList:', data.image instanceof FileList);
+        console.log('Image is File:', data.image instanceof File);
+      } else {
+        console.error('No image data provided in form submission');
+      }
       
       // Append all form fields
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          if (key === 'image' && value instanceof FileList) {
-            // Handle FileList from input[type=file]
-            if (value.length > 0) {
-              formData.append(key, value[0]);
+          if (key === 'image') {
+            if (value instanceof FileList) {
+              // Handle FileList from input[type=file]
+              if (value.length > 0) {
+                console.log('Appending FileList image to FormData:', value[0].name, 'Size:', value[0].size);
+                formData.append(key, value[0]);
+              } else {
+                console.error('FileList is empty');
+              }
+            } else if (value instanceof File) {
+              // Handle direct File object
+              console.log('Appending File object to FormData:', value.name);
+              formData.append(key, value);
+            } else {
+              console.error('Image value is not a File or FileList:', value);
             }
-          } else if (value instanceof File) {
-            // Handle direct File object
-            formData.append(key, value);
           } else if (typeof value === 'number') {
             formData.append(key, value.toString());
           } else if (typeof value === 'string') {
@@ -70,7 +179,14 @@ export default function ShopPage() {
         }
       });
       
-      return shopService.createProduct(data);
+      // Log the FormData entries to verify what's being sent
+      console.log('FormData entries:');
+      Array.from(formData.entries()).forEach(pair => {
+        console.log(pair[0], pair[1]);
+      });
+      
+      // Use formData instead of data for the API call
+      return shopService.createProduct(formData);
     },
     onSuccess: (data) => {
       console.log('Product created successfully:', data);
@@ -152,7 +268,9 @@ export default function ShopPage() {
     }
   });
 
-  const onSubmit = (data: CreateProductData) => {
+  const onSubmit = async (data: CreateProductData) => {
+    console.log('Form submitted with data:', data);
+    
     if (editingProduct) {
       // For updates, don't include image in data if no new file is selected
       const imageFile = fileInputRef.current?.files?.[0];
@@ -166,10 +284,53 @@ export default function ShopPage() {
         };
         updateMutation.mutate({ ...restData, id: editingProduct.id });
       } else {
-        updateMutation.mutate({ ...data, id: editingProduct.id });
+        try {
+          // Compress the image before uploading
+          toast.loading('Compressing image...');
+          const compressedFile = await compressImage(imageFile);
+          toast.dismiss();
+          
+          // Add the compressed file to the data
+          const dataWithFile = { 
+            ...data, 
+            image: compressedFile 
+          };
+          console.log('Updating with compressed image:', compressedFile.name, `(${(compressedFile.size / 1024).toFixed(2)} KB)`);
+          updateMutation.mutate({ ...dataWithFile, id: editingProduct.id });
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          toast.error('Error compressing image');
+        }
       }
     } else {
-      createMutation.mutate(data);
+      // For new products, get the file from the file input ref
+      const imageFile = fileInputRef.current?.files?.[0];
+      if (!imageFile) {
+        console.error('No image file selected');
+        toast.error('Please select an image for the product');
+        return;
+      }
+      
+      try {
+        // Compress the image before uploading
+        toast.loading('Compressing image...');
+        const compressedFile = await compressImage(imageFile);
+        toast.dismiss();
+        
+        // Create a new FormData instance
+        const formData = new FormData();
+        formData.append('name', data.name);
+        formData.append('description', data.description);
+        formData.append('price', data.price.toString());
+        formData.append('stock', data.stock.toString());
+        formData.append('image', compressedFile);
+        
+        console.log('Creating with compressed image:', compressedFile.name, `(${(compressedFile.size / 1024).toFixed(2)} KB)`);
+        createMutation.mutate(formData as unknown as CreateProductData);
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        toast.error('Error compressing image');
+      }
     }
   };
 
@@ -601,4 +762,4 @@ export default function ShopPage() {
       </Dialog>
     </div>
   );
-} 
+}

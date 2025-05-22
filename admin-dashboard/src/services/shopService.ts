@@ -108,31 +108,52 @@ const shopService = {
   },
 
   // Create a new product
-  createProduct: async (data: CreateProductData) => {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined) {
-        if (value instanceof File) {
-          formData.append(key, value);
-        } else if (typeof value === 'number') {
-          formData.append(key, value.toString());
-        } else if (typeof value === 'string') {
-          formData.append(key, value);
-        }
-      }
-    });
-    const response = await apiClient.post<Product>('/products/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+  createProduct: async (data: CreateProductData | FormData) => {
+    console.log('ShopService: Creating product with data type:', data instanceof FormData ? 'FormData' : 'CreateProductData');
     
-    // Process image URL in the response
-    if (response.data.image) {
-      response.data.image = getImageUrl(response.data.image);
+    let formData: FormData;
+    
+    // If data is not already FormData, create a new FormData instance
+    if (!(data instanceof FormData)) {
+      formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined) {
+          if (value instanceof File) {
+            console.log('Converting File to FormData:', key, value.name);
+            formData.append(key, value);
+          } else if (value instanceof FileList && value.length > 0) {
+            console.log('Converting FileList to FormData:', key, value[0].name);
+            formData.append(key, value[0]);
+          } else if (typeof value === 'number') {
+            formData.append(key, value.toString());
+          } else if (typeof value === 'string') {
+            formData.append(key, value);
+          }
+        }
+      });
+    } else {
+      formData = data;
     }
     
-    return response.data;
+    try {
+      const response = await apiClient.post<Product>('/products/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('API Response:', response);
+      
+      // Process image URL in the response
+      if (response.data.image) {
+        response.data.image = getImageUrl(response.data.image);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
   },
 
   // Update an existing product
