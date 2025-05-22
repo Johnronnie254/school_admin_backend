@@ -1,11 +1,14 @@
 'use client';
 
+import type { Metadata } from 'next';
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ConnectivityProvider } from '@/contexts/ConnectivityContext';
+import ConnectivityStatus from '@/components/ui/ConnectivityStatus';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,6 +21,8 @@ const queryClient = new QueryClient({
   },
 });
 
+
+
 export default function RootLayout({
   children,
 }: {
@@ -28,27 +33,30 @@ export default function RootLayout({
       <body className={inter.className}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <ProtectedRoute>{children}</ProtectedRoute>
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#333',
-                  color: '#fff',
-                },
-                success: {
+            <ConnectivityProvider>
+              <ProtectedRoute>{children}</ProtectedRoute>
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 3000,
                   style: {
-                    background: '#22c55e',
+                    background: '#333',
+                    color: '#fff',
                   },
-                },
-                error: {
-                  style: {
-                    background: '#ef4444',
+                  success: {
+                    style: {
+                      background: '#22c55e',
+                    },
                   },
-                },
-              }}
-            />
+                  error: {
+                    style: {
+                      background: '#ef4444',
+                    },
+                  },
+                }}
+              />
+              <ConnectivityStatus />
+            </ConnectivityProvider>
           </AuthProvider>
         </QueryClientProvider>
       </body>

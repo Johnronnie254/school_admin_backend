@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  return NextResponse.json({ status: 'ok', timestamp: new Date().toISOString() }, { status: 200 });
+  return NextResponse.json({ status: 'ok' }, { status: 200 });
 }
 
-// Disable caching for this endpoint
-export const dynamic = 'force-dynamic'; 
+// No-cache headers for the API route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; 
