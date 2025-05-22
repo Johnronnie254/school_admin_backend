@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { schoolService } from '@/services/schoolService';
 import { useAuth } from '@/hooks/useAuth';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { EventBanner } from '@/components/EventBanner';
 import { InternetStatus } from '@/components/InternetStatus';
 import {
@@ -19,8 +18,8 @@ import Image from 'next/image';
 
 export default function DashboardPage() {
   const { logout } = useAuth();
-  const isOnline = useOnlineStatus();
-  
+
+
   // Fetch school statistics instead of individual counts
   const { data: schoolStats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['schoolStatistics'],
@@ -144,7 +143,7 @@ export default function DashboardPage() {
       )}
 
       {/* Event Banner */}
-      {isOnline && <EventBanner />}
+      <EventBanner />
       
       {/* Main Dashboard Content */}
       <div className="p-4 sm:p-6">

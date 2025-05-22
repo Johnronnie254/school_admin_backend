@@ -25,7 +25,7 @@ export default function ConnectivityStatus() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         setShow(false);
-      }, 2000); // show for 2 seconds
+      }, 3000); // show for 3 seconds
     }
   }, [isOnline]);
 
@@ -47,10 +47,11 @@ export default function ConnectivityStatus() {
     }
   };
 
-  if (!show) return null;
+  // Don't render anything if not showing or if we're on the dashboard page (to avoid conflicts)
+  if (!show || window.location.pathname === '/dashboard') return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-4 right-4 z-50 pointer-events-auto">
       <div
         className={`flex items-center gap-2 p-3 rounded-md shadow-lg border transition-all duration-300 ${
           isOnline

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef, useMemo } from 'react';
 
 interface ConnectivityContextType {
   isOnline: boolean;
@@ -18,9 +18,15 @@ export function ConnectivityProvider({ children }: { children: React.ReactNode }
   const [isOnline, setIsOnline] = useState(true);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const [consecutiveSuccesses, setConsecutiveSuccesses] = useState(0);
+  const checkingRef = useRef(false);
 
   // Function to check connectivity by pinging the API
   const checkConnectivity = useCallback(async (): Promise<boolean> => {
+    // Prevent multiple simultaneous checks
+    if (checkingRef.current) return isOnline;
+    
+    checkingRef.current = true;
+    
     try {
       // Use a timestamp to prevent caching
       const timestamp = new Date().getTime();
@@ -66,6 +72,8 @@ export function ConnectivityProvider({ children }: { children: React.ReactNode }
       }
       
       return false;
+    } finally {
+      checkingRef.current = false;
     }
   }, [consecutiveFailures, consecutiveSuccesses, isOnline]);
 
@@ -90,8 +98,10 @@ export function ConnectivityProvider({ children }: { children: React.ReactNode }
 
     // Check connectivity initially and periodically
     const intervalId = setInterval(() => {
-      checkConnectivity();
-    }, 30000); // Check every 30 seconds
+      if (!document.hidden) {  // Only check when tab is visible
+        checkConnectivity();
+      }
+    }, 60000); // Check every 60 seconds (reduced from 30s to avoid excessive checks)
 
     // Initial check
     checkConnectivity();
@@ -103,8 +113,14 @@ export function ConnectivityProvider({ children }: { children: React.ReactNode }
     };
   }, [checkConnectivity]);
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    isOnline,
+    checkNow
+  }), [isOnline, checkNow]);
+
   return (
-    <ConnectivityContext.Provider value={{ isOnline, checkNow }}>
+    <ConnectivityContext.Provider value={contextValue}>
       {children}
     </ConnectivityContext.Provider>
   );
