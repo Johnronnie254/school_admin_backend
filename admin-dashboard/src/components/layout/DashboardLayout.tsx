@@ -8,7 +8,6 @@ import {
   UserGroupIcon,
   UsersIcon,
   DocumentTextIcon,
-  CurrencyDollarIcon,
   BellIcon,
   ChatBubbleLeftRightIcon,
   ClipboardDocumentListIcon,
