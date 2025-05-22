@@ -59,7 +59,7 @@ export default function TeachersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [isListVisible, setIsListVisible] = useState(false);
-  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{email: string, password: string} | null>(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<TeacherFormData>();
@@ -104,21 +104,24 @@ export default function TeachersPage() {
     (showAll ? filteredTeachers : filteredTeachers.slice(0, 5)) : 
     [];
 
-  const createMutation = useMutation({
-    mutationFn: (data: TeacherFormData) => teacherService.createTeacher({ ...data, subjects: selectedSubjects }),
+  const createMutation = useMutation<Teacher, AxiosError | Error, TeacherFormData>({
+    mutationFn: async (data) => {
+      const modifiedData = {
+        ...data,
+        subjects: selectedSubjects
+      };
+      return await teacherService.createTeacher(modifiedData);
+    },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
-      // Store the password for display
+      // Display the login credentials in the modal
       if (variables.password) {
-        setCreatedPassword(variables.password);
+        setCreatedCredentials({
+          email: variables.email,
+          password: variables.password
+        });
       }
       toast.success('Teacher created successfully');
-      // Don't close modal immediately if we have a password to show
-      if (!variables.password) {
-        setIsModalOpen(false);
-        reset();
-        setSelectedSubjects([]);
-      }
     },
     onError: (error: AxiosError | Error) => {
       console.error('Error creating teacher:', error);
@@ -211,6 +214,7 @@ export default function TeachersPage() {
     setIsModalOpen(true);
     setEditingTeacher(null);
     setSelectedSubjects([]);
+    setCreatedCredentials(null);
     reset({
       name: '',
       email: '',
@@ -445,7 +449,7 @@ export default function TeachersPage() {
         onClose={() => {
           setIsModalOpen(false);
           setEditingTeacher(null);
-          setCreatedPassword(null);
+          setCreatedCredentials(null);
           reset();
         }}
         className="relative z-50"
@@ -461,7 +465,7 @@ export default function TeachersPage() {
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingTeacher(null);
-                  setCreatedPassword(null);
+                  setCreatedCredentials(null);
                   reset();
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -479,28 +483,51 @@ export default function TeachersPage() {
               </Dialog.Title>
             </div>
 
-            {/* Password display after successful teacher creation */}
-            {createdPassword && (
+            {/* Credentials display after successful teacher creation */}
+            {createdCredentials && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
                 <h3 className="text-sm font-medium text-green-800 mb-2">Teacher created successfully!</h3>
-                <p className="text-sm text-green-700 mb-2">Please note down this temporary password. It will be shown only once:</p>
-                <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
-                  <code className="text-sm font-mono text-green-900">{createdPassword}</code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(createdPassword);
-                      toast.success('Password copied to clipboard');
-                    }}
-                    className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
-                  >
-                    Copy
-                  </button>
+                <p className="text-sm text-green-700 mb-2">Please share these login credentials with the teacher:</p>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
+                    <div className="text-sm">
+                      <span className="font-medium">Username/Email:</span>
+                      <code className="ml-2 font-mono text-green-900">{createdCredentials.email}</code>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdCredentials.email);
+                        toast.success('Email copied to clipboard');
+                      }}
+                      className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
+                    <div className="text-sm">
+                      <span className="font-medium">Password:</span>
+                      <code className="ml-2 font-mono text-green-900">{createdCredentials.password}</code>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdCredentials.password);
+                        toast.success('Password copied to clipboard');
+                      }}
+                      className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                    >
+                      Copy
+                    </button>
+                  </div>
                 </div>
+                
                 <div className="mt-4 flex justify-end">
                   <button
                     onClick={() => {
                       setIsModalOpen(false);
-                      setCreatedPassword(null);
+                      setCreatedCredentials(null);
                       reset();
                       setSelectedSubjects([]);
                     }}
@@ -512,7 +539,7 @@ export default function TeachersPage() {
               </div>
             )}
 
-            {!createdPassword && (
+            {!createdCredentials && (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6" autoComplete="off">
                 <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-6 sm:grid-cols-2">
                   <div>

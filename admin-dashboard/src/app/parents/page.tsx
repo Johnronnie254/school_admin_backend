@@ -23,7 +23,7 @@ export default function ParentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [isListVisible, setIsListVisible] = useState(false);
-  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{email: string, password: string} | null>(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<ParentFormData>();
@@ -32,15 +32,16 @@ export default function ParentsPage() {
 
   // Handle adding a new parent - clear all form fields
   const handleAddParent = () => {
+    setIsModalOpen(true);
     setEditingParent(null);
+    setCreatedCredentials(null);
     reset({
       name: '',
       email: '',
       phone_number: '',
       password: '',
-      password_confirmation: '',
+      password_confirmation: ''
     });
-    setIsModalOpen(true);
   };
 
   useEffect(() => {
@@ -82,19 +83,15 @@ export default function ParentsPage() {
     [];
 
   const createMutation = useMutation<Parent, Error, ParentFormData>({
-    mutationFn: parentService.createParent,
+    mutationFn: (data) => parentService.createParent(data),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['parents'] });
-      // Store the password for display
-      if (variables.password) {
-        setCreatedPassword(variables.password);
-      }
+      // Set credentials to display in modal
+      setCreatedCredentials({
+        email: variables.email,
+        password: variables.password
+      });
       toast.success('Parent created successfully');
-      // Don't close modal immediately if we have a password to show
-      if (!variables.password) {
-        setIsModalOpen(false);
-        reset();
-      }
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to create parent');
@@ -319,7 +316,7 @@ export default function ParentsPage() {
         onClose={() => {
           setIsModalOpen(false);
           setEditingParent(null);
-          setCreatedPassword(null);
+          setCreatedCredentials(null);
           reset();
         }}
         className="relative z-50"
@@ -335,7 +332,7 @@ export default function ParentsPage() {
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingParent(null);
-                  setCreatedPassword(null);
+                  setCreatedCredentials(null);
                   reset();
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -353,28 +350,51 @@ export default function ParentsPage() {
               </Dialog.Title>
             </div>
 
-            {/* Password display after successful parent creation */}
-            {createdPassword && (
+            {/* Credentials display after successful parent creation */}
+            {createdCredentials && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
                 <h3 className="text-sm font-medium text-green-800 mb-2">Parent created successfully!</h3>
-                <p className="text-sm text-green-700 mb-2">Please note down this temporary password. It will be shown only once:</p>
-                <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
-                  <code className="text-sm font-mono text-green-900">{createdPassword}</code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(createdPassword);
-                      toast.success('Password copied to clipboard');
-                    }}
-                    className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
-                  >
-                    Copy
-                  </button>
+                <p className="text-sm text-green-700 mb-2">Please share these login credentials with the parent:</p>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
+                    <div className="text-sm">
+                      <span className="font-medium">Username/Email:</span>
+                      <code className="ml-2 font-mono text-green-900">{createdCredentials.email}</code>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdCredentials.email);
+                        toast.success('Email copied to clipboard');
+                      }}
+                      className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
+                    <div className="text-sm">
+                      <span className="font-medium">Password:</span>
+                      <code className="ml-2 font-mono text-green-900">{createdCredentials.password}</code>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdCredentials.password);
+                        toast.success('Password copied to clipboard');
+                      }}
+                      className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                    >
+                      Copy
+                    </button>
+                  </div>
                 </div>
+                
                 <div className="mt-4 flex justify-end">
                   <button
                     onClick={() => {
                       setIsModalOpen(false);
-                      setCreatedPassword(null);
+                      setCreatedCredentials(null);
                       reset();
                     }}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
@@ -385,7 +405,7 @@ export default function ParentsPage() {
               </div>
             )}
 
-            {!createdPassword && (
+            {!createdCredentials && (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6" autoComplete="off">
                 <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-8 sm:grid-cols-2">
                   <div>
@@ -522,7 +542,7 @@ export default function ParentsPage() {
                     onClick={() => {
                       setIsModalOpen(false);
                       setEditingParent(null);
-                      setCreatedPassword(null);
+                      setCreatedCredentials(null);
                       reset();
                     }}
                     className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 w-full sm:w-auto order-2 sm:order-1"
