@@ -593,7 +593,7 @@ export default function TeachersPage() {
                         placeholder="Enter teacher's name"
                     />
                       {errors.name && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>}
-                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -610,7 +610,7 @@ export default function TeachersPage() {
                         placeholder="Enter email address"
                     />
                       {errors.email && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>}
-                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -632,7 +632,7 @@ export default function TeachersPage() {
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
                     />
                       {errors.phone_number && <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>}
-                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -778,4 +778,4 @@ export default function TeachersPage() {
       )}
     </div>
   );
-} 
+}

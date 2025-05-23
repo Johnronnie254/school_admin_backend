@@ -85,6 +85,18 @@ export default function SchoolsPage() {
       toast.error('Failed to update school');
     },
   });
+  
+  // Toggle school status mutation
+  const toggleStatusMutation = useMutation({
+    mutationFn: (id: number) => superuserService.toggleSchoolStatus(id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['schools'] });
+      toast.success(data.message);
+    },
+    onError: () => {
+      toast.error('Failed to toggle school status');
+    },
+  });
 
   // Delete school mutation
   const deleteMutation = useMutation({
@@ -107,6 +119,12 @@ export default function SchoolsPage() {
     setEditingSchool(school);
     setIsModalOpen(true);
   };
+  
+  const handleToggleStatus = (schoolId: number) => {
+    if (window.confirm('Are you sure you want to change this school\'s status? This will affect login access for all users.')) {
+      toggleStatusMutation.mutate(schoolId);
+    }
+  };
 
   const handleDeleteSchool = async (schoolId: number) => {
     if (window.confirm('Are you sure you want to delete this school?')) {
@@ -122,7 +140,7 @@ export default function SchoolsPage() {
     }
   };
 
-  if (isAuthenticated === null || isLoading) {
+  if (isAuthenticated === null || isLoading || toggleStatusMutation.isPending) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -188,11 +206,26 @@ export default function SchoolsPage() {
                     <div className="text-sm text-black">{school.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      school.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {school.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    <div className="flex items-center">
+                      <button 
+                        onClick={() => handleToggleStatus(school.id)}
+                        className={`relative inline-flex flex-shrink-0 h-6 w-11 items-center rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                          school.is_active ? 'bg-green-500' : 'bg-red-500'
+                        }`}
+                      >
+                        <span className="sr-only">Toggle status</span>
+                        <span
+                          className={`${
+                            school.is_active ? 'translate-x-5' : 'translate-x-1'
+                          } inline-block h-4 w-4 rounded-full bg-white transform transition duration-200 ease-in-out`}
+                        />
+                      </button>
+                      <span className={`ml-3 text-xs font-semibold ${
+                        school.is_active ? 'text-green-800' : 'text-red-800'
+                      }`}>
+                        {school.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button

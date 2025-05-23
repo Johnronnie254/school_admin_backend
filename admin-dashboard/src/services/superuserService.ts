@@ -98,6 +98,15 @@ export const superuserService = {
     return response.data;
   },
 
+  toggleSchoolStatus: async (id: number): Promise<{ 
+    status: string; 
+    message: string; 
+    is_active: boolean;
+  }> => {
+    const response = await apiClient.post(`schools/${id}/toggle_status/`);
+    return response.data;
+  },
+
   deleteSchool: async (id: number): Promise<void> => {
     await apiClient.delete(`schools/${id}/`);
   },
