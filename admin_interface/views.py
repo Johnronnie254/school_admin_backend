@@ -1992,7 +1992,7 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
                 if user.school:
                     serializer.save(teacher=teacher, school=user.school)
                 else:
-                serializer.save(teacher=teacher)
+                    serializer.save(teacher=teacher)
             except Exception as e:
                 raise serializers.ValidationError({"error": f"Could not create leave application: {str(e)}"})
         else:
