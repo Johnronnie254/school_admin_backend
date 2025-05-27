@@ -198,9 +198,23 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class ParentSerializer(serializers.ModelSerializer):
     """Serializer for Parent model"""
+    children = serializers.SerializerMethodField()
+
     class Meta:
         model = Parent
-        fields = ('id', 'name', 'email', 'phone_number', 'created_at')
+        fields = ('id', 'name', 'email', 'phone_number', 'created_at', 'children')
+
+    def get_children(self, obj):
+        # Get children from context if available
+        parent_children = self.context.get('parent_children', {})
+        if obj.id in parent_children:
+            return StudentSerializer(parent_children[obj.id], many=True).data
+        return []
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Add any additional fields or transformations here if needed
+        return data
 
 class ParentRegistrationSerializer(serializers.ModelSerializer):
     """Serializer for Parent registration"""

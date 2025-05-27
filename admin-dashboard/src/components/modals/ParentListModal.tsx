@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
-import { XMarkIcon, EyeIcon, EyeSlashIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, EyeIcon, EyeSlashIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { AxiosError } from 'axios';
-import { Parent } from '@/services/parentService';
+import { Parent, parentService } from '@/services/parentService';
+import { Student } from '@/services/studentService';
 
 interface ParentListModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ export default function ParentListModal({
 }: ParentListModalProps) {
   const [visibleFields, setVisibleFields] = useState<Record<string, { email: boolean; phone: boolean }>>({});
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [children, setChildren] = useState<Record<string, Student[]>>({});
+  const [loadingChildren, setLoadingChildren] = useState<Record<string, boolean>>({});
 
   const toggleFieldVisibility = (parentEmail: string, field: 'email' | 'phone') => {
     setVisibleFields(prev => ({
@@ -52,6 +55,21 @@ export default function ParentListModal({
       }
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const fetchChildren = async (parentId: string) => {
+    if (children[parentId]) return; // Don't fetch if we already have the data
+    
+    try {
+      setLoadingChildren(prev => ({ ...prev, [parentId]: true }));
+      const childrenData = await parentService.getParentChildren(parentId);
+      setChildren(prev => ({ ...prev, [parentId]: childrenData }));
+    } catch (error) {
+      console.error('Error fetching children:', error);
+      toast.error('Failed to fetch children');
+    } finally {
+      setLoadingChildren(prev => ({ ...prev, [parentId]: false }));
     }
   };
 
@@ -148,6 +166,39 @@ export default function ParentListModal({
                         day: 'numeric'
                       })}
                     </span>
+                  </div>
+
+                  {/* Children Section */}
+                  <div className="mt-4 border-t pt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-sm font-medium text-black">Children</h4>
+                      <button
+                        onClick={() => fetchChildren(parent.id)}
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                      >
+                        {loadingChildren[parent.id] ? 'Loading...' : 'View Children'}
+                      </button>
+                    </div>
+                    
+                    {loadingChildren[parent.id] ? (
+                      <div className="flex justify-center py-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
+                      </div>
+                    ) : children[parent.id] ? (
+                      <div className="space-y-2">
+                        {children[parent.id].length > 0 ? (
+                          children[parent.id].map((child) => (
+                            <div key={child.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                              <UserIcon className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm text-black">{child.name}</span>
+                              <span className="text-xs text-gray-500">(Grade {child.grade})</span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500">No children found</p>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

@@ -746,6 +746,20 @@ class ParentViewSet(viewsets.ModelViewSet):
             return Parent.objects.filter(user=user)
         return Parent.objects.none()
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # Get all students for the parents in the queryset
+        parent_ids = [parent.id for parent in self.get_queryset()]
+        students = Student.objects.filter(parent__in=parent_ids)
+        # Create a mapping of parent_id to their children
+        parent_children = {}
+        for student in students:
+            if student.parent.id not in parent_children:
+                parent_children[student.parent.id] = []
+            parent_children[student.parent.id].append(student)
+        context['parent_children'] = parent_children
+        return context
+
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             permission_classes = [IsAdminOrTeacher]
