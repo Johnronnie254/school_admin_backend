@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { studentService, type Student, type StudentFormData } from '@/services/studentService';
 import { Dialog } from '@/components/ui/dialog';
+import { parentService, type Parent } from '@/services/parentService';
 
 const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -25,8 +26,11 @@ export default function StudentsPage() {
   const [showAll, setShowAll] = useState(false);
   const [isListVisible, setIsListVisible] = useState(false);
   const queryClient = useQueryClient();
+  const [parentSearchQuery, setParentSearchQuery] = useState('');
+  const [parentSearchResults, setParentSearchResults] = useState<Parent[]>([]);
+  const [showParentSearch, setShowParentSearch] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<StudentFormData>({
+  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm<StudentFormData>({
     defaultValues: editingStudent ? {
       name: editingStudent.name,
       guardian: editingStudent.guardian,
@@ -49,6 +53,12 @@ export default function StudentsPage() {
     staleTime: 30000,
   });
 
+  const { data: parentsData } = useQuery({
+    queryKey: ['parents'],
+    queryFn: parentService.getParents,
+    enabled: showParentSearch
+  });
+
   // Extract students array from the response
   const students = studentsResponse?.results || [];
 
@@ -64,6 +74,17 @@ export default function StudentsPage() {
       String(student.grade).includes(query)
     );
   });
+
+  // Filter parents based on search
+  useEffect(() => {
+    if (parentsData?.results) {
+      const filtered = parentsData.results.filter(parent => 
+        parent.name.toLowerCase().includes(parentSearchQuery.toLowerCase()) ||
+        parent.email.toLowerCase().includes(parentSearchQuery.toLowerCase())
+      );
+      setParentSearchResults(filtered);
+    }
+  }, [parentSearchQuery, parentsData]);
 
   // Only display students if search is active or list visibility is toggled
   const shouldDisplayStudents = isListVisible || searchQuery.length > 0;
@@ -461,20 +482,44 @@ export default function StudentsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Parent Email
+                    Parent <span className="text-red-500">*</span>
                   </label>
                   <div className="mt-1.5 sm:mt-2">
                     <div className="flex flex-col">
-                      <input
-                        type="email"
-                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                        placeholder="Enter parent's email (optional)"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">Note: Parent email is for display only.</p>
-                      {/* Hidden input for parent UUID */}
+                      <div className="relative">
+                        <input
+                          type="text"
+                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                          placeholder="Search for parent..."
+                          value={parentSearchQuery}
+                          onChange={(e) => {
+                            setParentSearchQuery(e.target.value);
+                            setShowParentSearch(true);
+                          }}
+                          onFocus={() => setShowParentSearch(true)}
+                        />
+                        {showParentSearch && parentSearchResults.length > 0 && (
+                          <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
+                            {parentSearchResults.map(parent => (
+                              <div
+                                key={parent.id}
+                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={() => {
+                                  setValue('parent', parent.id);
+                                  setParentSearchQuery(parent.name);
+                                  setShowParentSearch(false);
+                                }}
+                              >
+                                <div className="font-medium">{parent.name}</div>
+                                <div className="text-sm text-gray-500">{parent.email}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <input
                         type="hidden"
-                        {...register('parent')}
+                        {...register('parent', { required: 'Parent is required' })}
                       />
                     </div>
                     {errors.parent && (

@@ -34,6 +34,8 @@ from rest_framework.exceptions import PermissionDenied
 from django.db import IntegrityError
 from django.db.models import Q
 from django.db import connection
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 class RegisterView(APIView):
     """Handles user registration."""
@@ -216,12 +218,59 @@ class SchoolViewSet(viewsets.ModelViewSet):
         return School.objects.none()
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'toggle_status']:
             return [IsSuperUser()]
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         serializer.save()
+        
+    @action(detail=True, methods=['post'])
+    def toggle_status(self, request, pk=None):
+        """
+        Toggle a school's active status and update all user credentials associated with the school.
+        When deactivated, users can't login with a message about subscription ending.
+        When activated, user credentials are restored.
+        """
+        school = self.get_object()
+        # Toggle the school's active status
+        school.is_active = not school.is_active
+        school.save()
+        
+        if school.is_active:
+            # School was activated - restore login credentials
+            User.objects.filter(school=school).update(is_active=True)
+            
+            # Create notification for all users in this school
+            Notification.objects.create(
+                message="Your school subscription has been renewed. You can now access all Educite features.",
+                target_group="all",
+                school=school,
+                created_by=request.user
+            )
+            
+            return Response({
+                'status': 'success',
+                'message': f'School "{school.name}" has been activated and all user credentials have been restored.',
+                'is_active': True
+            })
+        else:
+            # School was deactivated - invalidate login credentials
+            User.objects.filter(school=school).update(is_active=False)
+            
+            # Create notification for all users in this school
+            Notification.objects.create(
+                message="Your subscription has ended. Please renew to access Educite features.",
+                target_group="all",
+                school=school,
+                created_by=request.user
+            )
+            
+            return Response({
+                'status': 'success',
+                'message': f'School "{school.name}" has been deactivated and all user credentials have been invalidated.',
+                'is_active': False
+            })
 
     @action(detail=True, methods=['get'])
     def statistics(self, request, pk=None):
@@ -469,14 +518,12 @@ class StudentViewSet(viewsets.ModelViewSet):
             # Admin should only see students from their school
             if user.school:
                 return Student.objects.filter(school=user.school)
-            else:
-                return Student.objects.all()
+            return Student.objects.all()
         elif user.role == Role.TEACHER:
             # Teacher should only see students from their school
             if user.school:
                 return Student.objects.filter(school=user.school)
-            else:
-                return Student.objects.all()
+            return Student.objects.all()
         elif user.role == Role.PARENT:
             return Student.objects.filter(parent=user)
         return Student.objects.none()
@@ -485,9 +532,37 @@ class StudentViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'create_student']:
             return [IsAuthenticated(), IsAdminOrTeacherOrParent()]
         elif self.action in ['update', 'partial_update', 'destroy']:
-            # Allow both admin/teacher and parent to modify students
             return [IsAuthenticated()]
         return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        """Ensure proper parent-student relationship when creating a student"""
+        user = self.request.user
+        
+        # If parent is creating, automatically set parent field
+        if user.role == Role.PARENT:
+            serializer.save(parent=user)
+        elif user.role in [Role.ADMIN, Role.TEACHER]:
+            # For admin or teacher users, validate parent exists and has correct role
+            parent_id = self.request.data.get('parent')
+            if not parent_id:
+                raise serializers.ValidationError({"parent": "Parent ID is required"})
+                
+            try:
+                parent = User.objects.get(id=parent_id, role=Role.PARENT)
+                if user.school and parent.school and user.school != parent.school:
+                    raise serializers.ValidationError({
+                        "parent": "Parent must belong to the same school"
+                    })
+                serializer.save(parent=parent, school=user.school)
+            except User.DoesNotExist:
+                raise serializers.ValidationError({
+                    "parent": "Parent not found or does not have parent role"
+                })
+        else:
+            raise serializers.ValidationError({
+                "error": "Only parents, teachers, and admins can create students"
+            })
 
     def perform_update(self, serializer):
         """Ensure users can only update students they have permission for"""
@@ -499,6 +574,18 @@ class StudentViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can only update your own children's records")
         elif user.role not in [Role.ADMIN, Role.TEACHER, Role.PARENT]:
             raise PermissionDenied("You do not have permission to update student records")
+            
+        # Validate parent if being changed
+        if 'parent' in serializer.validated_data:
+            parent = serializer.validated_data['parent']
+            if parent.role != Role.PARENT:
+                raise serializers.ValidationError({
+                    "parent": "The selected user must have a parent role"
+                })
+            if user.school and parent.school and user.school != parent.school:
+                raise serializers.ValidationError({
+                    "parent": "Parent must belong to the same school"
+                })
             
         serializer.save()
 
@@ -564,14 +651,14 @@ class StudentViewSet(viewsets.ModelViewSet):
         if self.request.user.role == Role.PARENT:
             # If parent is creating, automatically set parent field
             serializer.save(parent=self.request.user)
-        else:
+        elif self.request.user.role == Role.ADMIN or self.request.user.role == Role.TEACHER:
             # For admin or teacher users, set the school based on the admin's school
             user = self.request.user
             school = user.school
             if school:
                 serializer.save(school=school)
-            else:
-                serializer.save()
+        else:
+            serializer.save()
 
     @action(detail=True, methods=['get'])
     def exam_results(self, request, pk=None):
@@ -646,75 +733,57 @@ class StudentViewSet(viewsets.ModelViewSet):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class ParentViewSet(viewsets.ModelViewSet):
-    """ViewSet for Parent operations"""
-    queryset = Parent.objects.all()
-    permission_classes = [AllowAny]
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['name', 'email']
-
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return ParentRegistrationSerializer
-        return ParentSerializer
+    serializer_class = ParentSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Get all parents, including those created through User model, filtered by school"""
         user = self.request.user
-        
-        # Get all User records with role=PARENT first
-        parent_users = User.objects.filter(role=Role.PARENT)
-        if user.school:
-            parent_users = parent_users.filter(school=user.school)
-        
-        # Get all existing Parent records
-        parent_records = Parent.objects.all()
-        if user.school:
-            parent_records = parent_records.filter(school=user.school)
-            
-        # Ensure every parent User has a Parent record
-        with transaction.atomic():
-            for parent_user in parent_users:
-                Parent.objects.get_or_create(
-                    email=parent_user.email,
-                    defaults={
-                        'name': parent_user.first_name,
-                        'phone_number': '',
-                        'password': '',
-                        'school': parent_user.school
-                    }
-                )
-        
-        # Now fetch the updated set of Parent records
-        updated_parent_records = Parent.objects.all()
-        if user.school:
-            updated_parent_records = updated_parent_records.filter(school=user.school)
-            
-        return updated_parent_records
+        if user.role == Role.ADMIN:
+            return Parent.objects.filter(school=user.school)
+        elif user.role == Role.TEACHER:
+            return Parent.objects.filter(school=user.school)
+        elif user.role == Role.PARENT:
+            return Parent.objects.filter(user=user)
+        return Parent.objects.none()
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminOrTeacher]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
+    def perform_create(self, serializer):
+        # Create User record first
+        user_data = {
+            'username': serializer.validated_data['email'],
+            'email': serializer.validated_data['email'],
+            'password': serializer.validated_data['password'],
+            'role': Role.PARENT,
+            'school': self.request.user.school
+        }
+        try:
+            user = User.objects.create_user(**user_data)
+            # Create Parent record
+            serializer.save(user=user, school=self.request.user.school)
+        except IntegrityError:
+            raise ValidationError({'email': 'A user with this email already exists'})
 
     def destroy(self, request, *args, **kwargs):
-        """Delete a parent and their associated User record"""
+        parent = self.get_object()
+        # The cascade delete will automatically delete all associated students
+        # due to the CASCADE setting in the Student model
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['get'])
+    def children(self, request, pk=None):
+        parent = self.get_object()
         try:
-            parent = self.get_object()
-            
-            # Delete associated User record if it exists
-            try:
-                user = User.objects.get(email=parent.email, role=Role.PARENT)
-                user.delete()
-            except User.DoesNotExist:
-                pass
-                
-            # Delete the Parent record
-            self.perform_destroy(parent)
-            
-            return Response(
-                {"message": "Parent deleted successfully"},
-                status=status.HTTP_204_NO_CONTENT
-            )
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            students = Student.objects.filter(parent=parent.user)
+            serializer = StudentSerializer(students, many=True)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({'error': 'Parent user account not found'}, status=404)
 
     @action(detail=False, methods=['post'])
     def login(self, request):
@@ -751,18 +820,6 @@ class ParentViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         except Parent.DoesNotExist:
             return Response({'error': 'Parent not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    @action(detail=True, methods=['get'])
-    def children(self, request, pk=None):
-        parent = self.get_object()
-        # Get the associated User if it exists
-        try:
-            user = User.objects.get(email=parent.email, role=Role.PARENT)
-            children = Student.objects.filter(parent=user)
-        except User.DoesNotExist:
-            children = Student.objects.filter(parent=None)  # No children if no User record
-        serializer = StudentDetailSerializer(children, many=True)
-        return Response(serializer.data)
 
     @action(detail=True, methods=['put'], permission_classes=[IsParent])
     def update_profile(self, request, pk=None):
@@ -1624,7 +1681,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             # Get user_id from URL parameters if not provided in the path
             if not user_id:
                 user_id = request.query_params.get('user_id')
-            
+
             if not user_id:
                 return Response(
                     {"error": "User ID is required"},
@@ -1703,7 +1760,6 @@ class MessageViewSet(viewsets.ModelViewSet):
             
             serializer = self.get_serializer(messages, many=True)
             return Response(serializer.data)
-
         except Exception as e:
             print(f"Error in get_chat_history: {str(e)}")
             import traceback
@@ -1921,7 +1977,7 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
                 if user.school:
                     serializer.save(teacher=teacher, school=user.school)
                 else:
-                    serializer.save(teacher=teacher)
+                serializer.save(teacher=teacher)
             except Teacher.DoesNotExist:
                 raise serializers.ValidationError({"error": "Your teacher profile could not be found. Please contact an administrator."})
         elif user.role == Role.ADMIN:
@@ -1936,7 +1992,7 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
                 if user.school:
                     serializer.save(teacher=teacher, school=user.school)
                 else:
-                    serializer.save(teacher=teacher)
+                serializer.save(teacher=teacher)
             except Exception as e:
                 raise serializers.ValidationError({"error": f"Could not create leave application: {str(e)}"})
         else:

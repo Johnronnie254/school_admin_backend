@@ -18,7 +18,7 @@ import Image from 'next/image';
 
 export default function DashboardPage() {
   const { logout } = useAuth();
-
+  
 
   // Fetch school statistics instead of individual counts
   const { data: schoolStats, isLoading: isLoadingStats } = useQuery({

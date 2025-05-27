@@ -156,22 +156,27 @@ class Student(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, db_index=True)
     guardian = models.CharField(max_length=255)
-    contact = models.CharField(max_length=15, unique=True)
-    grade = models.PositiveIntegerField(db_index=True)
-    class_assigned = models.CharField(max_length=255, blank=True, null=True, db_index=True)
-    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='children', null=True)
-    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='students', null=True, blank=True)
+    contact = models.CharField(max_length=255)
+    grade = models.IntegerField()
+    class_assigned = models.CharField(max_length=50, null=True, blank=True)
+    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='children', null=False)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='students')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        indexes = [
-            models.Index(fields=['name', 'grade']),
-            models.Index(fields=['class_assigned']),
-        ]
+    def clean(self):
+        super().clean()
+        if self.parent and self.parent.role != Role.PARENT:
+            raise ValidationError({'parent': 'The selected user must have a parent role'})
+        if self.parent and self.parent.school != self.school:
+            raise ValidationError({'parent': 'Parent must belong to the same school as the student'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.name} - Grade {self.grade}"
+        return self.name
 
 
 class Notification(models.Model):

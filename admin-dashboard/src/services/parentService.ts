@@ -1,11 +1,14 @@
 import { apiClient, PaginatedResponse } from '@/lib/api';
+import { Student } from './studentService';
 
 export interface Parent {
   id: string;
   name: string;
   email: string;
   phone_number: string;
+  school: string;
   created_at: string;
+  children?: Student[];
 }
 
 export interface ParentFormData {
@@ -14,6 +17,7 @@ export interface ParentFormData {
   phone_number: string;
   password: string;
   password_confirmation: string;
+  school?: string;
 }
 
 class ParentService {
@@ -49,11 +53,15 @@ class ParentService {
   }
 
   async createParent(data: ParentFormData) {
-    console.log('Creating parent with data:', data);
-    // Use the /api/parents/ endpoint directly like the teacher service does
-    const response = await apiClient.post<Parent>('/api/parents/', data);
-    console.log('Create parent response:', response.data);
-    return response.data;
+    try {
+      console.log('Creating parent with data:', data);
+      const response = await apiClient.post<Parent>('/api/parents/', data);
+      console.log('Create parent response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating parent:', error);
+      throw error;
+    }
   }
 
   async updateParent(id: string, data: Partial<ParentFormData>) {
@@ -62,12 +70,23 @@ class ParentService {
   }
 
   async deleteParent(id: string) {
-    await apiClient.delete(`/api/parents/${id}/`);
+    try {
+      // The backend will handle cascade delete of children
+      await apiClient.delete(`/api/parents/${id}/`);
+    } catch (error) {
+      console.error('Error deleting parent:', error);
+      throw error;
+    }
   }
 
   async getParentChildren(parentId: string) {
-    const response = await apiClient.get(`/api/parents/${parentId}/children/`);
-    return response.data;
+    try {
+      const response = await apiClient.get(`/api/parents/${parentId}/children/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching parent children:', error);
+      throw error;
+    }
   }
 }
 

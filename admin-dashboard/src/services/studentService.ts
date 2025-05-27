@@ -7,7 +7,8 @@ export interface Student {
   contact: string;
   grade: number;
   class_assigned: string | null;
-  parent: string | null;
+  parent: string;
+  school: string;
   created_at: string;
   updated_at: string;
 }
@@ -18,7 +19,7 @@ export interface StudentFormData {
   contact: string;
   grade: number;
   class_assigned?: string;
-  parent?: string | null;
+  parent: string;
 }
 
 export interface PaymentData {
@@ -84,16 +85,18 @@ export const studentService = {
 
   createStudent: async (data: StudentFormData): Promise<Student> => {
     try {
-      // Strip out parent if it's not a valid UUID to prevent 400 errors
-      const formData = { ...data };
-      
-      // Check if parent is a valid UUID format using regex
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (formData.parent && !uuidRegex.test(formData.parent)) {
-        formData.parent = null;
+      // Validate parent ID is provided
+      if (!data.parent) {
+        throw new Error('Parent ID is required');
       }
-      
-      const response = await apiClient.post<Student>('/students/', formData);
+
+      // Validate parent ID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(data.parent)) {
+        throw new Error('Invalid parent ID format');
+      }
+
+      const response = await apiClient.post<Student>('/students/', data);
       return response.data;
     } catch (error) {
       console.error('Error in createStudent:', error);
@@ -103,6 +106,14 @@ export const studentService = {
 
   updateStudent: async (id: string, data: Partial<StudentFormData>): Promise<Student> => {
     try {
+      // If parent is being updated, validate the ID
+      if (data.parent) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(data.parent)) {
+          throw new Error('Invalid parent ID format');
+        }
+      }
+
       const response = await apiClient.patch<Student>(`/students/${id}/`, data);
       return response.data;
     } catch (error) {
