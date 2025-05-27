@@ -1977,7 +1977,7 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
                 if user.school:
                     serializer.save(teacher=teacher, school=user.school)
                 else:
-                serializer.save(teacher=teacher)
+                    serializer.save(teacher=teacher)
             except Teacher.DoesNotExist:
                 raise serializers.ValidationError({"error": "Your teacher profile could not be found. Please contact an administrator."})
         elif user.role == Role.ADMIN:
