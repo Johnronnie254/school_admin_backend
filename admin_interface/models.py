@@ -159,7 +159,7 @@ class Student(models.Model):
     contact = models.CharField(max_length=255)
     grade = models.IntegerField()
     class_assigned = models.CharField(max_length=50, null=True, blank=True)
-    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='children', null=False)
+    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='children', null=True, blank=True, default=None)
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='students')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
