@@ -3,7 +3,6 @@ import { apiClient, PaginatedResponse } from '@/lib/api';
 export interface Student {
   id: string;
   name: string;
-  guardian: string;
   contact: string;
   grade: number;
   class_assigned: string | null;
@@ -15,7 +14,6 @@ export interface Student {
 
 export interface StudentFormData {
   name: string;
-  guardian: string;
   contact: string;
   grade: number;
   class_assigned?: string;

@@ -33,7 +33,6 @@ export default function StudentsPage() {
   const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm<StudentFormData>({
     defaultValues: editingStudent ? {
       name: editingStudent.name,
-      guardian: editingStudent.guardian,
       contact: editingStudent.contact,
       grade: editingStudent.grade,
       class_assigned: editingStudent.class_assigned || undefined,
@@ -68,7 +67,6 @@ export default function StudentsPage() {
     const query = searchQuery.toLowerCase();
     return (
       student.name.toLowerCase().includes(query) ||
-      student.guardian.toLowerCase().includes(query) ||
       student.contact.toLowerCase().includes(query) ||
       (student.class_assigned && student.class_assigned.toLowerCase().includes(query)) ||
       String(student.grade).includes(query)
@@ -144,7 +142,6 @@ export default function StudentsPage() {
     setEditingStudent(student);
     reset({
       name: student.name,
-      guardian: student.guardian,
       contact: student.contact,
       grade: student.grade,
       class_assigned: student.class_assigned || undefined,
@@ -163,7 +160,6 @@ export default function StudentsPage() {
     setEditingStudent(null);
     reset({
       name: '',
-      guardian: '',
       contact: '',
       grade: undefined,
       class_assigned: '',
@@ -281,7 +277,6 @@ export default function StudentsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guardian</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
@@ -292,7 +287,6 @@ export default function StudentsPage() {
                   {displayedStudents.map((student) => (
                 <tr key={student.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.guardian}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
@@ -341,9 +335,6 @@ export default function StudentsPage() {
                 
                 <div className="space-y-1 text-sm">
                   <p className="text-gray-600">
-                    <span className="font-medium text-gray-700">Guardian:</span> {student.guardian}
-                  </p>
-                  <p className="text-gray-600">
                     <span className="font-medium text-gray-700">Contact:</span> {student.contact}
                   </p>
                   <p className="text-gray-600">
@@ -369,7 +360,6 @@ export default function StudentsPage() {
           setEditingStudent(null);
           reset({
             name: '',
-            guardian: '',
             contact: '',
             grade: undefined,
             class_assigned: '',
@@ -425,27 +415,6 @@ export default function StudentsPage() {
                     />
                     {errors.name && (
                       <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Guardian Name
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-1.5 sm:mt-2">
-                    <input
-                      type="text"
-                      {...register('guardian', { 
-                        required: 'Guardian name is required',
-                        minLength: { value: 2, message: 'Guardian name must be at least 2 characters' }
-                      })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter guardian's name"
-                    />
-                    {errors.guardian && (
-                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.guardian.message}</p>
                     )}
                   </div>
                 </div>

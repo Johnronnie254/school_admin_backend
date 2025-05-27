@@ -155,7 +155,6 @@ class Student(models.Model):
     """Independent Student model."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, db_index=True)
-    guardian = models.CharField(max_length=255)
     contact = models.CharField(max_length=255)
     grade = models.IntegerField()
     class_assigned = models.CharField(max_length=50, null=True, blank=True)
