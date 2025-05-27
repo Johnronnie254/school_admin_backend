@@ -15,13 +15,13 @@ class Role(models.TextChoices):
 class School(models.Model):
     """Model for School"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
-    address = models.TextField()
-    phone_number = models.CharField(max_length=15)
+    name = models.CharField(max_length=255, default="Default School")
+    address = models.TextField(default="Default Address")
+    phone_number = models.CharField(max_length=15, default="0700000000")
     email = models.EmailField(unique=True)
     website = models.URLField(blank=True, null=True)
     logo = models.ImageField(upload_to='school_logos/', blank=True, null=True)
-    registration_number = models.CharField(max_length=50, unique=True)
+    registration_number = models.CharField(max_length=50, unique=True, default="REG000001")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -160,7 +160,7 @@ class Student(models.Model):
     grade = models.IntegerField()
     class_assigned = models.CharField(max_length=50, null=True, blank=True)
     parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='children', null=True, blank=True, default=None)
-    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='students')
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='students', default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
