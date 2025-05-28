@@ -298,7 +298,6 @@ export default function StudentsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parent</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -309,9 +308,6 @@ export default function StudentsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {student.parent ? `${student.parent.name} (${student.parent.email})` : '-'}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEdit(student)}
@@ -471,50 +467,53 @@ export default function StudentsPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="parent_email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Parent *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search for parent by name..."
-                      value={parentSearchQuery}
-                      onChange={(e) => {
-                        setParentSearchQuery(e.target.value);
-                        setShowParentSearch(true);
-                      }}
-                      onFocus={() => setIsListVisible(true)}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                    />
-                    <input
-                      type="hidden"
-                      {...register('parent_email', { required: 'Parent is required' })}
-                    />
-                    
-                    {/* Parent search dropdown */}
-                    {showParentSearch && parentSearchResults.length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
-                        {parentSearchResults.map((parent) => (
-                          <div
-                            key={parent.id}
-                            className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-50"
-                            onClick={() => handleParentSelect(parent)}
-                          >
-                            <div className="flex items-center">
-                              <span className="font-normal ml-3 block truncate">
-                                {parent.name} ({parent.email})
-                              </span>
+                {!editingStudent && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Parent
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <div className="mt-1.5 sm:mt-2 relative">
+                      <input
+                        type="text"
+                        placeholder="Search for parent by name..."
+                        value={parentSearchQuery}
+                        onChange={(e) => {
+                          setParentSearchQuery(e.target.value);
+                          setShowParentSearch(true);
+                        }}
+                        onFocus={() => setIsListVisible(true)}
+                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                      />
+                      <input
+                        type="hidden"
+                        {...register('parent_email', { required: 'Parent is required' })}
+                      />
+                      
+                      {/* Parent search dropdown */}
+                      {showParentSearch && parentSearchResults.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+                          {parentSearchResults.map((parent) => (
+                            <div
+                              key={parent.id}
+                              className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-50"
+                              onClick={() => handleParentSelect(parent)}
+                            >
+                              <div className="flex items-center">
+                                <span className="font-normal ml-3 block truncate">
+                                  {parent.name} ({parent.email})
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {errors.parent_email && (
+                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.parent_email.message}</p>
                     )}
                   </div>
-                  {errors.parent_email && (
-                    <p className="text-red-600 text-sm mt-1">{errors.parent_email.message}</p>
-                  )}
-                </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">

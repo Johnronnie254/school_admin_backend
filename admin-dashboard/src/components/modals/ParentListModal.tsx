@@ -139,7 +139,7 @@ export default function ParentListModal({
                   </div>
 
                   {/* Created Date */}
-                  <div className="flex items-center gap-2">
+                  {/* <div className="flex items-center gap-2">
                     <span className="text-sm text-black w-20">Joined:</span>
                     <span className="text-sm text-black">
                       {new Date(parent.created_at).toLocaleDateString('en-US', {
@@ -148,7 +148,7 @@ export default function ParentListModal({
                         day: 'numeric'
                       })}
                     </span>
-                  </div>
+                  </div> */}
 
                   {/* Children Section */}
                   <div className="mt-4">
