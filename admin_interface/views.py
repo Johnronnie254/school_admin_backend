@@ -748,19 +748,22 @@ class ParentViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        # Get all students for the parents in the queryset
-        parent_ids = [parent.id for parent in self.get_queryset()]
+        # Get all parents in the queryset
+        parents = self.get_queryset()
         # Get the corresponding User IDs for these parents
-        parent_users = User.objects.filter(id__in=parent_ids, role=Role.PARENT)
+        parent_users = User.objects.filter(email__in=[parent.email for parent in parents], role=Role.PARENT)
         user_ids = [user.id for user in parent_users]
         # Get students for these parent users
         students = Student.objects.filter(parent_id__in=user_ids)
         # Create a mapping of parent_id to their children
         parent_children = {}
         for student in students:
-            if student.parent_id not in parent_children:
-                parent_children[student.parent_id] = []
-            parent_children[student.parent_id].append(student)
+            # Find the parent by matching the user ID
+            parent_user = User.objects.get(id=student.parent_id)
+            parent = Parent.objects.get(email=parent_user.email)
+            if parent.id not in parent_children:
+                parent_children[parent.id] = []
+            parent_children[parent.id].append(student)
         context['parent_children'] = parent_children
         return context
 

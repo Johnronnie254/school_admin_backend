@@ -211,7 +211,8 @@ class ParentSerializer(serializers.ModelSerializer):
             return StudentSerializer(parent_children[obj.id], many=True).data
         # If not in context, try to get children directly
         try:
-            parent_user = User.objects.get(id=obj.id, role=Role.PARENT)
+            # Get the parent's user ID from the Parent model
+            parent_user = User.objects.get(email=obj.email, role=Role.PARENT)
             students = Student.objects.filter(parent=parent_user)
             return StudentSerializer(students, many=True).data
         except User.DoesNotExist:
