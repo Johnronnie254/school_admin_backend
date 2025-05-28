@@ -337,7 +337,7 @@ class SchoolEvent(models.Model):
     ])
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='events', null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, default=timezone.now)
 
     def has_ended(self):
         """Check if the event has ended"""
