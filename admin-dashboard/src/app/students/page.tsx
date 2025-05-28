@@ -13,11 +13,19 @@ import {
   QuestionMarkCircleIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
-import { studentService, type Student, type StudentFormData } from '@/services/studentService';
+import { studentService, type Student } from '@/services/studentService';
 import { Dialog } from '@/components/ui/dialog';
 import { parentService, type Parent } from '@/services/parentService';
 
 const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
+
+interface StudentFormData {
+  name: string;
+  contact: string;
+  grade: number;
+  class_assigned?: string;
+  parent_email: string;
+}
 
 export default function StudentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,7 +44,7 @@ export default function StudentsPage() {
       contact: editingStudent.contact,
       grade: editingStudent.grade,
       class_assigned: editingStudent.class_assigned || undefined,
-      parent: editingStudent.parent
+      parent_email: ''
     } : {}
   });
 
@@ -73,16 +81,26 @@ export default function StudentsPage() {
     );
   });
 
-  // Filter parents based on search
+  // Search for parents when typing
   useEffect(() => {
-    if (parentsData?.results) {
+    if (parentSearchQuery && parentsData?.results) {
       const filtered = parentsData.results.filter(parent => 
         parent.name.toLowerCase().includes(parentSearchQuery.toLowerCase()) ||
         parent.email.toLowerCase().includes(parentSearchQuery.toLowerCase())
       );
       setParentSearchResults(filtered);
+      setShowParentSearch(filtered.length > 0);
+    } else {
+      setParentSearchResults([]);
+      setShowParentSearch(false);
     }
   }, [parentSearchQuery, parentsData]);
+
+  const handleParentSelect = (parent: Parent) => {
+    setValue('parent_email', parent.email);
+    setParentSearchQuery(parent.name);
+    setShowParentSearch(false);
+  };
 
   // Only display students if search is active or list visibility is toggled
   const shouldDisplayStudents = isListVisible || searchQuery.length > 0;
@@ -145,7 +163,7 @@ export default function StudentsPage() {
       contact: student.contact,
       grade: student.grade,
       class_assigned: student.class_assigned || undefined,
-      parent: student.parent
+      parent_email: ''
     });
     setIsModalOpen(true);
   };
@@ -163,7 +181,7 @@ export default function StudentsPage() {
       contact: '',
       grade: undefined,
       class_assigned: '',
-      parent: ''
+      parent_email: ''
     });
     setIsModalOpen(true);
   };
@@ -280,6 +298,7 @@ export default function StudentsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parent</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -290,6 +309,9 @@ export default function StudentsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {student.parent ? `${student.parent.name} (${student.parent.email})` : '-'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => handleEdit(student)}
@@ -363,7 +385,7 @@ export default function StudentsPage() {
             contact: '',
             grade: undefined,
             class_assigned: '',
-            parent: ''
+            parent_email: ''
           });
         }}
         className="relative z-50"
@@ -450,51 +472,48 @@ export default function StudentsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Parent <span className="text-red-500">*</span>
+                  <label htmlFor="parent_email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Parent *
                   </label>
-                  <div className="mt-1.5 sm:mt-2">
-                    <div className="flex flex-col">
-                      <div className="relative">
-                      <input
-                          type="text"
-                          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                          placeholder="Search for parent..."
-                          value={parentSearchQuery}
-                          onChange={(e) => {
-                            setParentSearchQuery(e.target.value);
-                            setShowParentSearch(true);
-                          }}
-                          onFocus={() => setShowParentSearch(true)}
-                        />
-                        {showParentSearch && parentSearchResults.length > 0 && (
-                          <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
-                            {parentSearchResults.map(parent => (
-                              <div
-                                key={parent.id}
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => {
-                                  setValue('parent', parent.id);
-                                  setParentSearchQuery(parent.name);
-                                  setShowParentSearch(false);
-                                }}
-                              >
-                                <div className="font-medium">{parent.name}</div>
-                                <div className="text-sm text-gray-500">{parent.email}</div>
-                              </div>
-                            ))}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search for parent by name..."
+                      value={parentSearchQuery}
+                      onChange={(e) => {
+                        setParentSearchQuery(e.target.value);
+                        setShowParentSearch(true);
+                      }}
+                      onFocus={() => setIsListVisible(true)}
+                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    />
+                    <input
+                      type="hidden"
+                      {...register('parent_email', { required: 'Parent is required' })}
+                    />
+                    
+                    {/* Parent search dropdown */}
+                    {showParentSearch && parentSearchResults.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+                        {parentSearchResults.map((parent) => (
+                          <div
+                            key={parent.id}
+                            className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-50"
+                            onClick={() => handleParentSelect(parent)}
+                          >
+                            <div className="flex items-center">
+                              <span className="font-normal ml-3 block truncate">
+                                {parent.name} ({parent.email})
+                              </span>
+                            </div>
                           </div>
-                        )}
+                        ))}
                       </div>
-                      <input
-                        type="hidden"
-                        {...register('parent', { required: 'Parent is required' })}
-                      />
-                    </div>
-                    {errors.parent && (
-                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.parent.message}</p>
                     )}
                   </div>
+                  {errors.parent_email && (
+                    <p className="text-red-600 text-sm mt-1">{errors.parent_email.message}</p>
+                  )}
                 </div>
 
                 <div>

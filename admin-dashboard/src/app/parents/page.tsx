@@ -358,10 +358,8 @@ export default function ParentsPage() {
         }}
         className="relative z-50"
       >
-        {/* Background blur - visible only on non-mobile */}
         <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
         
-        {/* Modal container - full screen on mobile */}
         <div className="fixed inset-0 flex items-center justify-center sm:p-4">
           <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
             <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
@@ -445,11 +443,11 @@ export default function ParentsPage() {
             {!createdCredentials && (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6" autoComplete="off">
                 <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-8 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Full Name
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Full Name
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
                     <div className="mt-1.5 sm:mt-2">
                     <input
                       type="text"
@@ -459,19 +457,19 @@ export default function ParentsPage() {
                         minLength: { value: 2, message: 'Name must be at least 2 characters' }
                       })}
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter parent's full name"
-                    />
-                    {errors.name && (
+                        placeholder="Enter parent's full name"
+                      />
+                      {errors.name && (
                         <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Email
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Email Address
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
                     <div className="mt-1.5 sm:mt-2">
                     <input
                       type="email"
@@ -484,19 +482,19 @@ export default function ParentsPage() {
                         }
                       })}
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter email address"
-                    />
-                    {errors.email && (
+                        placeholder="Enter email address"
+                      />
+                      {errors.email && (
                         <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Phone Number
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Phone Number
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
                     <div className="mt-1.5 sm:mt-2 relative">
                     <input
                       type="tel"
@@ -509,19 +507,19 @@ export default function ParentsPage() {
                         }
                       })}
                         className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter phone number"
-                    />
+                        placeholder="Enter phone number"
+                      />
                       <div className="absolute right-2 top-1.5 group">
                         <QuestionMarkCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                      <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
-                        Enter a valid phone number (format: 07XXXXXXXX)
+                        <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
+                          Enter a valid phone number (format: 07XXXXXXXX)
+                        </div>
                       </div>
-                    </div>
-                    {errors.phone_number && (
+                      {errors.phone_number && (
                         <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
 
                 {/* Password fields - only show when creating new parent */}
                 {!editingParent && (
@@ -540,19 +538,19 @@ export default function ParentsPage() {
                             minLength: { value: 6, message: 'Password must be at least 6 characters' }
                           })}
                             className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                          placeholder="Enter password"
-                        />
-                        {errors.password && (
+                            placeholder="Enter password"
+                          />
+                          {errors.password && (
                             <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Confirm Password
-                        <span className="text-red-500 ml-1">*</span>
-                      </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Confirm Password
+                          <span className="text-red-500 ml-1">*</span>
+                        </label>
                         <div className="mt-1.5 sm:mt-2">
                         <input
                           type="password"
@@ -562,26 +560,26 @@ export default function ParentsPage() {
                             validate: value => !editingParent ? (value === password || 'Passwords do not match') : true
                           })}
                             className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                          placeholder="Confirm password"
-                        />
-                        {errors.password_confirmation && (
+                            placeholder="Confirm password"
+                          />
+                          {errors.password_confirmation && (
                             <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                    </>
+                  )}
+                </div>
 
                 <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingParent(null);
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setEditingParent(null);
                       setCreatedCredentials(null);
-                    reset();
-                  }}
+                      reset();
+                    }}
                     className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 w-full sm:w-auto order-2 sm:order-1"
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
@@ -590,22 +588,22 @@ export default function ParentsPage() {
                 <button
                   type="submit"
                     className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {createMutation.isPending || updateMutation.isPending ? (
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                  >
+                    {createMutation.isPending || updateMutation.isPending ? (
                       <div className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      {editingParent ? 'Updating...' : 'Creating...'}
-                    </div>
-                  ) : (
-                    <>{editingParent ? 'Update Parent' : 'Create Parent'}</>
-                  )}
-                </button>
-              </div>
-            </form>
+                        <svg className="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {editingParent ? 'Updating...' : 'Creating...'}
+                      </div>
+                    ) : (
+                      <>{editingParent ? 'Update Parent' : 'Create Parent'}</>
+                    )}
+                  </button>
+                </div>
+              </form>
             )}
           </Dialog.Panel>
         </div>

@@ -6,7 +6,10 @@ export interface Student {
   contact: string;
   grade: number;
   class_assigned: string | null;
-  parent: string;
+  parent: {
+    id: string;
+    name: string;
+  };
   school: string;
   created_at: string;
   updated_at: string;
@@ -17,7 +20,7 @@ export interface StudentFormData {
   contact: string;
   grade: number;
   class_assigned?: string;
-  parent: string;
+  parent_email: string;
 }
 
 export interface PaymentData {
@@ -83,18 +86,18 @@ export const studentService = {
 
   createStudent: async (data: StudentFormData): Promise<Student> => {
     try {
-      // Validate parent ID is provided
-      if (!data.parent) {
-        throw new Error('Parent ID is required');
+      // Validate parent email is provided
+      if (!data.parent_email) {
+        throw new Error('Parent email is required');
       }
 
-      // Validate parent ID format
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(data.parent)) {
-        throw new Error('Invalid parent ID format');
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.parent_email)) {
+        throw new Error('Invalid parent email format');
       }
 
-      const response = await apiClient.post<Student>('/students/', data);
+      const response = await apiClient.post<Student>('/students/create_student/', data);
       return response.data;
     } catch (error) {
       console.error('Error in createStudent:', error);
@@ -105,10 +108,10 @@ export const studentService = {
   updateStudent: async (id: string, data: Partial<StudentFormData>): Promise<Student> => {
     try {
       // If parent is being updated, validate the ID
-      if (data.parent) {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(data.parent)) {
-          throw new Error('Invalid parent ID format');
+      if (data.parent_email) {
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i;
+        if (!emailRegex.test(data.parent_email)) {
+          throw new Error('Invalid parent email format');
         }
       }
 

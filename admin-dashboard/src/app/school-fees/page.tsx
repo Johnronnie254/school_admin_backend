@@ -163,7 +163,7 @@ export default function SchoolFeesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guardian</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parent</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
               </tr>
             </thead>
@@ -177,7 +177,7 @@ export default function SchoolFeesPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.guardian}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.parent}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
                 </tr>
               ))}
@@ -205,8 +205,8 @@ export default function SchoolFeesPage() {
                     <p className="text-gray-900">{student.class_assigned || '-'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Guardian:</span>
-                    <p className="text-gray-900">{student.guardian}</p>
+                    <span className="text-gray-500">Parent:</span>
+                    <p className="text-gray-900">{student.parent}</p>
                   </div>
                   <div>
                     <span className="text-gray-500">Contact:</span>
