@@ -795,16 +795,27 @@ class ParentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def children(self, request, pk=None):
-        parent = self.get_object()
+        """Get children for a parent"""
         try:
-            # Get the parent's User record
-            parent_user = User.objects.get(id=parent.id, role=Role.PARENT)
+            # First try to get the parent from Parent model
+            try:
+                parent = Parent.objects.get(id=pk)
+                # Get the corresponding User record
+                parent_user = User.objects.get(email=parent.email, role=Role.PARENT)
+            except (Parent.DoesNotExist, User.DoesNotExist):
+                # If not found in Parent model, try User model directly
+                parent_user = User.objects.get(id=pk, role=Role.PARENT)
+                # Get the corresponding Parent record
+                parent = Parent.objects.get(email=parent_user.email)
+
             # Get students associated with this parent user
             students = Student.objects.filter(parent=parent_user)
             serializer = StudentSerializer(students, many=True)
             return Response(serializer.data)
-        except User.DoesNotExist:
-            return Response({'error': 'Parent user account not found'}, status=404)
+        except (Parent.DoesNotExist, User.DoesNotExist):
+            return Response({'error': 'Parent not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
 
     @action(detail=False, methods=['post'])
     def login(self, request):
