@@ -78,16 +78,6 @@ class ParentService {
       throw error;
     }
   }
-
-  async getParentChildren(parentId: string) {
-    try {
-      const response = await apiClient.get(`/api/parents/${parentId}/children/`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching parent children:', error);
-      throw error;
-    }
-  }
 }
 
 export const parentService = new ParentService(); 

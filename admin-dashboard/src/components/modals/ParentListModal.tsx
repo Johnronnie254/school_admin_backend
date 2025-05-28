@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { XMarkIcon, EyeIcon, EyeSlashIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { AxiosError } from 'axios';
-import { Parent, parentService } from '@/services/parentService';
-import { Student } from '@/services/studentService';
+import { Parent } from '@/services/parentService';
 
 interface ParentListModalProps {
   isOpen: boolean;
@@ -23,8 +22,6 @@ export default function ParentListModal({
 }: ParentListModalProps) {
   const [visibleFields, setVisibleFields] = useState<Record<string, { email: boolean; phone: boolean }>>({});
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [childrenData, setChildrenData] = useState<Record<string, Student[]>>({});
-  const [isLoadingChildren, setIsLoadingChildren] = useState<Record<string, boolean>>({});
 
   const toggleFieldVisibility = (parentEmail: string, field: 'email' | 'phone') => {
     setVisibleFields(prev => ({
@@ -58,31 +55,6 @@ export default function ParentListModal({
     }
   };
 
-  // Fetch children data for each parent
-  useEffect(() => {
-    const fetchChildren = async (parentId: string) => {
-      if (!childrenData[parentId] && !isLoadingChildren[parentId]) {
-        try {
-          console.log('Fetching children for parent:', parentId);
-          setIsLoadingChildren(prev => ({ ...prev, [parentId]: true }));
-          const children = await parentService.getParentChildren(parentId);
-          console.log('Children data received:', children);
-          setChildrenData(prev => ({ ...prev, [parentId]: children }));
-        } catch (error) {
-          console.error(`Error fetching children for parent ${parentId}:`, error);
-          toast.error('Failed to fetch children data');
-        } finally {
-          setIsLoadingChildren(prev => ({ ...prev, [parentId]: false }));
-        }
-      }
-    };
-
-    parents.forEach(parent => {
-      console.log('Parent data:', parent);
-      fetchChildren(parent.id);
-    });
-  }, [parents]);
-
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
@@ -104,11 +76,11 @@ export default function ParentListModal({
             </h2>
           </div>
 
-          <div className="space-y-4">
-            {parents.map((parent) => (
+          {parents.length > 0 ? (
+            parents.map((parent) => (
               <div
                 key={parent.email}
-                className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow mb-4"
               >
                 <div className="space-y-3">
                   <div className="flex justify-between items-start">
@@ -182,12 +154,8 @@ export default function ParentListModal({
                   <div className="mt-4">
                     <h4 className="text-sm font-medium text-black mb-2">Children</h4>
                     <div className="space-y-2">
-                      {isLoadingChildren[parent.id] ? (
-                        <div className="flex items-center justify-center py-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500"></div>
-                        </div>
-                      ) : childrenData[parent.id]?.length > 0 ? (
-                        childrenData[parent.id].map((child) => (
+                      {parent.children && parent.children.length > 0 ? (
+                        parent.children.map((child) => (
                           <div key={child.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                             <UserIcon className="h-4 w-4 text-gray-500" />
                             <span className="text-sm text-black">{child.name}</span>
@@ -201,14 +169,12 @@ export default function ParentListModal({
                   </div>
                 </div>
               </div>
-            ))}
-
-            {parents.length === 0 && (
-              <div className="text-center py-6 text-black">
-                No parents found
-              </div>
-            )}
-          </div>
+            ))
+          ) : (
+            <div className="text-center py-6 text-black">
+              No parents found
+            </div>
+          )}
         </Dialog.Panel>
       </div>
     </Dialog>
