@@ -209,7 +209,13 @@ class ParentSerializer(serializers.ModelSerializer):
         parent_children = self.context.get('parent_children', {})
         if obj.id in parent_children:
             return StudentSerializer(parent_children[obj.id], many=True).data
-        return []
+        # If not in context, try to get children directly
+        try:
+            parent_user = User.objects.get(id=obj.id, role=Role.PARENT)
+            students = Student.objects.filter(parent=parent_user)
+            return StudentSerializer(students, many=True).data
+        except User.DoesNotExist:
+            return []
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

@@ -750,13 +750,17 @@ class ParentViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         # Get all students for the parents in the queryset
         parent_ids = [parent.id for parent in self.get_queryset()]
-        students = Student.objects.filter(parent__in=parent_ids)
+        # Get the corresponding User IDs for these parents
+        parent_users = User.objects.filter(id__in=parent_ids, role=Role.PARENT)
+        user_ids = [user.id for user in parent_users]
+        # Get students for these parent users
+        students = Student.objects.filter(parent_id__in=user_ids)
         # Create a mapping of parent_id to their children
         parent_children = {}
         for student in students:
-            if student.parent.id not in parent_children:
-                parent_children[student.parent.id] = []
-            parent_children[student.parent.id].append(student)
+            if student.parent_id not in parent_children:
+                parent_children[student.parent_id] = []
+            parent_children[student.parent_id].append(student)
         context['parent_children'] = parent_children
         return context
 
@@ -793,7 +797,10 @@ class ParentViewSet(viewsets.ModelViewSet):
     def children(self, request, pk=None):
         parent = self.get_object()
         try:
-            students = Student.objects.filter(parent=parent.user)
+            # Get the parent's User record
+            parent_user = User.objects.get(id=parent.id, role=Role.PARENT)
+            # Get students associated with this parent user
+            students = Student.objects.filter(parent=parent_user)
             serializer = StudentSerializer(students, many=True)
             return Response(serializer.data)
         except User.DoesNotExist:

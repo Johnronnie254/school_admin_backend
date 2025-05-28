@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { XMarkIcon, EyeIcon, EyeSlashIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { AxiosError } from 'axios';
-import { Parent } from '@/services/parentService';
+import { Parent, parentService } from '@/services/parentService';
+import { Student } from '@/services/studentService';
 
 interface ParentListModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ export default function ParentListModal({
 }: ParentListModalProps) {
   const [visibleFields, setVisibleFields] = useState<Record<string, { email: boolean; phone: boolean }>>({});
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [childrenData, setChildrenData] = useState<Record<string, Student[]>>({});
+  const [isLoadingChildren, setIsLoadingChildren] = useState<Record<string, boolean>>({});
 
   const toggleFieldVisibility = (parentEmail: string, field: 'email' | 'phone') => {
     setVisibleFields(prev => ({
@@ -54,6 +57,31 @@ export default function ParentListModal({
       setIsDeleting(null);
     }
   };
+
+  // Fetch children data for each parent
+  useEffect(() => {
+    const fetchChildren = async (parentId: string) => {
+      if (!childrenData[parentId] && !isLoadingChildren[parentId]) {
+        try {
+          console.log('Fetching children for parent:', parentId);
+          setIsLoadingChildren(prev => ({ ...prev, [parentId]: true }));
+          const children = await parentService.getParentChildren(parentId);
+          console.log('Children data received:', children);
+          setChildrenData(prev => ({ ...prev, [parentId]: children }));
+        } catch (error) {
+          console.error(`Error fetching children for parent ${parentId}:`, error);
+          toast.error('Failed to fetch children data');
+        } finally {
+          setIsLoadingChildren(prev => ({ ...prev, [parentId]: false }));
+        }
+      }
+    };
+
+    parents.forEach(parent => {
+      console.log('Parent data:', parent);
+      fetchChildren(parent.id);
+    });
+  }, [parents]);
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
@@ -154,8 +182,12 @@ export default function ParentListModal({
                   <div className="mt-4">
                     <h4 className="text-sm font-medium text-black mb-2">Children</h4>
                     <div className="space-y-2">
-                      {parent.children && parent.children.length > 0 ? (
-                        parent.children.map((child) => (
+                      {isLoadingChildren[parent.id] ? (
+                        <div className="flex items-center justify-center py-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500"></div>
+                        </div>
+                      ) : childrenData[parent.id]?.length > 0 ? (
+                        childrenData[parent.id].map((child) => (
                           <div key={child.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                             <UserIcon className="h-4 w-4 text-gray-500" />
                             <span className="text-sm text-black">{child.name}</span>
