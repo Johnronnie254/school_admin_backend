@@ -544,20 +544,20 @@ class StudentViewSet(viewsets.ModelViewSet):
             serializer.save(parent=user)
         elif user.role in [Role.ADMIN, Role.TEACHER]:
             # For admin or teacher users, validate parent exists and has correct role
-            parent_id = self.request.data.get('parent')
-            if not parent_id:
-                raise serializers.ValidationError({"parent": "Parent ID is required"})
+            parent_email = self.request.data.get('parent_email')
+            if not parent_email:
+                raise serializers.ValidationError({"parent_email": "Parent email is required"})
                 
             try:
-                parent = User.objects.get(id=parent_id, role=Role.PARENT)
+                parent = User.objects.get(email=parent_email, role=Role.PARENT)
                 if user.school and parent.school and user.school != parent.school:
                     raise serializers.ValidationError({
-                        "parent": "Parent must belong to the same school"
+                        "parent_email": "Parent must belong to the same school"
                     })
                 serializer.save(parent=parent, school=user.school)
             except User.DoesNotExist:
                 raise serializers.ValidationError({
-                    "parent": "Parent not found or does not have parent role"
+                    "parent_email": "Parent not found or does not have parent role"
                 })
         else:
             raise serializers.ValidationError({
@@ -608,28 +608,26 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def create_student(self, request):
-        """Create a student associated with a parent"""
+        """Create a student associated with a parent using parent_email"""
         try:
             # If parent is creating, use their ID
             if request.user.role == Role.PARENT:
-                parent_id = request.user.id
+                parent = request.user
             else:
-                # For admin/teacher creating student, parent_id should be provided
-                parent_id = request.data.get('parent')
-                if not parent_id:
+                # For admin/teacher creating student, parent_email should be provided
+                parent_email = request.data.get('parent_email')
+                if not parent_email:
                     return Response(
-                        {'error': 'parent is required'}, 
+                        {'error': 'parent_email is required'}, 
                         status=status.HTTP_400_BAD_REQUEST
                     )
-
-            # Verify parent exists
-            try:
-                parent = User.objects.get(id=parent_id, role=Role.PARENT)
-            except User.DoesNotExist:
-                return Response(
-                    {'error': 'Parent not found'}, 
-                    status=status.HTTP_404_NOT_FOUND
-                )
+                try:
+                    parent = User.objects.get(email=parent_email, role=Role.PARENT)
+                except User.DoesNotExist:
+                    return Response(
+                        {'error': 'Parent not found'}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
 
             # Create student with parent association
             serializer = self.get_serializer(data=request.data)
@@ -1755,6 +1753,7 @@ class MessageViewSet(viewsets.ModelViewSet):
             
             serializer = self.get_serializer(messages, many=True)
             return Response(serializer.data)
+            
         except Exception as e:
             print(f"Error in get_chat_history: {str(e)}")
             import traceback
