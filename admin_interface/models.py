@@ -337,6 +337,32 @@ class SchoolEvent(models.Model):
     ])
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='events', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def has_ended(self):
+        """Check if the event has ended"""
+        return timezone.now() > self.end_date
+
+    def clean(self):
+        """Validate event dates"""
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValidationError({
+                'end_date': 'End date must be after start date'
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['start_date']
+        indexes = [
+            models.Index(fields=['start_date', 'end_date']),
+            models.Index(fields=['event_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.get_event_type_display()})"
 
 
 class Message(models.Model):

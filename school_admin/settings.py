@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'channels',
+    'django_crontab',
 ]
 
 MIDDLEWARE = [
@@ -239,3 +240,9 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@schooladmin.c
 
 # Frontend URL for password reset
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
+# Cron Jobs Configuration
+CRONJOBS = [
+    # Run the cleanup task every day at midnight
+    ('0 0 * * *', 'django.core.management.call_command', ['cleanup_past_events']),
+]
