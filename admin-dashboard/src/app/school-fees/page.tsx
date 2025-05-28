@@ -177,7 +177,7 @@ export default function SchoolFeesPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.parent}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.parent.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
                 </tr>
               ))}
@@ -206,7 +206,7 @@ export default function SchoolFeesPage() {
                   </div>
                   <div>
                     <span className="text-gray-500">Parent:</span>
-                    <p className="text-gray-900">{student.parent}</p>
+                    <p className="text-gray-900">{student.parent.name}</p>
                   </div>
                   <div>
                     <span className="text-gray-500">Contact:</span>
