@@ -615,10 +615,10 @@ class StudentViewSet(viewsets.ModelViewSet):
                 parent_id = request.user.id
             else:
                 # For admin/teacher creating student, parent_id should be provided
-                parent_id = request.data.get('parent_id')
+                parent_id = request.data.get('parent')
                 if not parent_id:
                     return Response(
-                        {'error': 'parent_id is required'}, 
+                        {'error': 'parent is required'}, 
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
@@ -634,7 +634,7 @@ class StudentViewSet(viewsets.ModelViewSet):
             # Create student with parent association
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save(parent=parent)
+            serializer.save(parent=parent, school=request.user.school)
 
             return Response({
                 'message': 'Student created successfully',
@@ -646,19 +646,6 @@ class StudentViewSet(viewsets.ModelViewSet):
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-    def perform_create(self, serializer):
-        if self.request.user.role == Role.PARENT:
-            # If parent is creating, automatically set parent field
-            serializer.save(parent=self.request.user)
-        elif self.request.user.role == Role.ADMIN or self.request.user.role == Role.TEACHER:
-            # For admin or teacher users, set the school based on the admin's school
-            user = self.request.user
-            school = user.school
-            if school:
-                serializer.save(school=school)
-        else:
-            serializer.save()
 
     @action(detail=True, methods=['get'])
     def exam_results(self, request, pk=None):
@@ -752,18 +739,15 @@ class ParentViewSet(viewsets.ModelViewSet):
         parents = self.get_queryset()
         # Get the corresponding User IDs for these parents
         parent_users = User.objects.filter(email__in=[parent.email for parent in parents], role=Role.PARENT)
-        user_ids = [user.id for user in parent_users]
         # Get students for these parent users
-        students = Student.objects.filter(parent_id__in=user_ids)
-        # Create a mapping of parent_id to their children
+        students = Student.objects.filter(parent_id__in=parent_users.values_list('id', flat=True))
+        # Create a mapping of parent email to their children
         parent_children = {}
         for student in students:
-            # Find the parent by matching the user ID
             parent_user = User.objects.get(id=student.parent_id)
-            parent = Parent.objects.get(email=parent_user.email)
-            if parent.id not in parent_children:
-                parent_children[parent.id] = []
-            parent_children[parent.id].append(student)
+            if parent_user.email not in parent_children:
+                parent_children[parent_user.email] = []
+            parent_children[parent_user.email].append(student)
         context['parent_children'] = parent_children
         return context
 

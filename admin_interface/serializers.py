@@ -199,29 +199,36 @@ class NotificationSerializer(serializers.ModelSerializer):
 class ParentSerializer(serializers.ModelSerializer):
     """Serializer for Parent model"""
     children = serializers.SerializerMethodField()
+    password = serializers.CharField(write_only=True, required=False)
+    password_confirmation = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = Parent
-        fields = ('id', 'name', 'email', 'phone_number', 'created_at', 'children')
+        fields = ['id', 'name', 'email', 'phone_number', 'children', 'password', 'password_confirmation']
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'password_confirmation': {'write_only': True}
+        }
 
     def get_children(self, obj):
-        # Get children from context if available
+        """Get children data from context"""
         parent_children = self.context.get('parent_children', {})
-        if obj.id in parent_children:
-            return StudentSerializer(parent_children[obj.id], many=True).data
-        # If not in context, try to get children directly
-        try:
-            # Get the parent's user ID from the Parent model
-            parent_user = User.objects.get(email=obj.email, role=Role.PARENT)
-            students = Student.objects.filter(parent=parent_user)
-            return StudentSerializer(students, many=True).data
-        except User.DoesNotExist:
-            return []
+        children = parent_children.get(obj.email, [])
+        return StudentSerializer(children, many=True).data
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        # Add any additional fields or transformations here if needed
+    def validate(self, data):
+        """Validate password confirmation"""
+        if 'password' in data and 'password_confirmation' in data:
+            if data['password'] != data['password_confirmation']:
+                raise serializers.ValidationError({
+                    "password": "Password fields didn't match."
+                })
         return data
+
+    def create(self, validated_data):
+        """Create a new parent"""
+        validated_data.pop('password_confirmation', None)
+        return super().create(validated_data)
 
 class ParentRegistrationSerializer(serializers.ModelSerializer):
     """Serializer for Parent registration"""
