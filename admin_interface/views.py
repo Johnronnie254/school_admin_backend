@@ -1448,59 +1448,6 @@ class MessageViewSet(viewsets.ModelViewSet):
             
         return queryset
 
-    def create(self, request, *args, **kwargs):
-        """Override create to provide detailed error messages"""
-        import logging
-        logger = logging.getLogger(__name__)
-
-        logger.error(f"💬 CREATE MESSAGE - REQUEST DATA: {request.data}")
-        
-        try:
-            # First validate the data using the serializer
-            serializer = self.get_serializer(data=request.data)
-            if not serializer.is_valid():
-                logger.error(f"❌ VALIDATION ERROR: {serializer.errors}")
-                # Return detailed validation errors
-                return Response(
-                    {
-                        "error": "Validation error", 
-                        "details": serializer.errors,
-                        "request_data": request.data
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # If validation passed, perform the creation
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-        
-        except serializers.ValidationError as e:
-            logger.error(f"❌ VALIDATION ERROR IN PERFORM_CREATE: {str(e)}")
-            # Return detailed validation errors
-            return Response(
-                {
-                    "error": "Validation error",
-                    "details": e.detail if hasattr(e, 'detail') else str(e),
-                    "request_data": request.data
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except Exception as e:
-            logger.error(f"❌ UNEXPECTED ERROR: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
-            # Return detailed error information
-            return Response(
-                {
-                    "error": "Unexpected error",
-                    "message": str(e),
-                    "traceback": traceback.format_exc(),
-                    "request_data": request.data
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
     def perform_create(self, serializer):
         """Save the message with sender and school"""
         import logging
