@@ -104,7 +104,7 @@ export default function StudentsPage() {
   const shouldDisplayStudents = isListVisible || searchQuery.length > 0;
   
   // Limit displayed students unless "Show All" is clicked
-  const displayedStudents = shouldDisplayStudents ? 
+  const displayedStudents = shouldDisplayStudents ?
     (showAll ? filteredStudents : filteredStudents.slice(0, 5)) : 
     [];
 
