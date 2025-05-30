@@ -107,9 +107,9 @@ export const studentService = {
 
   updateStudent: async (id: string, data: Partial<StudentFormData>): Promise<Student> => {
     try {
-      // If parent is being updated, validate the ID
+      // If parent is being updated, validate the email
       if (data.parent_email) {
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/i;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(data.parent_email)) {
           throw new Error('Invalid parent email format');
         }

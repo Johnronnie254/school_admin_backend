@@ -10,7 +10,6 @@ import {
   PlusIcon, 
   XMarkIcon,
   UserGroupIcon,
-  QuestionMarkCircleIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { studentService, type Student } from '@/services/studentService';
@@ -21,10 +20,10 @@ const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
 
 interface StudentFormData {
   name: string;
-  contact: string;
   grade: number;
   class_assigned?: string;
   parent_email: string;
+  contact: string;
 }
 
 export default function StudentsPage() {
@@ -41,10 +40,10 @@ export default function StudentsPage() {
   const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm<StudentFormData>({
     defaultValues: editingStudent ? {
       name: editingStudent.name,
-      contact: editingStudent.contact,
       grade: editingStudent.grade,
       class_assigned: editingStudent.class_assigned || undefined,
-      parent_email: ''
+      parent_email: '',
+      contact: ''
     } : {}
   });
 
@@ -75,7 +74,6 @@ export default function StudentsPage() {
     const query = searchQuery.toLowerCase();
     return (
       student.name.toLowerCase().includes(query) ||
-      student.contact.toLowerCase().includes(query) ||
       (student.class_assigned && student.class_assigned.toLowerCase().includes(query)) ||
       String(student.grade).includes(query)
     );
@@ -150,9 +148,9 @@ export default function StudentsPage() {
 
   const onSubmit: SubmitHandler<StudentFormData> = (data) => {
     if (editingStudent) {
-      updateMutation.mutate({ ...data, id: editingStudent.id });
+      updateMutation.mutate({ ...data, id: editingStudent.id, contact: '' });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate({ ...data, contact: '' });
     }
   };
 
@@ -160,10 +158,10 @@ export default function StudentsPage() {
     setEditingStudent(student);
     reset({
       name: student.name,
-      contact: student.contact,
       grade: student.grade,
       class_assigned: student.class_assigned || undefined,
-      parent_email: ''
+      parent_email: '',
+      contact: ''
     });
     setIsModalOpen(true);
   };
@@ -178,10 +176,10 @@ export default function StudentsPage() {
     setEditingStudent(null);
     reset({
       name: '',
-      contact: '',
       grade: undefined,
       class_assigned: '',
-      parent_email: ''
+      parent_email: '',
+      contact: ''
     });
     setIsModalOpen(true);
   };
@@ -295,7 +293,6 @@ export default function StudentsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -305,7 +302,6 @@ export default function StudentsPage() {
                   {displayedStudents.map((student) => (
                 <tr key={student.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.contact}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.grade}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.class_assigned || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -353,9 +349,6 @@ export default function StudentsPage() {
                 
                 <div className="space-y-1 text-sm">
                   <p className="text-gray-600">
-                    <span className="font-medium text-gray-700">Contact:</span> {student.contact}
-                  </p>
-                  <p className="text-gray-600">
                     <span className="font-medium text-gray-700">Grade:</span> {student.grade}
                   </p>
                   {student.class_assigned && (
@@ -376,13 +369,7 @@ export default function StudentsPage() {
         onClose={() => {
           setIsModalOpen(false);
           setEditingStudent(null);
-          reset({
-            name: '',
-            contact: '',
-            grade: undefined,
-            class_assigned: '',
-            parent_email: ''
-          });
+          reset();
         }}
         className="relative z-50"
       >
@@ -433,36 +420,6 @@ export default function StudentsPage() {
                     />
                     {errors.name && (
                       <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Contact Number
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="mt-1.5 sm:mt-2 relative">
-                    <input
-                      type="tel"
-                      {...register('contact', { 
-                        required: 'Contact number is required',
-                        pattern: {
-                          value: /^07[0-9]{8}$/,
-                          message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
-                        }
-                      })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                      placeholder="Enter contact number"
-                    />
-                    <div className="absolute right-2 top-1.5 group">
-                      <QuestionMarkCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                      <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
-                        Enter a valid phone number (format: 07XXXXXXXX)
-                      </div>
-                    </div>
-                    {errors.contact && (
-                      <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.contact.message}</p>
                     )}
                   </div>
                 </div>
