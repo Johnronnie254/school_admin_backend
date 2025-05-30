@@ -1689,14 +1689,31 @@ class MessageViewSet(viewsets.ModelViewSet):
                 )
             
             # Get messages exchanged between the current user and the other user
+            # Include both direct user-to-user messages and messages through Teacher/Parent models
             messages = Message.objects.filter(
-                (Q(sender=request.user) & Q(receiver=other_user)) |
-                (Q(sender=other_user) & Q(receiver=request.user))
+                Q(
+                    # Direct user-to-user messages
+                    (Q(sender=request.user) & Q(receiver=other_user)) |
+                    (Q(sender=other_user) & Q(receiver=request.user))
+                ) |
+                Q(
+                    # Messages through Teacher/Parent models
+                    (Q(sender=request.user) & Q(teacher__id=user_id)) |
+                    (Q(sender=request.user) & Q(parent__id=user_id)) |
+                    (Q(teacher__id=user_id) & Q(receiver=request.user)) |
+                    (Q(parent__id=user_id) & Q(receiver=request.user))
+                )
             ).order_by('created_at')
             
             # Filter by school if user has a school
             if request.user.school:
                 messages = messages.filter(school=request.user.school)
+            
+            # Log the query and results for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"🔍 CHAT HISTORY QUERY - User: {request.user.id}, Other User: {user_id}")
+            logger.error(f"🔍 MESSAGES FOUND: {messages.count()}")
             
             serializer = self.get_serializer(messages, many=True)
             return Response(serializer.data)
