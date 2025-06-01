@@ -17,7 +17,7 @@ export interface Student {
 
 export interface StudentFormData {
   name: string;
-  contact: string;
+  contact?: string;
   grade: number;
   class_assigned?: string;
   parent_email: string;
@@ -158,4 +158,4 @@ export const studentService = {
     const response = await apiClient.post(`/api/students/${studentId}/initiate_payment/`, paymentData);
     return response.data;
   }
-}; 
+};
