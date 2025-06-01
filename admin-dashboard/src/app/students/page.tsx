@@ -16,14 +16,14 @@ import { studentService, type Student } from '@/services/studentService';
 import { Dialog } from '@/components/ui/dialog';
 import { parentService, type Parent } from '@/services/parentService';
 
-const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
+const GRADES = ['Playgroup', 'PP1', 'PP2', ...Array.from({ length: 12 }, (_, i) => i + 1)];
 
 interface StudentFormData {
   name: string;
   grade: number;
   class_assigned?: string;
   parent_email: string;
-  contact: string;
+  contact?: string;
 }
 
 export default function StudentsPage() {
@@ -147,10 +147,19 @@ export default function StudentsPage() {
   });
 
   const onSubmit: SubmitHandler<StudentFormData> = (data) => {
+    // Create a new object without the contact field if it's empty
+    const studentData = {
+      name: data.name,
+      grade: data.grade,
+      class_assigned: data.class_assigned,
+      parent_email: data.parent_email,
+      ...(data.contact ? { contact: data.contact } : {})  // Only include contact if it has a value
+    };
+    
     if (editingStudent) {
-      updateMutation.mutate({ ...data, id: editingStudent.id, contact: '' });
+      updateMutation.mutate({ ...studentData, id: editingStudent.id });
     } else {
-      createMutation.mutate({ ...data, contact: '' });
+      createMutation.mutate(studentData);
     }
   };
 
@@ -485,7 +494,7 @@ export default function StudentsPage() {
                       <option value="">Select grade</option>
                       {GRADES.map((grade) => (
                         <option key={grade} value={grade}>
-                          Grade {grade}
+                          {typeof grade === 'number' ? `Grade ${grade}` : grade}
                         </option>
                       ))}
                     </select>
@@ -550,4 +559,4 @@ export default function StudentsPage() {
       </Dialog>
     </div>
   );
-} 
+}

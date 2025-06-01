@@ -41,16 +41,19 @@ interface PaginatedResponse<T> {
 const AVAILABLE_SUBJECTS = [
   'Mathematics',
   'English',
-  'Science',
-  'History',
-  'Geography',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'Computer Science',
-  'Physical Education',
-  'Art',
-  'Music'
+  'Kiswahili',
+  'Science and Technology',
+  'Social Studies',
+  'Religious Education',
+  'Agriculture',
+  'Home Science',
+  'Creative Arts',
+  'Physical and Health Education',
+  'Indigenous Languages',
+  'Pre-Technical Studies',
+  'Business Studies',
+  'Life Skills Education',
+  'Computer Science'
 ];
 
 export default function TeachersPage() {
