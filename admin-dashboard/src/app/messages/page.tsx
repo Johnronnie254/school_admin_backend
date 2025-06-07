@@ -7,6 +7,7 @@ import { MagnifyingGlassIcon, PaperAirplaneIcon, TrashIcon, ArrowLeftIcon } from
 import toast from 'react-hot-toast';
 import { messageService } from '@/services/messageService';
 import { authService } from '@/services/auth.service';
+import { User } from '@/types';
 import { AxiosError } from 'axios';
 
 interface ChatUser {
@@ -35,7 +36,7 @@ export default function MessagesPage() {
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<MessageFormData>();
