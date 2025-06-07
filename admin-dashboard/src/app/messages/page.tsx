@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { MagnifyingGlassIcon, PaperAirplaneIcon, TrashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
@@ -37,9 +37,30 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isWindowFocused, setIsWindowFocused] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<MessageFormData>();
+
+  // ✅ Window focus tracking for smart polling
+  useEffect(() => {
+    const handleFocus = () => setIsWindowFocused(true);
+    const handleBlur = () => setIsWindowFocused(false);
+    
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
+  // ✅ Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // ✅ Get current user info
   useEffect(() => {
@@ -55,25 +76,67 @@ export default function MessagesPage() {
     getUserInfo();
   }, []);
 
+  // ✅ Chat users with auto-refresh
   const { data: chatUsers = [], isLoading: isLoadingUsers } = useQuery<ChatUser[]>({
     queryKey: ['chatUsers'],
     queryFn: messageService.getChatUsers,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
+  // ✅ Messages with smart polling - more frequent when chat is active
   const { data: messages = [], isLoading: isLoadingMessages } = useQuery<Message[]>({
     queryKey: ['messages', selectedUser?.id],
     queryFn: () => selectedUser ? messageService.getMessages(selectedUser.id) : Promise.resolve([]),
     enabled: !!selectedUser,
+    refetchInterval: selectedUser && isWindowFocused ? 3000 : 10000, // 3s when active, 10s when not
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    // Keep previous data to prevent flickering
+    keepPreviousData: true,
   });
 
+  // ✅ Optimistic message sending
   const sendMessageMutation = useMutation({
     mutationFn: (data: MessageFormData) => messageService.sendMessage(data),
-    onSuccess: (newMessage) => {
+    onMutate: async (newMessage) => {
+      if (!selectedUser || !currentUser) return;
+
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['messages', selectedUser.id] });
+
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData<Message[]>(['messages', selectedUser.id]);
+
+      // Optimistically update the cache
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`, // Temporary ID
+        sender: currentUser.id,
+        receiver: selectedUser.id,
+        content: newMessage.content,
+        created_at: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<Message[]>(['messages', selectedUser.id], (old = []) => [
+        ...old,
+        optimisticMessage,
+      ]);
+
+      return { previousMessages };
+    },
+    onSuccess: (newMessage, variables, context) => {
+      // Replace the optimistic message with the real one
       queryClient.invalidateQueries({ queryKey: ['messages', selectedUser?.id] });
       reset();
       console.log('✅ Message sent successfully:', newMessage);
     },
-    onError: (error: AxiosError | Error) => {
+    onError: (error: AxiosError | Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['messages', selectedUser?.id], context.previousMessages);
+      }
+      
       console.error('❌ Error sending message:', error);
       if (error instanceof AxiosError && error.response?.status === 401) {
         toast.error('Session expired. Please login again.');
@@ -88,11 +151,29 @@ export default function MessagesPage() {
 
   const deleteMessageMutation = useMutation({
     mutationFn: (messageId: string) => messageService.deleteMessage(messageId),
+    onMutate: async (messageId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['messages', selectedUser?.id] });
+
+      // Snapshot the previous value
+      const previousMessages = queryClient.getQueryData<Message[]>(['messages', selectedUser?.id]);
+
+      // Optimistically remove the message
+      queryClient.setQueryData<Message[]>(['messages', selectedUser?.id], (old = []) =>
+        old.filter(msg => msg.id !== messageId)
+      );
+
+      return { previousMessages };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', selectedUser?.id] });
       toast.success('Message deleted successfully');
     },
-    onError: (error: AxiosError | Error) => {
+    onError: (error: AxiosError | Error, variables, context) => {
+      // Rollback on error
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['messages', selectedUser?.id], context.previousMessages);
+      }
+      
       console.error('❌ Error deleting message:', error);
       if (error instanceof AxiosError && error.response?.status === 401) {
         toast.error('Session expired. Please login again.');
@@ -116,6 +197,14 @@ export default function MessagesPage() {
       receiver_email: selectedUser.email,
       receiver_role: selectedUser.role 
     });
+  };
+
+  // ✅ Force refresh function
+  const refreshMessages = () => {
+    if (selectedUser) {
+      queryClient.invalidateQueries({ queryKey: ['messages', selectedUser.id] });
+    }
+    queryClient.invalidateQueries({ queryKey: ['chatUsers'] });
   };
 
   // Get unique roles from users
@@ -147,6 +236,20 @@ export default function MessagesPage() {
       {/* Messages List - Hidden on mobile when chat is open */}
       <div className={`${selectedUser ? 'hidden md:block' : 'block'} w-full md:w-80 border-r border-gray-200 bg-white`}>
         <div className="p-4 space-y-4">
+          {/* ✅ Added refresh button */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+            <button
+              onClick={refreshMessages}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              title="Refresh messages"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+          
           <div className="relative">
             <input
               type="text"
@@ -177,9 +280,15 @@ export default function MessagesPage() {
               ))}
             </div>
           </div>
+
+          {/* ✅ Real-time indicator */}
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className={`w-2 h-2 rounded-full ${isWindowFocused ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+            <span>{isWindowFocused ? 'Live updates active' : 'Updates paused'}</span>
+          </div>
         </div>
 
-        <div className="overflow-y-auto h-[calc(100vh-12rem)]">
+        <div className="overflow-y-auto h-[calc(100vh-16rem)]">
           {isLoadingUsers ? (
             <div className="flex justify-center p-4">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
@@ -238,7 +347,7 @@ export default function MessagesPage() {
                 >
                   <ArrowLeftIcon className="h-6 w-6 text-gray-500" />
                 </button>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
                     <span className="text-white font-medium text-sm">
                       {selectedUser.name.charAt(0).toUpperCase()}
@@ -248,6 +357,23 @@ export default function MessagesPage() {
                     <h2 className="text-lg font-medium text-gray-900">{selectedUser.name}</h2>
                     <p className="text-sm text-gray-500">{selectedUser.email}</p>
                   </div>
+                </div>
+                
+                {/* ✅ Chat-specific refresh and status */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span>Auto-refresh: 3s</span>
+                  </div>
+                  <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['messages', selectedUser.id] })}
+                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                    title="Refresh chat"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -267,70 +393,76 @@ export default function MessagesPage() {
                   <p className="text-sm">Start a conversation with {selectedUser.name}!</p>
                 </div>
               ) : (
-                messages.map((message) => {
-                  // ✅ FIXED: Proper message identification logic
-                  const isMyMessage = currentUser && message.sender === currentUser.id;
-                  
-                  console.log(`📨 Message ${message.id}:`, {
-                    sender: message.sender,
-                    currentUserId: currentUser?.id,
-                    selectedUserId: selectedUser.id,
-                    isMyMessage
-                  });
+                <>
+                  {messages.map((message) => {
+                    // ✅ FIXED: Proper message identification logic
+                    const isMyMessage = currentUser && message.sender === currentUser.id;
+                    const isOptimistic = message.id.startsWith('temp-');
+                    
+                    console.log(`📨 Message ${message.id}:`, {
+                      sender: message.sender,
+                      currentUserId: currentUser?.id,
+                      selectedUserId: selectedUser.id,
+                      isMyMessage,
+                      isOptimistic
+                    });
 
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        isMyMessage ? 'justify-end' : 'justify-start'
-                      } animate-fade-in`}
-                    >
-                      <div className={`flex items-end gap-2 max-w-[70%] ${
-                        isMyMessage ? 'flex-row-reverse' : 'flex-row'
-                      }`}>
-                        {/* Avatar for other person's messages */}
-                        {!isMyMessage && (
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-gray-400 to-gray-600 flex items-center justify-center flex-shrink-0">
-                            <span className="text-white text-xs font-medium">
-                              {selectedUser.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                        
-                        <div
-                          className={`rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 hover:shadow-md ${
-                            isMyMessage
-                              ? 'bg-blue-600 text-white rounded-br-md'
-                              : 'bg-white text-gray-900 border border-gray-200 rounded-bl-md'
-                          }`}
-                        >
-                          <p className="text-sm leading-relaxed break-words">{message.content}</p>
-                          <div className={`flex items-center justify-between mt-2 ${
-                            isMyMessage ? 'flex-row-reverse' : 'flex-row'
-                          }`}>
-                            <p className={`text-xs ${
-                              isMyMessage ? 'text-blue-100' : 'text-gray-500'
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${
+                          isMyMessage ? 'justify-end' : 'justify-start'
+                        } animate-fade-in`}
+                      >
+                        <div className={`flex items-end gap-2 max-w-[70%] ${
+                          isMyMessage ? 'flex-row-reverse' : 'flex-row'
+                        }`}>
+                          {/* Avatar for other person's messages */}
+                          {!isMyMessage && (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-gray-400 to-gray-600 flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-xs font-medium">
+                                {selectedUser.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div
+                            className={`rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 hover:shadow-md ${
+                              isMyMessage
+                                ? `${isOptimistic ? 'bg-blue-400 opacity-70' : 'bg-blue-600'} text-white rounded-br-md`
+                                : 'bg-white text-gray-900 border border-gray-200 rounded-bl-md'
+                            }`}
+                          >
+                            <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                            <div className={`flex items-center justify-between mt-2 ${
+                              isMyMessage ? 'flex-row-reverse' : 'flex-row'
                             }`}>
-                              {new Date(message.created_at).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                            {isMyMessage && (
-                              <button
-                                onClick={() => deleteMessageMutation.mutate(message.id)}
-                                className="ml-2 text-blue-200 hover:text-red-300 transition-colors"
-                                title="Delete message"
-                              >
-                                <TrashIcon className="h-4 w-4" />
-                              </button>
-                            )}
+                              <p className={`text-xs ${
+                                isMyMessage ? 'text-blue-100' : 'text-gray-500'
+                              }`}>
+                                {isOptimistic ? 'Sending...' : new Date(message.created_at).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                              {isMyMessage && !isOptimistic && (
+                                <button
+                                  onClick={() => deleteMessageMutation.mutate(message.id)}
+                                  className="ml-2 text-blue-200 hover:text-red-300 transition-colors"
+                                  title="Delete message"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                  {/* ✅ Auto-scroll anchor */}
+                  <div ref={messagesEndRef} />
+                </>
               )}
             </div>
 
@@ -343,6 +475,7 @@ export default function MessagesPage() {
                     {...register('content', { required: 'Message is required' })}
                     placeholder={`Type a message to ${selectedUser.name}...`}
                     className="w-full rounded-full border border-gray-300 px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm"
+                    disabled={sendMessageMutation.isPending}
                   />
                   {errors.content && (
                     <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
