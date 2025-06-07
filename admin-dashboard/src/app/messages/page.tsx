@@ -125,13 +125,13 @@ export default function MessagesPage() {
 
       return { previousMessages };
     },
-    onSuccess: (newMessage, _variables, _context) => {
+    onSuccess: (newMessage) => {
       // Replace the optimistic message with the real one
       queryClient.invalidateQueries({ queryKey: ['messages', selectedUser?.id] });
       reset();
       console.log('✅ Message sent successfully:', newMessage);
     },
-    onError: (error: AxiosError | Error, _variables, context) => {
+    onError: (error: AxiosError | Error, _, context) => {
       // Rollback on error
       if (context?.previousMessages) {
         queryClient.setQueryData(['messages', selectedUser?.id], context.previousMessages);
@@ -168,7 +168,7 @@ export default function MessagesPage() {
     onSuccess: () => {
       toast.success('Message deleted successfully');
     },
-    onError: (error: AxiosError | Error, _variables, context) => {
+    onError: (error: AxiosError | Error, _, context) => {
       // Rollback on error
       if (context?.previousMessages) {
         queryClient.setQueryData(['messages', selectedUser?.id], context.previousMessages);
@@ -509,4 +509,4 @@ export default function MessagesPage() {
       </div>
     </div>
   );
-} 
+}
