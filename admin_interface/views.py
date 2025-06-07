@@ -1499,80 +1499,101 @@ class MessageViewSet(viewsets.ModelViewSet):
         import logging
         logger = logging.getLogger(__name__)
         
-        # First try to find existing User
+        # First try to find existing User by ID
         try:
             user = User.objects.get(id=target_id)
             logger.error(f"✅ Found existing User with ID: {target_id}")
             return user
         except User.DoesNotExist:
-            logger.error(f"❌ No User found with ID: {target_id}, attempting to create...")
+            logger.error(f"❌ No User found with ID: {target_id}")
+        
+        # Try to find in Teacher or Parent models
+        teacher = None
+        parent = None
+        
+        try:
+            teacher = Teacher.objects.get(id=target_id)
+            logger.error(f"✅ Found Teacher with ID: {target_id}")
+        except Teacher.DoesNotExist:
+            pass
             
-            # Try to find in Teacher or Parent models
-            teacher = None
-            parent = None
-            
+        try:
+            parent = Parent.objects.get(id=target_id)
+            logger.error(f"✅ Found Parent with ID: {target_id}")
+        except Parent.DoesNotExist:
+            pass
+        
+        # If we found a Teacher or Parent, check if User with same email already exists
+        source_record = teacher or parent
+        if source_record:
+            # Check if User with this email already exists
             try:
-                teacher = Teacher.objects.get(id=target_id)
-                logger.error(f"✅ Found Teacher with ID: {target_id}")
-            except Teacher.DoesNotExist:
-                pass
+                existing_user = User.objects.get(email=source_record.email)
+                logger.error(f"✅ Found existing User with email {source_record.email}: {existing_user.id}")
                 
-            try:
-                parent = Parent.objects.get(id=target_id)
-                logger.error(f"✅ Found Parent with ID: {target_id}")
-            except Parent.DoesNotExist:
-                pass
+                # If the existing user has different ID, we need to return the existing user
+                # This handles the case where Teacher/Parent ID != User ID but same email
+                if str(existing_user.id) != str(target_id):
+                    logger.error(f"⚠️ User ID mismatch: Teacher/Parent ID: {target_id}, User ID: {existing_user.id}")
+                    # Return the existing user - messaging will work with their actual User ID
+                    return existing_user
+                else:
+                    # This shouldn't happen since we already checked by ID above, but just in case
+                    return existing_user
+                    
+            except User.DoesNotExist:
+                # No User with this email exists, safe to create one
+                logger.error(f"✅ No User found with email {source_record.email}, creating new one...")
                 
-            # Create User based on what we found
-            if teacher:
-                try:
-                    # Create User record for teacher using the ORM properly
-                    user = User(
-                        id=target_id,  # Use the same ID
-                        email=teacher.email,
-                        first_name=teacher.name,
-                        role=Role.TEACHER,
-                        school=teacher.school,
-                        is_active=True
-                    )
-                    user.set_password(User.objects.make_random_password())
-                    user.save()
-                    
-                    logger.error(f"✅ Created User for Teacher with ID: {target_id}")
-                    return user
-                except Exception as e:
-                    logger.error(f"❌ Failed to create User for Teacher: {str(e)}")
-                    raise serializers.ValidationError({
-                        "receiver": f"Could not create user account for teacher: {str(e)}"
-                    })
-                    
-            elif parent:
-                try:
-                    # Create User record for parent using the ORM properly
-                    user = User(
-                        id=target_id,  # Use the same ID
-                        email=parent.email,
-                        first_name=parent.name,
-                        role=Role.PARENT,
-                        school=parent.school,
-                        is_active=True
-                    )
-                    user.set_password(User.objects.make_random_password())
-                    user.save()
-                    
-                    logger.error(f"✅ Created User for Parent with ID: {target_id}")
-                    return user
-                except Exception as e:
-                    logger.error(f"❌ Failed to create User for Parent: {str(e)}")
-                    raise serializers.ValidationError({
-                        "receiver": f"Could not create user account for parent: {str(e)}"
-                    })
-            else:
-                # No Teacher or Parent found, this is an error
-                logger.error(f"❌ No Teacher or Parent found with ID: {target_id}")
-                raise serializers.ValidationError({
-                    "receiver": f"No user, teacher or parent found with ID {target_id}"
-                })
+                if teacher:
+                    try:
+                        # Create User record for teacher using the ORM properly
+                        user = User(
+                            id=target_id,  # Use the same ID
+                            email=teacher.email,
+                            first_name=teacher.name,
+                            role=Role.TEACHER,
+                            school=teacher.school,
+                            is_active=True
+                        )
+                        user.set_password(User.objects.make_random_password())
+                        user.save()
+                        
+                        logger.error(f"✅ Created User for Teacher with ID: {target_id}")
+                        return user
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create User for Teacher: {str(e)}")
+                        raise serializers.ValidationError({
+                            "receiver": f"Could not create user account for teacher: {str(e)}"
+                        })
+                        
+                elif parent:
+                    try:
+                        # Create User record for parent using the ORM properly
+                        user = User(
+                            id=target_id,  # Use the same ID
+                            email=parent.email,
+                            first_name=parent.name,
+                            role=Role.PARENT,
+                            school=parent.school,
+                            is_active=True
+                        )
+                        user.set_password(User.objects.make_random_password())
+                        user.save()
+                        
+                        logger.error(f"✅ Created User for Parent with ID: {target_id}")
+                        return user
+                    except Exception as e:
+                        logger.error(f"❌ Failed to create User for Parent: {str(e)}")
+                        raise serializers.ValidationError({
+                            "receiver": f"Could not create user account for parent: {str(e)}"
+                        })
+        
+        # No Teacher or Parent found, this is an error
+        logger.error(f"❌ No Teacher or Parent found with ID: {target_id}")
+        raise serializers.ValidationError({
+            "receiver": f"No user, teacher or parent found with ID {target_id}"
+        })
 
     def perform_create(self, serializer):
         """Create message with proper User lookup"""
@@ -1717,6 +1738,58 @@ class MessageViewSet(viewsets.ModelViewSet):
             return Response({
                 "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
+    def resolve_user_id(self, request):
+        """
+        Resolve the correct User ID for a Teacher or Parent ID
+        This helps frontend handle ID mismatches between Teacher/Parent and User records
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            target_id = request.data.get('target_id')
+            target_email = request.data.get('email')
+            target_role = request.data.get('role')
+            
+            if not target_id:
+                return Response(
+                    {"error": "target_id is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            logger.error(f"🔍 RESOLVING USER ID - Target: {target_id}, Email: {target_email}, Role: {target_role}")
+            
+            # Use our helper method to find or create the User
+            try:
+                user = self._ensure_user_exists(
+                    target_id=target_id,
+                    target_email=target_email,
+                    target_role=target_role
+                )
+                
+                return Response({
+                    "resolved_user_id": str(user.id),
+                    "email": user.email,
+                    "name": user.first_name,
+                    "role": user.role,
+                    "original_id": str(target_id),
+                    "id_match": str(user.id) == str(target_id)
+                })
+                
+            except serializers.ValidationError as e:
+                return Response(
+                    {"error": str(e.detail)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+        except Exception as e:
+            logger.error(f"❌ Error resolving user ID: {str(e)}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class TeacherParentAssociationViewSet(viewsets.ModelViewSet):
     queryset = TeacherParentAssociation.objects.all()

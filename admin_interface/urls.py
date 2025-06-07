@@ -71,6 +71,10 @@ urlpatterns = [
     path('teacher/schedule/', TeacherScheduleView.as_view(), name='teacher-schedule'),
 
     # Messages
+    path('messages/resolve_user_id/', MessageViewSet.as_view({
+        'post': 'resolve_user_id'
+    }), name='resolve-user-id'),
+    
     path('messages/chat/<uuid:user_id>/', MessageViewSet.as_view({
         'get': 'get_chat_history'
     }), name='chat-history'),
