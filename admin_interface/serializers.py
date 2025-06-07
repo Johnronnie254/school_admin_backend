@@ -350,9 +350,24 @@ class MessageSerializer(serializers.ModelSerializer):
     receiver_email = serializers.EmailField(write_only=True, required=False)
     receiver_role = serializers.CharField(write_only=True, required=False)
     
+    # ✅ Add sender and receiver details
+    sender_name = serializers.CharField(source='sender.first_name', read_only=True)
+    sender_role = serializers.CharField(source='sender.role', read_only=True)
+    sender_email = serializers.CharField(source='sender.email', read_only=True)
+    
+    receiver_name = serializers.CharField(source='receiver.first_name', read_only=True)
+    receiver_role_actual = serializers.CharField(source='receiver.role', read_only=True)
+    receiver_email_actual = serializers.CharField(source='receiver.email', read_only=True)
+
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'receiver', 'teacher', 'parent', 'content', 'is_read', 'school', 'created_at', 'receiver_email', 'receiver_role']
+        fields = [
+            'id', 'sender', 'receiver', 'teacher', 'parent', 'content', 'is_read', 
+            'school', 'created_at', 'receiver_email', 'receiver_role',
+            # ✅ New fields for sender/receiver details
+            'sender_name', 'sender_role', 'sender_email',
+            'receiver_name', 'receiver_role_actual', 'receiver_email_actual'
+        ]
         read_only_fields = ['sender', 'created_at']
         
     def create(self, validated_data):
