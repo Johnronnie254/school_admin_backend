@@ -43,6 +43,27 @@ export default function MessagesPage() {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<MessageFormData>();
 
+  // ✅ Chat users with auto-refresh
+  const { data: chatUsers = [], isLoading: isLoadingUsers } = useQuery<ChatUser[]>({
+    queryKey: ['chatUsers'],
+    queryFn: messageService.getChatUsers,
+    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+  });
+
+  // ✅ Messages with smart polling - more frequent when chat is active
+  const { data: messages = [], isLoading: isLoadingMessages } = useQuery<Message[]>({
+    queryKey: ['messages', selectedUser?.id],
+    queryFn: () => selectedUser ? messageService.getMessages(selectedUser.id) : Promise.resolve([]),
+    enabled: !!selectedUser,
+    refetchInterval: selectedUser && isWindowFocused ? 3000 : 10000, // 3s when active, 10s when not
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    // ✅ Use placeholderData instead of keepPreviousData
+    placeholderData: [],
+  });
+
   // ✅ Window focus tracking for smart polling
   useEffect(() => {
     const handleFocus = () => setIsWindowFocused(true);
@@ -76,27 +97,6 @@ export default function MessagesPage() {
     getUserInfo();
   }, []);
 
-  // ✅ Chat users with auto-refresh
-  const { data: chatUsers = [], isLoading: isLoadingUsers } = useQuery<ChatUser[]>({
-    queryKey: ['chatUsers'],
-    queryFn: messageService.getChatUsers,
-    refetchInterval: 30000, // Refresh every 30 seconds
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-  });
-
-  // ✅ Messages with smart polling - more frequent when chat is active
-  const { data: messages = [], isLoading: isLoadingMessages } = useQuery<Message[]>({
-    queryKey: ['messages', selectedUser?.id],
-    queryFn: () => selectedUser ? messageService.getMessages(selectedUser.id) : Promise.resolve([]),
-    enabled: !!selectedUser,
-    refetchInterval: selectedUser && isWindowFocused ? 3000 : 10000, // 3s when active, 10s when not
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    // Keep previous data to prevent flickering
-    keepPreviousData: true,
-  });
-
   // ✅ Optimistic message sending
   const sendMessageMutation = useMutation({
     mutationFn: (data: MessageFormData) => messageService.sendMessage(data),
@@ -125,13 +125,13 @@ export default function MessagesPage() {
 
       return { previousMessages };
     },
-    onSuccess: (newMessage, variables, context) => {
+    onSuccess: (newMessage, _variables, _context) => {
       // Replace the optimistic message with the real one
       queryClient.invalidateQueries({ queryKey: ['messages', selectedUser?.id] });
       reset();
       console.log('✅ Message sent successfully:', newMessage);
     },
-    onError: (error: AxiosError | Error, variables, context) => {
+    onError: (error: AxiosError | Error, _variables, context) => {
       // Rollback on error
       if (context?.previousMessages) {
         queryClient.setQueryData(['messages', selectedUser?.id], context.previousMessages);
@@ -168,7 +168,7 @@ export default function MessagesPage() {
     onSuccess: () => {
       toast.success('Message deleted successfully');
     },
-    onError: (error: AxiosError | Error, variables, context) => {
+    onError: (error: AxiosError | Error, _variables, context) => {
       // Rollback on error
       if (context?.previousMessages) {
         queryClient.setQueryData(['messages', selectedUser?.id], context.previousMessages);
@@ -394,7 +394,7 @@ export default function MessagesPage() {
                 </div>
               ) : (
                 <>
-                  {messages.map((message) => {
+                  {messages.map((message: Message) => {
                     // ✅ FIXED: Proper message identification logic
                     const isMyMessage = currentUser && message.sender === currentUser.id;
                     const isOptimistic = message.id.startsWith('temp-');
