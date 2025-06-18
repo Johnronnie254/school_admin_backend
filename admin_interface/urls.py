@@ -14,7 +14,7 @@ from .views import (
     TeacherExamViewSet, PasswordResetRequestView,
     PasswordResetConfirmView, TeacherParentAssociationViewSet,
     SchoolViewSet, ParentViewSet, SchoolEventViewSet, SuperUserViewSet,
-    CurrentSchoolView
+    CurrentSchoolView, DirectMessagingView
 )
 
 router = DefaultRouter()
@@ -69,6 +69,10 @@ urlpatterns = [
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),
     path('teacher/profile_pic/', TeacherProfilePicView.as_view(), name='teacher-profile-pic'),
     path('teacher/schedule/', TeacherScheduleView.as_view(), name='teacher-schedule'),
+
+    # Direct Messaging (Simplified)
+    path('messaging/contacts/', DirectMessagingView.as_view(), name='messaging-contacts'),
+    path('messaging/send/', DirectMessagingView.as_view(), name='send-direct-message'),
 
     # Messages
     path('messages/resolve_user_id/', MessageViewSet.as_view({

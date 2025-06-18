@@ -384,6 +384,25 @@ class TeacherViewSet(viewsets.ModelViewSet):
         else:
             raise serializers.ValidationError({"error": "You can only create a teacher profile with your own email address"})
 
+    @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
+    def available_parents(self, request):
+        """Get all parents in the school that the teacher can message"""
+        user = request.user
+        if not user.school:
+            return Response({"error": "Teacher must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get all parents in the same school
+        parents = User.objects.filter(
+            school=user.school,
+            role=Role.PARENT,
+            is_active=True
+        ).values('id', 'first_name', 'email')
+        
+        return Response({
+            'parents': list(parents),
+            'count': len(parents)
+        })
+
     @action(detail=False, methods=['post'])
     def bulk_upload(self, request):
         file = request.FILES.get('file')
@@ -877,33 +896,42 @@ class ParentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['put'], permission_classes=[IsParent])
     def update_contact_info(self, request, pk=None):
-        """Update contact information"""
-        try:
-            parent = self.get_object()
-            phone = request.data.get('phone_number')
-            email = request.data.get('email')
-            
-            if phone:
-                parent.phone_number = phone
-            if email:
-                parent.email = email
-            parent.save()
-            
-            # Also update the User record if it exists
-            try:
-                user = User.objects.get(email=parent.email, role=Role.PARENT)
-                if email:
-                    user.email = email
-                user.save()
-            except User.DoesNotExist:
-                pass
-            
-            return Response({
-                'message': 'Contact information updated successfully',
-                'parent': ParentSerializer(parent).data
-            })
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        """Update parent contact information"""
+        parent = self.get_object()
+        
+        # Check if the parent belongs to the authenticated user
+        if parent.id != request.user.id:
+            return Response(
+                {"detail": "You can only update your own contact information."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Update only specific fields
+        allowed_fields = ['phone_number', 'email']
+        for field in allowed_fields:
+            if field in request.data:
+                setattr(parent, field, request.data[field])
+        
+        parent.save()
+        serializer = self.get_serializer(parent)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsParent])
+    def available_teachers(self, request):
+        """Get all teachers in the school that the parent can message"""
+        user = request.user
+        if not user.school:
+            return Response({"error": "Parent must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get all teachers in the same school
+        teachers = Teacher.objects.filter(
+            school=user.school
+        ).values('id', 'name', 'email', 'subjects', 'class_assigned')
+        
+        return Response({
+            'teachers': list(teachers),
+            'count': len(teachers)
+        })
 
     def create(self, request, *args, **kwargs):
         """Override create to set the school automatically"""
@@ -2412,16 +2440,293 @@ class CurrentSchoolView(APIView):
     """Get current school information for logged-in user"""
     permission_classes = [IsAuthenticated]
     serializer_class = SchoolSerializer
+
+    def get(self, request):
+        """Get current school information"""
+        user = request.user
+        if user.school:
+            serializer = self.serializer_class(user.school)
+            return Response(serializer.data)
+        return Response({"error": "User is not associated with any school"}, status=status.HTTP_404_NOT_FOUND)
+
+class DirectMessagingView(APIView):
+    """Simplified messaging view for direct communication between teachers and parents"""
+    permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        """Get school info for the current user"""
-        # Get the user's school
-        school = request.user.school
-        if not school:
-            return Response(
-                {"error": "No school associated with this user"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        """Get available contacts for messaging based on user role"""
+        user = request.user
         
-        serializer = self.serializer_class(school)
-        return Response(serializer.data)
+        if not user.school:
+            return Response({"error": "User must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        contacts = []
+        
+        if user.role == Role.TEACHER:
+            # Teachers can message all parents in their school
+            parents = User.objects.filter(
+                school=user.school,
+                role=Role.PARENT,
+                is_active=True
+            ).values('id', 'first_name', 'email')
+            
+            contacts = [{
+                'id': parent['id'],
+                'name': parent['first_name'],
+                'email': parent['email'],
+                'role': 'parent'
+            } for parent in parents]
+            
+        elif user.role == Role.PARENT:
+            # Parents can message all teachers in their school
+            teachers = Teacher.objects.filter(
+                school=user.school
+            ).values('id', 'name', 'email', 'subjects', 'class_assigned')
+            
+            contacts = [{
+                'id': teacher['id'],
+                'name': teacher['name'],
+                'email': teacher['email'],
+                'role': 'teacher',
+                'subjects': teacher['subjects'],
+                'class_assigned': teacher['class_assigned']
+            } for teacher in teachers]
+            
+        elif user.role == Role.ADMIN:
+            # Admins can message everyone in their school
+            parents = User.objects.filter(
+                school=user.school,
+                role=Role.PARENT,
+                is_active=True
+            ).values('id', 'first_name', 'email')
+            
+            teachers = Teacher.objects.filter(
+                school=user.school
+            ).values('id', 'name', 'email', 'subjects', 'class_assigned')
+            
+            parent_contacts = [{
+                'id': parent['id'],
+                'name': parent['first_name'],
+                'email': parent['email'],
+                'role': 'parent'
+            } for parent in parents]
+            
+            teacher_contacts = [{
+                'id': teacher['id'],
+                'name': teacher['name'],
+                'email': teacher['email'],
+                'role': 'teacher',
+                'subjects': teacher['subjects'],
+                'class_assigned': teacher['class_assigned']
+            } for teacher in teachers]
+            
+            contacts = parent_contacts + teacher_contacts
+        
+        return Response({
+            'contacts': contacts,
+            'count': len(contacts),
+            'user_role': user.role
+        })
+    
+    def post(self, request):
+        """Send a direct message to any contact in the school"""
+        user = request.user
+        
+        if not user.school:
+            return Response({"error": "User must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        receiver_id = request.data.get('receiver_id')
+        content = request.data.get('content')
+        
+        if not receiver_id or not content:
+            return Response({"error": "receiver_id and content are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Try to find the receiver as a User first
+            try:
+                receiver_user = User.objects.get(id=receiver_id, school=user.school)
+                receiver = receiver_user
+            except User.DoesNotExist:
+                # If not found as User, try as Teacher
+                try:
+                    teacher = Teacher.objects.get(id=receiver_id, school=user.school)
+                    # Create or get corresponding User record
+                    receiver, created = User.objects.get_or_create(
+                        email=teacher.email,
+                        defaults={
+                            'id': teacher.id,
+                            'first_name': teacher.name,
+                            'role': Role.TEACHER,
+                            'school': teacher.school,
+                            'is_active': True
+                        }
+                    )
+                    if created:
+                        receiver.set_password(User.objects.make_random_password())
+                        receiver.save()
+                except Teacher.DoesNotExist:
+                    return Response({"error": "Receiver not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Verify both users are in the same school
+            if receiver.school != user.school:
+                return Response({"error": "You can only message users in your school"}, status=status.HTTP_403_FORBIDDEN)
+            
+            # Create the message
+            message = Message.objects.create(
+                sender=user,
+                receiver=receiver,
+                content=content,
+                school=user.school
+            )
+            
+            return Response({
+                'message': 'Message sent successfully',
+                'message_id': message.id,
+                'sent_to': receiver.first_name,
+                'content': content,
+                'created_at': message.created_at
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class DirectMessagingView(APIView):
+    """Simplified messaging view for direct communication between teachers and parents"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get available contacts for messaging based on user role"""
+        user = request.user
+        
+        if not user.school:
+            return Response({"error": "User must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        contacts = []
+        
+        if user.role == Role.TEACHER:
+            # Teachers can message all parents in their school
+            parents = User.objects.filter(
+                school=user.school,
+                role=Role.PARENT,
+                is_active=True
+            ).values('id', 'first_name', 'email')
+            
+            contacts = [{
+                'id': parent['id'],
+                'name': parent['first_name'],
+                'email': parent['email'],
+                'role': 'parent'
+            } for parent in parents]
+            
+        elif user.role == Role.PARENT:
+            # Parents can message all teachers in their school
+            teachers = Teacher.objects.filter(
+                school=user.school
+            ).values('id', 'name', 'email', 'subjects', 'class_assigned')
+            
+            contacts = [{
+                'id': teacher['id'],
+                'name': teacher['name'],
+                'email': teacher['email'],
+                'role': 'teacher',
+                'subjects': teacher['subjects'],
+                'class_assigned': teacher['class_assigned']
+            } for teacher in teachers]
+            
+        elif user.role == Role.ADMIN:
+            # Admins can message everyone in their school
+            parents = User.objects.filter(
+                school=user.school,
+                role=Role.PARENT,
+                is_active=True
+            ).values('id', 'first_name', 'email')
+            
+            teachers = Teacher.objects.filter(
+                school=user.school
+            ).values('id', 'name', 'email', 'subjects', 'class_assigned')
+            
+            parent_contacts = [{
+                'id': parent['id'],
+                'name': parent['first_name'],
+                'email': parent['email'],
+                'role': 'parent'
+            } for parent in parents]
+            
+            teacher_contacts = [{
+                'id': teacher['id'],
+                'name': teacher['name'],
+                'email': teacher['email'],
+                'role': 'teacher',
+                'subjects': teacher['subjects'],
+                'class_assigned': teacher['class_assigned']
+            } for teacher in teachers]
+            
+            contacts = parent_contacts + teacher_contacts
+        
+        return Response({
+            'contacts': contacts,
+            'count': len(contacts),
+            'user_role': user.role
+        })
+    
+    def post(self, request):
+        """Send a direct message to any contact in the school"""
+        user = request.user
+        
+        if not user.school:
+            return Response({"error": "User must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        receiver_id = request.data.get('receiver_id')
+        content = request.data.get('content')
+        
+        if not receiver_id or not content:
+            return Response({"error": "receiver_id and content are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Try to find the receiver as a User first
+            try:
+                receiver_user = User.objects.get(id=receiver_id, school=user.school)
+                receiver = receiver_user
+            except User.DoesNotExist:
+                # If not found as User, try as Teacher
+                try:
+                    teacher = Teacher.objects.get(id=receiver_id, school=user.school)
+                    # Create or get corresponding User record
+                    receiver, created = User.objects.get_or_create(
+                        email=teacher.email,
+                        defaults={
+                            'id': teacher.id,
+                            'first_name': teacher.name,
+                            'role': Role.TEACHER,
+                            'school': teacher.school,
+                            'is_active': True
+                        }
+                    )
+                    if created:
+                        receiver.set_password(User.objects.make_random_password())
+                        receiver.save()
+                except Teacher.DoesNotExist:
+                    return Response({"error": "Receiver not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Verify both users are in the same school
+            if receiver.school != user.school:
+                return Response({"error": "You can only message users in your school"}, status=status.HTTP_403_FORBIDDEN)
+            
+            # Create the message
+            message = Message.objects.create(
+                sender=user,
+                receiver=receiver,
+                content=content,
+                school=user.school
+            )
+            
+            return Response({
+                'message': 'Message sent successfully',
+                'message_id': message.id,
+                'sent_to': receiver.first_name,
+                'content': content,
+                'created_at': message.created_at
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
