@@ -121,9 +121,16 @@ class LoginSerializer(serializers.Serializer):
 
 class TeacherSerializer(serializers.ModelSerializer):
     """Serializer for Teachers"""
+    password = serializers.CharField(write_only=True, required=False)
+    password_confirmation = serializers.CharField(write_only=True, required=False)
+    
     class Meta:
         model = Teacher
         fields = '__all__'
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'password_confirmation': {'write_only': True}
+        }
 
     def validate_email(self, value):
         """Ensure email is unique"""
@@ -131,9 +138,26 @@ class TeacherSerializer(serializers.ModelSerializer):
         if Teacher.objects.filter(email=value).exclude(id=instance.id if instance else None).exists():
             raise serializers.ValidationError("A teacher with this email already exists.")
         return value
+
+    def validate(self, data):
+        """Validate password confirmation if passwords are provided"""
+        password = data.get('password')
+        password_confirmation = data.get('password_confirmation')
+        
+        if password and password_confirmation:
+            if password != password_confirmation:
+                raise serializers.ValidationError({
+                    "password": "Password fields didn't match."
+                })
+        
+        return data
         
     def create(self, validated_data):
         """Override create to ensure a User record is created with the same UUID"""
+        # Extract password fields
+        password = validated_data.pop('password', None)
+        validated_data.pop('password_confirmation', None)
+        
         # First create the Teacher record
         email = validated_data.get('email')
         name = validated_data.get('name')
@@ -144,14 +168,21 @@ class TeacherSerializer(serializers.ModelSerializer):
             user = User.objects.get(email=email)
             # If user exists, use their UUID for the teacher
             teacher_id = user.id
+            
+            # Update the user's password if provided
+            if password:
+                user.set_password(password)
+                user.save()
+                
         except User.DoesNotExist:
             # Generate UUID for both Teacher and User
             teacher_id = uuid.uuid4()
             # Create User with same UUID
+            user_password = password if password else User.objects.make_random_password()
             user = User.objects.create_user(
                 id=teacher_id,
                 email=email,
-                password=User.objects.make_random_password(),
+                password=user_password,
                 role=Role.TEACHER,
                 first_name=name,
                 school=school
