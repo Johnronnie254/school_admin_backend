@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  HomeIcon, 
+import {
+  HomeIcon,
   UserGroupIcon,
   UsersIcon,
   DocumentTextIcon,
@@ -14,7 +14,8 @@ import {
   ShoppingBagIcon,
   CalendarIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Teachers', href: '/teachers', icon: UserGroupIcon },
   { name: 'Students', href: '/students', icon: UsersIcon },
   { name: 'Parents', href: '/parents', icon: UsersIcon },
+  { name: 'Classes', href: '/classes', icon:  AcademicCapIcon },
   { name: 'Exam Results', href: '/exam-results', icon: DocumentTextIcon },
   // { name: 'School Fees', href: '/school-fees', icon: CurrencyDollarIcon },
   { name: 'Notifications', href: '/notifications', icon: BellIcon },
