@@ -386,22 +386,56 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
     def available_parents(self, request):
-        """Get all parents in the school that the teacher can message"""
+        """Get parents of students in teacher's assigned class"""
         user = request.user
         if not user.school:
             return Response({"error": "Teacher must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Get all parents in the same school
-        parents = User.objects.filter(
-            school=user.school,
-            role=Role.PARENT,
-            is_active=True
-        ).values('id', 'first_name', 'email')
-        
-        return Response({
-            'parents': list(parents),
-            'count': len(parents)
-        })
+        try:
+            teacher = Teacher.objects.get(email=user.email)
+            
+            if not teacher.class_assigned:
+                return Response(
+                    {"error": "Teacher is not assigned to any class"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get students in the teacher's assigned class
+            students_in_class = Student.objects.filter(
+                class_assigned=teacher.class_assigned,
+                school=teacher.school,
+                parent__isnull=False
+            ).select_related('parent')
+            
+            # Get unique parents from these students
+            parent_data = {}
+            for student in students_in_class:
+                if student.parent:
+                    parent_id = str(student.parent.id)
+                    if parent_id not in parent_data:
+                        parent_data[parent_id] = {
+                            'id': parent_id,
+                            'first_name': student.parent.first_name,
+                            'email': student.parent.email,
+                            'children': []
+                        }
+                    parent_data[parent_id]['children'].append({
+                        'id': str(student.id),
+                        'name': student.name,
+                        'grade': student.grade
+                    })
+            
+            return Response({
+                'parents': list(parent_data.values()),
+                'count': len(parent_data),
+                'class_name': teacher.class_assigned
+            })
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {"error": "Teacher profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     @action(detail=False, methods=['post'])
     def bulk_upload(self, request):
@@ -918,20 +952,64 @@ class ParentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsParent])
     def available_teachers(self, request):
-        """Get all teachers in the school that the parent can message"""
+        """Get teachers of classes where parent's children are enrolled"""
         user = request.user
         if not user.school:
             return Response({"error": "Parent must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Get all teachers in the same school
-        teachers = Teacher.objects.filter(
-            school=user.school
-        ).values('id', 'name', 'email', 'subjects', 'class_assigned')
-        
-        return Response({
-            'teachers': list(teachers),
-            'count': len(teachers)
-        })
+        try:
+            # Get children of this parent
+            children = Student.objects.filter(parent=user).select_related('school')
+            
+            if not children.exists():
+                return Response({
+                    'teachers': [],
+                    'count': 0,
+                    'message': 'No children found for this parent'
+                })
+            
+            # Get unique classes of the children
+            child_classes = set()
+            child_data = {}
+            for child in children:
+                if child.class_assigned:
+                    child_classes.add(child.class_assigned)
+                    if child.class_assigned not in child_data:
+                        child_data[child.class_assigned] = []
+                    child_data[child.class_assigned].append({
+                        'id': str(child.id),
+                        'name': child.name,
+                        'grade': child.grade
+                    })
+            
+            # Get teachers assigned to these classes
+            teachers_data = []
+            teachers_in_classes = Teacher.objects.filter(
+                class_assigned__in=child_classes,
+                school=user.school
+            )
+            
+            for teacher in teachers_in_classes:
+                teachers_data.append({
+                    'id': str(teacher.id),
+                    'name': teacher.name,
+                    'email': teacher.email,
+                    'subjects': teacher.subjects if teacher.subjects else [],
+                    'class_assigned': teacher.class_assigned,
+                    'children_in_class': child_data.get(teacher.class_assigned, [])
+                })
+            
+            return Response({
+                'teachers': teachers_data,
+                'count': len(teachers_data),
+                'children_classes': list(child_classes)
+            })
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Error fetching available teachers: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def create(self, request, *args, **kwargs):
         """Override create to set the school automatically"""
@@ -1766,6 +1844,162 @@ class MessageViewSet(viewsets.ModelViewSet):
             return Response({
                 "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'])
+    def filtered_chat_contacts(self, request):
+        """Get chat contacts filtered by class assignments"""
+        try:
+            user = request.user
+            contacts = []
+
+            if user.role == Role.TEACHER:
+                # Teacher sees parents of students in their assigned class
+                try:
+                    teacher = Teacher.objects.get(email=user.email)
+                    
+                    if not teacher.class_assigned:
+                        return Response(
+                            {"error": "Teacher is not assigned to any class"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    
+                    # Get students in the teacher's assigned class
+                    students_in_class = Student.objects.filter(
+                        class_assigned=teacher.class_assigned,
+                        school=teacher.school,
+                        parent__isnull=False  # Only students with parents
+                    ).select_related('parent')
+                    
+                    # Extract unique parents from these students
+                    seen_parents = set()
+                    for student in students_in_class:
+                        parent_user = student.parent
+                        if parent_user and parent_user.id not in seen_parents:
+                            try:
+                                # Try to get the actual Parent model record
+                                parent_record = Parent.objects.get(email=parent_user.email)
+                                contacts.append({
+                                    'id': str(parent_record.id),
+                                    'name': parent_record.name,
+                                    'email': parent_record.email,
+                                    'role': 'parent',
+                                    'class_name': teacher.class_assigned,
+                                    'children_in_class': [
+                                        {
+                                            'student_id': str(s.id),
+                                            'student_name': s.name,
+                                            'student_grade': s.grade
+                                        }
+                                        for s in students_in_class if s.parent_id == parent_user.id
+                                    ]
+                                })
+                                seen_parents.add(parent_user.id)
+                            except Parent.DoesNotExist:
+                                # Fallback to User record
+                                contacts.append({
+                                    'id': str(parent_user.id),
+                                    'name': parent_user.first_name,
+                                    'email': parent_user.email,
+                                    'role': 'parent',
+                                    'class_name': teacher.class_assigned,
+                                    'children_in_class': [
+                                        {
+                                            'student_id': str(s.id),
+                                            'student_name': s.name,
+                                            'student_grade': s.grade
+                                        }
+                                        for s in students_in_class if s.parent_id == parent_user.id
+                                    ]
+                                })
+                                seen_parents.add(parent_user.id)
+                    
+                except Teacher.DoesNotExist:
+                    return Response(
+                        {"error": "Teacher profile not found"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+            elif user.role == Role.PARENT:
+                # Parent sees teachers of classes their children are in
+                try:
+                    # Get children of this parent
+                    children = Student.objects.filter(parent=user).select_related('school')
+                    
+                    if not children.exists():
+                        return Response({'contacts': []}, status=status.HTTP_200_OK)
+                    
+                    # Get unique classes of the children
+                    child_classes = set()
+                    child_data = {}
+                    for child in children:
+                        if child.class_assigned:
+                            child_classes.add(child.class_assigned)
+                            if child.class_assigned not in child_data:
+                                child_data[child.class_assigned] = []
+                            child_data[child.class_assigned].append({
+                                'student_id': str(child.id),
+                                'student_name': child.name,
+                                'student_grade': child.grade
+                            })
+                    
+                    # Get teachers assigned to these classes
+                    seen_teachers = set()
+                    teachers_in_classes = Teacher.objects.filter(
+                        class_assigned__in=child_classes,
+                        school=user.school
+                    )
+                    
+                    for teacher in teachers_in_classes:
+                        if teacher.id not in seen_teachers:
+                            contacts.append({
+                                'id': str(teacher.id),
+                                'name': teacher.name,
+                                'email': teacher.email,
+                                'role': 'teacher',
+                                'class_name': teacher.class_assigned,
+                                'subjects': teacher.subjects if teacher.subjects else [],
+                                'children_in_class': child_data.get(teacher.class_assigned, [])
+                            })
+                            seen_teachers.add(teacher.id)
+                    
+                except Exception as e:
+                    return Response(
+                        {"error": f"Error fetching parent's children: {str(e)}"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+
+            else:
+                # Admin or other roles - show all (fallback to original behavior)
+                teachers_qs = Teacher.objects.filter(school=user.school) if user.school else Teacher.objects.all()
+                parents_qs = Parent.objects.filter(school=user.school) if user.school else Parent.objects.all()
+                
+                for teacher in teachers_qs:
+                    contacts.append({
+                        'id': str(teacher.id),
+                        'name': teacher.name,
+                        'email': teacher.email,
+                        'role': 'teacher',
+                        'class_name': teacher.class_assigned,
+                        'subjects': teacher.subjects if teacher.subjects else []
+                    })
+                
+                for parent in parents_qs:
+                    contacts.append({
+                        'id': str(parent.id),
+                        'name': parent.name,
+                        'email': parent.email,
+                        'role': 'parent'
+                    })
+
+            return Response({'contacts': contacts}, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"error": f"Failed to get filtered contacts: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=False, methods=['post'])
     def resolve_user_id(self, request):

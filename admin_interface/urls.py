@@ -91,6 +91,10 @@ urlpatterns = [
         'post': 'direct_message'
     }), name='direct-message'),
     
+    path('messages/filtered_chat_contacts/', MessageViewSet.as_view({
+        'get': 'filtered_chat_contacts'
+    }), name='filtered-chat-contacts'),
+    
     path('messages/', MessageViewSet.as_view({
         'get': 'list',
         'post': 'create'
