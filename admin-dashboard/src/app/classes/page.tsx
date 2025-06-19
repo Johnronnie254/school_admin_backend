@@ -3,28 +3,34 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { PlusIcon, PencilIcon, UserGroupIcon, AcademicCapIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, UserGroupIcon, AcademicCapIcon, XMarkIcon, UsersIcon, UserIcon } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
 import toast from 'react-hot-toast';
 import { teacherService, Teacher } from '@/services/teacherService';
+import { studentService, Student } from '@/services/studentService';
+import { parentService, Parent } from '@/services/parentService';
 import { AxiosError } from 'axios';
 
 interface ClassData {
   name: string;
   teachers: Teacher[];
+  students: Student[];
+  parents: Parent[];
   studentCount: number;
 }
 
 interface ClassFormData {
   name: string;
   selectedTeachers: string[];
+  selectedStudents: string[];
 }
-
 
 export default function ClassesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<string | null>(null);
   const [selectedTeachers, setSelectedTeachers] = useState<string[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'teachers' | 'students'>('teachers');
   const queryClient = useQueryClient();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ClassFormData>();
@@ -35,49 +41,107 @@ export default function ClassesPage() {
     queryFn: teacherService.getTeachers,
   });
 
+  // Get all students
+  const { data: studentsData, isLoading: isLoadingStudents } = useQuery({
+    queryKey: ['students'],
+    queryFn: studentService.getStudents,
+  });
+
+  // Get all parents
+  const { data: parentsData, isLoading: isLoadingParents } = useQuery({
+    queryKey: ['parents'],
+    queryFn: parentService.getParents,
+  });
+
   const teachers = teachersData?.results || [];
+  const students = studentsData?.results || [];
+  const parents = parentsData?.results || [];
+
+  const isLoading = isLoadingTeachers || isLoadingStudents || isLoadingParents;
 
   // Group teachers by class
   const classesByName = teachers.reduce((acc, teacher) => {
     const className = teacher.class_assigned || 'Unassigned';
     if (!acc[className]) {
-      acc[className] = [];
+      acc[className] = { teachers: [], students: [], parents: [] };
     }
-    acc[className].push(teacher);
+    acc[className].teachers.push(teacher);
     return acc;
-  }, {} as Record<string, Teacher[]>);
+  }, {} as Record<string, { teachers: Teacher[]; students: Student[]; parents: Parent[] }>);
+
+  // Group students by class and add to classesByName
+  students.forEach(student => {
+    const className = student.class_assigned || 'Unassigned';
+    if (!classesByName[className]) {
+      classesByName[className] = { teachers: [], students: [], parents: [] };
+    }
+    classesByName[className].students.push(student);
+    
+    // Add parent to the class if student has a parent
+    if (student.parent) {
+      const parentExists = classesByName[className].parents.some(p => p.id === student.parent.id);
+      if (!parentExists) {
+        // Find the full parent object
+        const fullParent = parents.find(p => p.id === student.parent.id);
+        if (fullParent) {
+          classesByName[className].parents.push(fullParent);
+        }
+      }
+    }
+  });
 
   // Create class data structure
-  const classesData: ClassData[] = Object.entries(classesByName).map(([name, teachers]) => ({
+  const classesData: ClassData[] = Object.entries(classesByName).map(([name, data]) => ({
     name,
-    teachers,
-    studentCount: 0, // You can extend this to count students
+    teachers: data.teachers,
+    students: data.students,
+    parents: data.parents,
+    studentCount: data.students.length,
   }));
 
-  // Bulk update teachers' class assignments
+  // Bulk update assignments
   const updateClassMutation = useMutation({
-    mutationFn: async ({ className, teacherIds }: { className: string; teacherIds: string[] }) => {
-      const updatePromises = teachers.map(teacher => {
+    mutationFn: async ({ className, teacherIds, studentIds }: { 
+      className: string; 
+      teacherIds: string[]; 
+      studentIds: string[]; 
+    }) => {
+      const updatePromises: Promise<Teacher | Student>[] = [];
+
+      // Update teachers
+      teachers.forEach(teacher => {
         const shouldBeInClass = teacherIds.includes(teacher.id);
         const currentlyInClass = teacher.class_assigned === className;
         
         if (shouldBeInClass && !currentlyInClass) {
-          // Assign teacher to this class
-          return teacherService.updateTeacher(teacher.id, { class_assigned: className });
+          updatePromises.push(teacherService.updateTeacher(teacher.id, { class_assigned: className }));
         } else if (!shouldBeInClass && currentlyInClass) {
-          // Remove teacher from this class
-          return teacherService.updateTeacher(teacher.id, { class_assigned: '' });
+          updatePromises.push(teacherService.updateTeacher(teacher.id, { class_assigned: '' }));
         }
-        return Promise.resolve(teacher);
+      });
+
+      // Update students
+      students.forEach(student => {
+        const shouldBeInClass = studentIds.includes(student.id);
+        const currentlyInClass = student.class_assigned === className;
+        
+        if (shouldBeInClass && !currentlyInClass) {
+          updatePromises.push(studentService.updateStudent(student.id, { class_assigned: className }));
+        } else if (!shouldBeInClass && currentlyInClass) {
+          updatePromises.push(studentService.updateStudent(student.id, { class_assigned: '' }));
+        }
       });
       
       return Promise.all(updatePromises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['parents'] });
       toast.success('Class assignments updated successfully');
       setIsModalOpen(false);
       setSelectedTeachers([]);
+      setSelectedStudents([]);
       setEditingClass(null);
       reset();
     },
@@ -97,14 +161,16 @@ export default function ClassesPage() {
     updateClassMutation.mutate({
       className: data.name.trim(),
       teacherIds: selectedTeachers,
+      studentIds: selectedStudents,
     });
   };
 
   const handleEditClass = (className: string) => {
     setEditingClass(className);
     setIsModalOpen(true);
-    const classTeachers = classesByName[className] || [];
-    setSelectedTeachers(classTeachers.map(t => t.id));
+    const classData = classesByName[className] || { teachers: [], students: [], parents: [] };
+    setSelectedTeachers(classData.teachers.map(t => t.id));
+    setSelectedStudents(classData.students.map(s => s.id));
     reset({ name: className });
   };
 
@@ -112,6 +178,7 @@ export default function ClassesPage() {
     setEditingClass(null);
     setIsModalOpen(true);
     setSelectedTeachers([]);
+    setSelectedStudents([]);
     reset({ name: '' });
   };
 
@@ -123,10 +190,20 @@ export default function ClassesPage() {
     );
   };
 
+  const toggleStudent = (studentId: string) => {
+    setSelectedStudents(prev => 
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingClass(null);
     setSelectedTeachers([]);
+    setSelectedStudents([]);
+    setActiveTab('teachers');
     reset();
   };
 
@@ -150,7 +227,7 @@ export default function ClassesPage() {
       </div>
 
       {/* Classes Grid */}
-      {isLoadingTeachers ? (
+      {isLoading ? (
         <div className="flex justify-center p-12">
           <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
@@ -169,24 +246,65 @@ export default function ClassesPage() {
               </div>
               
               <div className="space-y-3">
+                {/* Teachers */}
                 <div className="flex items-center text-sm text-gray-600">
                   <UserGroupIcon className="w-4 h-4 mr-2 flex-shrink-0" />
-                  <span>{classData.teachers.length} Teacher(s) Assigned</span>
+                  <span>{classData.teachers.length} Teacher(s)</span>
+                </div>
+
+                {/* Students */}
+                <div className="flex items-center text-sm text-gray-600">
+                  <UsersIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span>{classData.students.length} Student(s)</span>
+                </div>
+
+                {/* Parents */}
+                <div className="flex items-center text-sm text-gray-600">
+                  <UserIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span>{classData.parents.length} Parent(s)</span>
                 </div>
                 
-                {classData.teachers.length > 0 ? (
+                {/* Display assigned members */}
+                {(classData.teachers.length > 0 || classData.students.length > 0) ? (
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Assigned Teachers:</p>
-                    <div className="space-y-1">
-                      {classData.teachers.map((teacher) => (
-                        <div key={teacher.id} className="text-sm text-gray-700 bg-gray-50 px-2 py-1.5 rounded-md border">
-                          {teacher.name}
+                    {classData.teachers.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Teachers:</p>
+                        <div className="space-y-1">
+                          {classData.teachers.slice(0, 2).map((teacher) => (
+                            <div key={teacher.id} className="text-sm text-gray-700 bg-blue-50 px-2 py-1 rounded-md border">
+                              {teacher.name}
+                            </div>
+                          ))}
+                          {classData.teachers.length > 2 && (
+                            <div className="text-xs text-gray-500">
+                              +{classData.teachers.length - 2} more
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+
+                    {classData.students.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Students:</p>
+                        <div className="space-y-1">
+                          {classData.students.slice(0, 2).map((student) => (
+                            <div key={student.id} className="text-sm text-gray-700 bg-green-50 px-2 py-1 rounded-md border">
+                              {student.name}
+                            </div>
+                          ))}
+                          {classData.students.length > 2 && (
+                            <div className="text-xs text-gray-500">
+                              +{classData.students.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500 italic">No teachers assigned</p>
+                  <p className="text-sm text-gray-500 italic">No assignments yet</p>
                 )}
               </div>
             </div>
@@ -205,7 +323,7 @@ export default function ClassesPage() {
         
         {/* Modal container - full screen on mobile */}
         <div className="fixed inset-0 flex items-center justify-center sm:p-4">
-          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[90vh] overflow-y-auto">
             <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
               <button
                 onClick={closeModal}
@@ -242,44 +360,114 @@ export default function ClassesPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Select Teachers to Assign
-                </label>
-                <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-md">
-                  {teachers.length > 0 ? (
-                    <div className="divide-y divide-gray-200">
-                      {teachers.map((teacher) => (
-                        <div key={teacher.id} className="flex items-center p-3 hover:bg-gray-50">
-                          <input
-                            type="checkbox"
-                            id={`teacher-${teacher.id}`}
-                            checked={selectedTeachers.includes(teacher.id)}
-                            onChange={() => toggleTeacher(teacher.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <div className="ml-3 flex-1">
-                            <label htmlFor={`teacher-${teacher.id}`} className="text-sm font-medium text-gray-900 cursor-pointer">
-                              {teacher.name}
-                            </label>
-                            <p className="text-xs text-gray-500">{teacher.email}</p>
-                            {teacher.class_assigned && (
-                              <p className="text-xs text-amber-600">Currently assigned to: {teacher.class_assigned}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-sm text-gray-500">
-                      No teachers available
-                    </div>
-                  )}
-                </div>
-                <p className="mt-2 text-xs text-gray-500">
-                  {selectedTeachers.length} teacher(s) selected
-                </p>
+              {/* Tab Navigation */}
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('teachers')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'teachers'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Teachers ({selectedTeachers.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('students')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'students'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Students ({selectedStudents.length})
+                  </button>
+                </nav>
               </div>
+
+              {/* Teachers Tab */}
+              {activeTab === 'teachers' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Select Teachers to Assign
+                  </label>
+                  <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-md">
+                    {teachers.length > 0 ? (
+                      <div className="divide-y divide-gray-200">
+                        {teachers.map((teacher) => (
+                          <div key={teacher.id} className="flex items-center p-3 hover:bg-gray-50">
+                            <input
+                              type="checkbox"
+                              id={`teacher-${teacher.id}`}
+                              checked={selectedTeachers.includes(teacher.id)}
+                              onChange={() => toggleTeacher(teacher.id)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <div className="ml-3 flex-1">
+                              <label htmlFor={`teacher-${teacher.id}`} className="text-sm font-medium text-gray-900 cursor-pointer">
+                                {teacher.name}
+                              </label>
+                              <p className="text-xs text-gray-500">{teacher.email}</p>
+                              {teacher.class_assigned && (
+                                <p className="text-xs text-amber-600">Currently assigned to: {teacher.class_assigned}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center text-sm text-gray-500">
+                        No teachers available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Students Tab */}
+              {activeTab === 'students' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Select Students to Assign
+                  </label>
+                  <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-md">
+                    {students.length > 0 ? (
+                      <div className="divide-y divide-gray-200">
+                        {students.map((student) => (
+                          <div key={student.id} className="flex items-center p-3 hover:bg-gray-50">
+                            <input
+                              type="checkbox"
+                              id={`student-${student.id}`}
+                              checked={selectedStudents.includes(student.id)}
+                              onChange={() => toggleStudent(student.id)}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            />
+                            <div className="ml-3 flex-1">
+                              <label htmlFor={`student-${student.id}`} className="text-sm font-medium text-gray-900 cursor-pointer">
+                                {student.name}
+                              </label>
+                              <p className="text-xs text-gray-500">Grade {student.grade}</p>
+                              {student.parent && (
+                                <p className="text-xs text-blue-600">Parent: {student.parent.name}</p>
+                              )}
+                              {student.class_assigned && (
+                                <p className="text-xs text-amber-600">Currently assigned to: {student.class_assigned}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center text-sm text-gray-500">
+                        No students available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-6 sm:mt-8">
                 <button
