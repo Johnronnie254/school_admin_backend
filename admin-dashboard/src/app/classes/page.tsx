@@ -8,7 +8,7 @@ import { Dialog } from '@headlessui/react';
 import toast from 'react-hot-toast';
 import { teacherService, Teacher } from '@/services/teacherService';
 import { studentService, Student } from '@/services/studentService';
-import { parentService, Parent } from '@/services/parentService';
+import { Parent } from '@/services/parentService';
 import { AxiosError } from 'axios';
 
 interface ClassData {
@@ -47,17 +47,10 @@ export default function ClassesPage() {
     queryFn: studentService.getStudents,
   });
 
-  // Get all parents
-  const { data: parentsData, isLoading: isLoadingParents } = useQuery({
-    queryKey: ['parents'],
-    queryFn: parentService.getParents,
-  });
-
   const teachers = teachersData?.results || [];
   const students = studentsData?.results || [];
-  const parents = parentsData?.results || [];
 
-  const isLoading = isLoadingTeachers || isLoadingStudents || isLoadingParents;
+  const isLoading = isLoadingTeachers || isLoadingStudents;
 
   // Group teachers by class
   const classesByName = teachers.reduce((acc, teacher) => {
@@ -142,7 +135,6 @@ export default function ClassesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
-      queryClient.invalidateQueries({ queryKey: ['parents'] });
       toast.success('Class assignments updated successfully');
       setIsModalOpen(false);
       setSelectedTeachers([]);
