@@ -81,11 +81,16 @@ export default function ClassesPage() {
     if (student.parent) {
       const parentExists = classesByName[className].parents.some(p => p.id === student.parent.id);
       if (!parentExists) {
-        // Find the full parent object
-        const fullParent = parents.find(p => p.id === student.parent.id);
-        if (fullParent) {
-          classesByName[className].parents.push(fullParent);
-        }
+        // Create a parent object from the student's parent data
+        const parentFromStudent = {
+          id: student.parent.id,
+          name: student.parent.name,
+          email: '', // We don't have this from student data
+          phone_number: '', // We don't have this from student data
+          school: '', // We don't have this from student data
+          created_at: '', // We don't have this from student data
+        };
+        classesByName[className].parents.push(parentFromStudent);
       }
     }
   });
