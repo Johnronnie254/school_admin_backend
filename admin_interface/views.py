@@ -2368,6 +2368,8 @@ class SchoolEventViewSet(viewsets.ModelViewSet):
     ordering_fields = ['start_date', 'end_date', 'created_at']
 
     def get_queryset(self):
+        from django.utils import timezone
+        
         # Filter events based on user role and school
         user = self.request.user
         queryset = SchoolEvent.objects.all()
@@ -2375,6 +2377,11 @@ class SchoolEventViewSet(viewsets.ModelViewSet):
         # Filter by school if user has a school
         if user.school:
             queryset = queryset.filter(school=user.school)
+        
+        # By default, exclude past events unless 'include_past' is explicitly requested
+        include_past = self.request.query_params.get('include_past', 'false').lower() == 'true'
+        if not include_past:
+            queryset = queryset.filter(end_date__gte=timezone.now())
         
         # Filter by date range if provided
         start = self.request.query_params.get('start', None)
@@ -2405,6 +2412,32 @@ class SchoolEventViewSet(viewsets.ModelViewSet):
             serializer.save(created_by=user, school=school)
         else:
             serializer.save(created_by=user)
+    
+    @action(detail=False, methods=['delete'], permission_classes=[IsAdmin])
+    def cleanup_past_events(self, request):
+        """Clean up past events that have ended"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get days parameter from request (default: 1 day)
+        days = int(request.query_params.get('days', 1))
+        cutoff_date = timezone.now() - timedelta(days=days)
+        
+        # Filter by school if user has a school
+        queryset = SchoolEvent.objects.filter(end_date__lt=cutoff_date)
+        if request.user.school:
+            queryset = queryset.filter(school=request.user.school)
+        
+        # Count and delete
+        deleted_count = queryset.count()
+        deleted_events = list(queryset.values('title', 'end_date'))
+        queryset.delete()
+        
+        return Response({
+            'message': f'Successfully deleted {deleted_count} past events',
+            'cutoff_date': cutoff_date.isoformat(),
+            'deleted_events': deleted_events
+        }, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'HEAD'])  # Add HEAD to allowed methods
 @permission_classes([AllowAny])
