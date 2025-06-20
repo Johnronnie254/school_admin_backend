@@ -69,6 +69,7 @@ urlpatterns = [
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),
     path('teacher/profile_pic/', TeacherProfilePicView.as_view(), name='teacher-profile-pic'),
     path('teacher/schedule/', TeacherScheduleView.as_view(), name='teacher-schedule'),
+    # GET /api/teachers/my_class_students/ - Get students in teacher's assigned class
 
     # Direct Messaging (Simplified)
     path('messaging/contacts/', DirectMessagingView.as_view(), name='messaging-contacts'),

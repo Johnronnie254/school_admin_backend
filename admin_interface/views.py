@@ -593,6 +593,43 @@ class TeacherViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
+    def my_class_students(self, request):
+        """Get students in teacher's assigned class"""
+        user = request.user
+        if not user.school:
+            return Response({"error": "Teacher must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            teacher = Teacher.objects.get(email=user.email)
+            
+            if not teacher.class_assigned:
+                return Response(
+                    {"error": "Teacher is not assigned to any class"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get students in the teacher's assigned class
+            students = Student.objects.filter(
+                class_assigned=teacher.class_assigned,
+                school=teacher.school
+            ).select_related('parent')
+            
+            # Serialize the students data
+            serializer = StudentSerializer(students, many=True)
+            
+            return Response({
+                'class_name': teacher.class_assigned,
+                'total_students': len(students),
+                'students': serializer.data
+            })
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {"error": "Teacher profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
 class StudentViewSet(viewsets.ModelViewSet):
     """ViewSet for Student operations"""
     serializer_class = StudentSerializer
@@ -980,9 +1017,9 @@ class ParentViewSet(viewsets.ModelViewSet):
                     if child.class_assigned not in child_data:
                         child_data[child.class_assigned] = []
                     child_data[child.class_assigned].append({
-                        'id': str(child.id),
-                        'name': child.name,
-                        'grade': child.grade
+                        'student_id': str(child.id),
+                        'student_name': child.name,
+                        'student_grade': child.grade
                     })
             
             # Get teachers assigned to these classes
