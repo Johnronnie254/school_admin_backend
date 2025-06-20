@@ -2412,6 +2412,32 @@ class SchoolEventViewSet(viewsets.ModelViewSet):
             serializer.save(created_by=user, school=school)
         else:
             serializer.save(created_by=user)
+
+    @action(detail=False, methods=['delete'], permission_classes=[IsAdmin])
+    def cleanup_past_events(self, request):
+        """Clean up past events that have ended"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get days parameter from request (default: 1 day)
+        days = int(request.query_params.get('days', 1))
+        cutoff_date = timezone.now() - timedelta(days=days)
+        
+        # Filter by school if user has a school
+        queryset = SchoolEvent.objects.filter(end_date__lt=cutoff_date)
+        if request.user.school:
+            queryset = queryset.filter(school=request.user.school)
+        
+        # Count and delete
+        deleted_count = queryset.count()
+        deleted_events = list(queryset.values('title', 'end_date'))
+        queryset.delete()
+        
+        return Response({
+            'message': f'Successfully deleted {deleted_count} past events',
+            'cutoff_date': cutoff_date.isoformat(),
+            'deleted_events': deleted_events
+        }, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['delete'], permission_classes=[IsAdmin])
     def cleanup_past_events(self, request):
