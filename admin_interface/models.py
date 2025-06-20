@@ -4,6 +4,7 @@ import uuid
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from datetime import datetime
 
 class Role(models.TextChoices):
     SUPERUSER = 'superuser', 'Super User'
@@ -408,14 +409,27 @@ class ExamPDF(models.Model):
     subject = models.CharField(max_length=100)
     class_assigned = models.CharField(max_length=50)
     exam_date = models.DateField()
+    term = models.CharField(max_length=20)
+    year = models.PositiveIntegerField(default=datetime.now().year)
     file = models.FileField(upload_to='exam_pdfs/')
+    remarks = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='exam_pdfs', null=True)
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['teacher', 'class_assigned', 'subject']),
+            models.Index(fields=['year', 'term']),
+        ]
         
     def __str__(self):
         return f"{self.exam_name} - {self.subject} - {self.class_assigned}"
+
+    def save(self, *args, **kwargs):
+        if not self.school and hasattr(self.teacher, 'school'):
+            self.school = self.teacher.school
+        super().save(*args, **kwargs)
 
 
 class LeaveApplication(models.Model):

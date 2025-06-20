@@ -4,6 +4,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 import uuid
+from django.utils import timezone
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User (Admins)"""
@@ -576,12 +577,20 @@ class ProductSerializer(serializers.ModelSerializer):
 class ExamPDFSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()
     teacher_name = serializers.SerializerMethodField()
+    school_name = serializers.SerializerMethodField()
     
     class Meta:
         model = ExamPDF
-        fields = ['id', 'teacher', 'teacher_name', 'exam_name', 'subject', 'class_assigned', 
-                  'exam_date', 'file', 'download_url', 'created_at']
-        read_only_fields = ['teacher', 'created_at']
+        fields = [
+            'id', 'teacher', 'teacher_name', 'exam_name', 'subject',
+            'class_assigned', 'exam_date', 'term', 'year', 'file',
+            'remarks', 'download_url', 'created_at',
+            'school', 'school_name'
+        ]
+        read_only_fields = [
+            'teacher', 'created_at', 'school',
+            'class_assigned'  # This is set from teacher's assigned class
+        ]
         
     def get_download_url(self, obj):
         request = self.context.get('request')
@@ -591,6 +600,29 @@ class ExamPDFSerializer(serializers.ModelSerializer):
         
     def get_teacher_name(self, obj):
         return obj.teacher.name if obj.teacher else None
+        
+    def get_school_name(self, obj):
+        return obj.school.name if obj.school else None
+        
+    def validate_exam_date(self, value):
+        """Ensure exam date is not in the future"""
+        if value > timezone.now().date():
+            raise serializers.ValidationError("Exam date cannot be in the future")
+        return value
+        
+    def validate_year(self, value):
+        """Ensure year is not in the future"""
+        current_year = timezone.now().year
+        if value > current_year:
+            raise serializers.ValidationError("Year cannot be in the future")
+        return value
+        
+    def validate_term(self, value):
+        """Validate term value"""
+        valid_terms = ['Term 1', 'Term 2', 'Term 3']
+        if value not in valid_terms:
+            raise serializers.ValidationError(f"Term must be one of: {', '.join(valid_terms)}")
+        return value
 
 class SchoolEventSerializer(serializers.ModelSerializer):
     class Meta:

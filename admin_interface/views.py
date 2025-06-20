@@ -6,7 +6,6 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
-import pandas as pd
 from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
@@ -36,6 +35,7 @@ from django.db.models import Q
 from django.db import connection
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from django.http import FileResponse
 
 class RegisterView(APIView):
     """Handles user registration."""
@@ -387,45 +387,25 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
     def available_parents(self, request):
-        """Get parents of students in teacher's assigned class"""
-        user = request.user
-        if not user.school:
-            return Response({"error": "Teacher must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
-        
+        """Get list of available parents for assigning to students"""
         try:
-            teacher = Teacher.objects.get(email=user.email)
+            teacher = Teacher.objects.get(email=request.user.email)
             
             if not teacher.class_assigned:
                 return Response(
-                    {"error": "Teacher is not assigned to any class"},
+                    {"error": "Teacher must be assigned to a class"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Get students in the teacher's assigned class
-            students_in_class = Student.objects.filter(
-                class_assigned=teacher.class_assigned,
-                school=teacher.school,
-                parent__isnull=False
-            ).select_related('parent')
-            
-            # Get unique parents from these students
+            # Get all parents in the school
             parent_data = {}
-            for student in students_in_class:
-                if student.parent:
-                    parent_id = str(student.parent.id)
-                    if parent_id not in parent_data:
-                        parent_data[parent_id] = {
-                            'id': parent_id,
-                            'first_name': student.parent.first_name,
-                            'email': student.parent.email,
-                            'children': []
-                        }
-                    parent_data[parent_id]['children'].append({
-                        'id': str(student.id),
-                        'name': student.name,
-                        'class_assigned': student.class_assigned,
-                        'grade': student.grade
-                    })
+            for parent in User.objects.filter(role=Role.PARENT, school=teacher.school):
+                parent_data[str(parent.id)] = {
+                    'id': str(parent.id),
+                    'name': parent.get_full_name() or parent.email,
+                    'email': parent.email,
+                    'contact': parent.contact or 'Not provided'
+                }
             
             return Response({
                 'parents': list(parent_data.values()),
@@ -439,57 +419,13 @@ class TeacherViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    @action(detail=False, methods=['post'])
-    def bulk_upload(self, request):
-        file = request.FILES.get('file')
-        if not file:
-            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            df = pd.read_csv(file) if file.name.endswith('.csv') else pd.read_excel(file)
-            Teacher.objects.bulk_create([
-                Teacher(**row) for row in df.to_dict('records')
-            ])
-            return Response({"message": "Teachers uploaded successfully"}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=['post'], permission_classes=[IsTeacher])
-    def upload_results(self, request):
-        file = request.FILES.get('file')
-        if not file:
-            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            df = pd.read_csv(file) if file.name.endswith('.csv') else pd.read_excel(file)
-            results = []
-            for _, row in df.iterrows():
-                result = ExamResult.objects.create(
-                    student_id=row['student_id'],
-                    exam_name=row['exam_name'],
-                    subject=row['subject'],
-                    marks=row['marks'],
-                    grade=row['grade'],
-                    term=row['term'],
-                    year=row['year'],
-                    remarks=row.get('remarks', '')
-                )
-                results.append(result)
-            
-            return Response({
-                'message': f'Successfully uploaded {len(results)} results',
-                'exam_name': results[0].exam_name if results else None
-            })
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
     @action(detail=False, methods=['post'], permission_classes=[IsTeacher])
     def add_feedback(self, request):
         try:
             student_id = request.data.get('student_id')
             exam_id = request.data.get('exam_id')
             feedback = request.data.get('feedback')
-            
+
             if not all([student_id, exam_id, feedback]):
                 return Response(
                     {'error': 'student_id, exam_id and feedback are required'}, 
@@ -1244,40 +1180,7 @@ class StudentByGradeView(APIView):
         serializer = self.serializer_class(students, many=True)
         return Response(serializer.data)
 
-class StudentUploadView(APIView):
-    """Handles bulk student uploads via CSV/Excel file."""
-    parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [IsAuthenticated]
 
-    def post(self, request, grade):
-        file = request.FILES.get('file')
-        if not file:
-            return Response({"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            if file.name.endswith('.csv'):
-                df = pd.read_csv(file)
-            elif file.name.endswith(('.xls', '.xlsx')):
-                df = pd.read_excel(file)
-            else:
-                return Response({"error": "Invalid file format. Please upload CSV or Excel file."}, 
-                             status=status.HTTP_400_BAD_REQUEST)
-
-            with transaction.atomic():
-                for _, row in df.iterrows():
-                    Student.objects.create(
-                        name=row['name'],
-                        guardian=row['guardian'],
-                        contact=row['contact'],
-                        grade=grade,
-                        class_assigned=row.get('class_assigned')
-                    )
-
-            return Response({"message": "Students uploaded successfully!"}, 
-                          status=status.HTTP_201_CREATED)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class TeachersBySubjectView(APIView):
     """Filter teachers by subject."""
@@ -2364,17 +2267,39 @@ class TeacherExamViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Only return exam PDFs uploaded by the requesting teacher"""
         try:
-            # Try to find the teacher object that matches the authenticated user
             teacher = Teacher.objects.get(email=self.request.user.email)
-            return ExamPDF.objects.filter(teacher=teacher)
+            return ExamPDF.objects.filter(teacher=teacher).select_related('school')
         except Teacher.DoesNotExist:
             return ExamPDF.objects.none()
     
     def perform_create(self, serializer):
-        """Set the teacher as the authenticated user before saving"""
+        """Set the teacher and validate the file before saving"""
         try:
             teacher = Teacher.objects.get(email=self.request.user.email)
-            serializer.save(teacher=teacher)
+            
+            # Validate file type
+            file = self.request.FILES.get('file')
+            if not file:
+                raise serializers.ValidationError({"file": "No file was submitted"})
+            
+            if not file.name.endswith('.pdf'):
+                raise serializers.ValidationError({"file": "Only PDF files are allowed"})
+            
+            # Validate file size (max 10MB)
+            if file.size > 10 * 1024 * 1024:
+                raise serializers.ValidationError({"file": "File size cannot exceed 10MB"})
+            
+            # Validate class assignment
+            if not teacher.class_assigned:
+                raise serializers.ValidationError({"error": "Teacher must be assigned to a class"})
+            
+            # Set the class_assigned from teacher's assignment
+            serializer.save(
+                teacher=teacher,
+                class_assigned=teacher.class_assigned,
+                school=teacher.school
+            )
+            
         except Teacher.DoesNotExist:
             raise serializers.ValidationError({"error": "Teacher profile not found for this user"})
     
@@ -2383,9 +2308,9 @@ class TeacherExamViewSet(viewsets.ModelViewSet):
         """Download the exam PDF file"""
         exam_pdf = self.get_object()
         if exam_pdf.file:
-            return Response({
-                "download_url": request.build_absolute_uri(exam_pdf.file.url)
-            })
+            response = FileResponse(exam_pdf.file, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{exam_pdf.file.name}"'
+            return response
         return Response({"error": "File not found"}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=False, methods=['get'])
@@ -2393,6 +2318,39 @@ class TeacherExamViewSet(viewsets.ModelViewSet):
         """Get recent exam PDFs uploaded by the teacher"""
         queryset = self.get_queryset().order_by('-created_at')[:10]  # Last 10 exams
         serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+        
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve an exam PDF (admin only)"""
+        if request.user.role != Role.ADMIN:
+            return Response(
+                {"error": "Only administrators can approve exam PDFs"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        exam_pdf = self.get_object()
+        exam_pdf.status = 'approved'
+        exam_pdf.save()
+        
+        serializer = self.get_serializer(exam_pdf)
+        return Response(serializer.data)
+        
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject an exam PDF (admin only)"""
+        if request.user.role != Role.ADMIN:
+            return Response(
+                {"error": "Only administrators can reject exam PDFs"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        exam_pdf = self.get_object()
+        exam_pdf.status = 'rejected'
+        exam_pdf.remarks = request.data.get('remarks', '')
+        exam_pdf.save()
+        
+        serializer = self.get_serializer(exam_pdf)
         return Response(serializer.data)
 
 class SchoolEventViewSet(viewsets.ModelViewSet):
