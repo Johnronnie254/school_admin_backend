@@ -422,6 +422,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
                     parent_data[parent_id]['children'].append({
                         'id': str(student.id),
                         'name': student.name,
+                        'class_assigned': student.class_assigned,
                         'grade': student.grade
                     })
             
