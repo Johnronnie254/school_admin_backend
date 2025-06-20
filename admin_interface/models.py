@@ -405,9 +405,9 @@ class ExamPDF(models.Model):
     """Model for storing exam PDFs uploaded by teachers"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='exam_pdfs')
-    exam_name = models.CharField(max_length=100)
-    subject = models.CharField(max_length=100)
-    class_assigned = models.CharField(max_length=50)
+    exam_name = models.CharField(max_length=255)
+    subject = models.CharField(max_length=255)
+    class_assigned = models.CharField(max_length=255)
     exam_date = models.DateField()
     term = models.CharField(max_length=20)
     year = models.PositiveIntegerField(default=datetime.now().year)
