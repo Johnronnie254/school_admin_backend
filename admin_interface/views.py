@@ -305,6 +305,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
     queryset = Teacher.objects.all()
     serializer_class = TeacherSerializer
     permission_classes = [IsAuthenticated]  # Changed from IsAdminUser to IsAuthenticated
+    pagination_class = None  # Disable pagination to show all teachers
 
     def get_queryset(self):
         """Filter teachers by school"""
@@ -807,6 +808,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 class ParentViewSet(viewsets.ModelViewSet):
     serializer_class = ParentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Disable pagination to show all parents
 
     def get_queryset(self):
         user = self.request.user

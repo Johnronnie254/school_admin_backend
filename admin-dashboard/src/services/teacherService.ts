@@ -24,18 +24,28 @@ export interface TeacherFormData {
 class TeacherService {
   async getTeachers(): Promise<PaginatedResponse<Teacher>> {
     try {
-      const response = await apiClient.get<PaginatedResponse<Teacher>>('/api/teachers/');
-      // Deep check to make sure response has the right structure
-      if (response?.data && typeof response.data === 'object') {
-        // Ensure results is always an array
-        const results = Array.isArray(response.data.results) ? response.data.results : [];
+      const response = await apiClient.get<Teacher[] | PaginatedResponse<Teacher>>('/api/teachers/');
+      console.log('Teacher service response:', response.data);
+      
+      // Handle both array and paginated response formats
+      if (Array.isArray(response.data)) {
+        // Direct array response (when pagination_class = None)
+        return {
+          count: response.data.length,
+          next: null,
+          previous: null,
+          results: response.data
+        };
+      } else if (response.data && typeof response.data === 'object' && 'results' in response.data) {
+        // Paginated response format
         return {
           count: response.data.count || 0,
           next: response.data.next || null,
           previous: response.data.previous || null,
-          results
+          results: Array.isArray(response.data.results) ? response.data.results : []
         };
       }
+      
       console.error('Malformed response in getTeachers:', response);
       return { count: 0, next: null, previous: null, results: [] };
     } catch (error) {

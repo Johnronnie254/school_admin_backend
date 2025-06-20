@@ -24,20 +24,28 @@ class ParentService {
   async getParents(): Promise<PaginatedResponse<Parent>> {
     try {
       console.log('Fetching parents...');
-      const response = await apiClient.get<PaginatedResponse<Parent>>('/api/parents/');
+      const response = await apiClient.get<Parent[] | PaginatedResponse<Parent>>('/api/parents/');
       console.log('Parent service response:', response.data);
       
-      // Deep check to make sure response has the right structure
-      if (response?.data && typeof response.data === 'object') {
-        // Ensure results is always an array
-        const results = Array.isArray(response.data.results) ? response.data.results : [];
+      // Handle both array and paginated response formats
+      if (Array.isArray(response.data)) {
+        // Direct array response (when pagination_class = None)
+        return {
+          count: response.data.length,
+          next: null,
+          previous: null,
+          results: response.data
+        };
+      } else if (response.data && typeof response.data === 'object' && 'results' in response.data) {
+        // Paginated response format
         return {
           count: response.data.count || 0,
           next: response.data.next || null,
           previous: response.data.previous || null,
-          results
+          results: Array.isArray(response.data.results) ? response.data.results : []
         };
       }
+      
       console.error('Malformed response in getParents:', response);
       return { count: 0, next: null, previous: null, results: [] };
     } catch (error) {
