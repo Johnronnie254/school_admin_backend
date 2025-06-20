@@ -409,7 +409,6 @@ class ExamPDF(models.Model):
     subject = models.CharField(max_length=255)
     class_assigned = models.CharField(max_length=255)
     exam_date = models.DateField()
-    term = models.CharField(max_length=20)
     year = models.PositiveIntegerField(default=datetime.now().year)
     file = models.FileField(upload_to='exam_pdfs/')
     remarks = models.TextField(blank=True)
@@ -420,7 +419,7 @@ class ExamPDF(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['teacher', 'class_assigned', 'subject']),
-            models.Index(fields=['year', 'term']),
+            models.Index(fields=['year']),
         ]
         
     def __str__(self):
