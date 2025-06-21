@@ -12,7 +12,7 @@ import {
   ArrowDownTrayIcon,
   QuestionMarkCircleIcon 
 } from '@heroicons/react/24/outline';
-import { examResultService, type ExamResult, type ExamResultFormData, type ExamPDF } from '@/services/examResultService';
+import examResultService, { type ExamResult, type ExamResultFormData, type ExamPDF } from '@/services/examResultService';
 import { Dialog } from '@/components/ui/dialog';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
@@ -20,7 +20,6 @@ export default function ExamResultsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<ExamResult | null>(null);
   const queryClient = useQueryClient();
-  const [results, setResults] = useState<ExamResult[]>([]);
   const [examPDFs, setExamPDFs] = useState<ExamPDF[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,12 +37,20 @@ export default function ExamResultsPage() {
     } : {}
   });
 
-  const { data: examResults = [], isLoading } = useQuery({
+  // Use React Query for exam results
+  const { data: examResults = [], isLoading, error: queryError } = useQuery({
     queryKey: ['examResults'],
     queryFn: async () => {
-      const response = await examResultService.getExamResults();
-      return response.results;
-    }
+      try {
+        const response = await examResultService.getExamResults();
+        return response.results || [];
+      } catch (error) {
+        console.error('Failed to fetch exam results:', error);
+        return [];
+      }
+    },
+    retry: 1,
+    refetchOnWindowFocus: false
   });
 
   const createMutation = useMutation({
@@ -141,25 +148,19 @@ export default function ExamResultsPage() {
     }
   };
 
+  // Fetch exam PDFs separately
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchExamPDFs = async () => {
       try {
-        setLoading(true);
-        const [resultsData, pdfsData] = await Promise.all([
-          examResultService.getResults(),
-          examResultService.getExamPDFs()
-        ]);
-        setResults(resultsData);
+        const pdfsData = await examResultService.getExamPDFs();
         setExamPDFs(pdfsData);
       } catch (err) {
-        setError('Failed to fetch exam data');
-        console.error(err);
-      } finally {
-        setLoading(false);
+        console.error('Failed to fetch exam PDFs:', err);
+        // Don't set error for PDFs as it's not critical
       }
     };
 
-    fetchData();
+    fetchExamPDFs();
   }, []);
 
   const handleDownloadPDF = async (examId: string, fileName: string) => {
@@ -173,14 +174,14 @@ export default function ExamResultsPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      toast.success('PDF downloaded successfully');
     } catch (err) {
       console.error('Failed to download PDF:', err);
-      setError('Failed to download PDF');
+      toast.error('Failed to download PDF');
     }
   };
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-500">{error}</div>;
+  if (isLoading) return <LoadingSpinner />;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -190,6 +191,12 @@ export default function ExamResultsPage() {
           <h1 className="text-2xl font-semibold text-gray-800">Exam Results</h1>
         </div>
         <div className="flex gap-4">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Add Result
+          </button>
           <button
             onClick={handleDownload}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
@@ -202,181 +209,110 @@ export default function ExamResultsPage() {
       </div>
 
       {/* Uploaded Exam PDFs Section */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Uploaded Exam Papers</h2>
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {examPDFs.map((exam) => (
-                <tr key={exam.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.exam_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.subject}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.class_assigned}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(exam.exam_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => handleDownloadPDF(exam.id, `${exam.exam_name}-${exam.subject}.pdf`)}
-                      className="text-indigo-600 hover:text-indigo-900 font-medium"
-                    >
-                      Download PDF
-                    </button>
-                  </td>
+      {examPDFs.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Uploaded Exam Papers</h2>
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {examPDFs.map((exam) => (
+                  <tr key={exam.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.exam_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.subject}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.class_assigned}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(exam.exam_date).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => handleDownloadPDF(exam.id, `${exam.exam_name}-${exam.subject}.pdf`)}
+                        className="text-indigo-600 hover:text-indigo-900 font-medium"
+                      >
+                        Download PDF
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Existing Exam Results Section */}
+      {/* Exam Results Section */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Student Results</h2>
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {results.map((result) => (
-                <tr key={result.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.student_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.exam_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.subject}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.marks}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.grade}</td>
+        {queryError && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+            <p className="text-yellow-800">
+              Unable to load exam results. Please check your connection or contact support.
+            </p>
+          </div>
+        )}
+        
+        {examResults.length === 0 && !queryError ? (
+          <div className="text-center py-12">
+            <AcademicCapIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No exam results</h3>
+            <p className="mt-1 text-sm text-gray-500">Get started by adding a new exam result.</p>
+          </div>
+        ) : (
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {examResults.map((result: ExamResult) => (
+                  <tr key={result.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {result.student_name || result.student}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{result.exam_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{result.subject}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{result.marks}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{result.grade}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{result.term}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{result.year}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <button
+                        onClick={() => handleEdit(result)}
+                        className="text-blue-600 hover:text-blue-900 mr-4"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(result.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      {isLoading || createMutation.isPending || updateMutation.isPending || deleteMutation.isPending ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      ) : examResults.length === 0 ? (
-        <div className="text-center py-12">
-          <AcademicCapIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No exam results</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by adding a new exam result.</p>
-        </div>
-      ) : (
-        <>
-          {/* Desktop Table - Hidden on mobile */}
-          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {examResults.map((result: ExamResult) => (
-                <tr key={result.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {result.student_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.exam_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.subject}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.marks}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.grade}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.term}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.year}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <button
-                      onClick={() => handleEdit(result)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(result.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-          </div>
-          
-          {/* Mobile Cards - Shown only on mobile */}
-          <div className="grid grid-cols-1 gap-4 sm:hidden">
-            {examResults.map((result: ExamResult) => (
-              <div key={result.id} className="bg-white rounded-lg shadow p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="text-base font-medium text-gray-900">{result.student_name}</h3>
-                    <p className="text-sm text-gray-500">{result.exam_name}</p>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(result)}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      <PencilIcon className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(result.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <TrashIcon className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700">Subject:</span>
-                    <p className="text-gray-600">{result.subject}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Marks:</span>
-                    <p className="text-gray-600">{result.marks}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Grade:</span>
-                    <p className="text-gray-600">{result.grade}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Term/Year:</span>
-                    <p className="text-gray-600">{result.term} - {result.year}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
 
       {/* Exam Result Form Modal */}
       <Dialog
@@ -388,13 +324,11 @@ export default function ExamResultsPage() {
         }}
         className="relative z-50"
       >
-        {/* Background blur - visible only on non-mobile */}
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
         
-        {/* Modal container - full screen on mobile */}
-        <div className="fixed inset-0 flex items-center justify-center sm:p-4">
-          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
-            <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white rounded-lg px-6 py-8 shadow-xl transition-all w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="absolute right-4 top-4">
               <button
                 onClick={() => {
                   setIsModalOpen(false);
@@ -403,15 +337,15 @@ export default function ExamResultsPage() {
                 }}
                 className="text-gray-400 hover:text-gray-500 focus:outline-none"
               >
-                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
-                <AcademicCapIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+            <div className="flex items-center gap-3 mb-8">
+              <div className="rounded-full bg-blue-50 p-2">
+                <AcademicCapIcon className="h-6 w-6 text-blue-600" />
               </div>
-              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
+              <Dialog.Title className="text-lg font-semibold leading-6 text-gray-900">
                 {editingResult ? 'Edit Exam Result' : 'Add New Exam Result'}
               </Dialog.Title>
             </div>
@@ -477,7 +411,7 @@ export default function ExamResultsPage() {
                     Marks
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2 relative">
+                  <div className="mt-2">
                     <input
                       type="number"
                       step="0.01"
@@ -489,12 +423,6 @@ export default function ExamResultsPage() {
                       className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                       placeholder="Enter marks"
                     />
-                    <div className="absolute right-2 top-2 group">
-                      <QuestionMarkCircleIcon className="h-5 w-5 text-gray-400" />
-                      <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
-                        Enter marks between 0 and 100
-                      </div>
-                    </div>
                     {errors.marks && (
                       <p className="mt-2 text-sm text-red-600">{errors.marks.message}</p>
                     )}

@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api';
+import { apiClient } from '../lib/api';
 
 export interface ExamResult {
   id: string;
@@ -40,69 +40,42 @@ export interface ExamPDF {
   school_name: string;
 }
 
-export const examResultService = {
+const examResultService = {
+  // Get exam results - using the correct endpoint
   getExamResults: async () => {
-    try {
-      // Use the new endpoint to get all exam results
-      const response = await apiClient.get<ExamResult[]>('/api/exams/record/');
-      return { results: response.data };
-    } catch (error) {
-      console.error('Error fetching exam results:', error);
-      // Fallback to previous method if the endpoint fails
-      console.log('Falling back to student-by-student exam results fetching...');
-      return examResultService.getExamResultsFallback();
-    }
+    const response = await apiClient.get('/api/exams/record/');
+    return { results: response.data };
   },
 
-  // Fallback method using the previous approach
-  getExamResultsFallback: async () => {
-    const studentsResponse = await apiClient.get('/api/students/');
-    const students = studentsResponse.data.results || [];
-    
-    const allResults = [];
-    for (const student of students) {
-      try {
-        const studentResults = await examResultService.getStudentExamResults(student.id);
-        allResults.push(...studentResults);
-      } catch (error) {
-        console.error(`Error fetching results for student ${student.id}:`, error);
-      }
-    }
-    
-    return { results: allResults };
-  },
-
-  getExamResultById: async (id: string) => {
-    const response = await examResultService.getExamResults();
-    const result = response.results.find(result => result.id === id);
-    if (!result) {
-      throw new Error(`Exam result with ID ${id} not found`);
-    }
-    return result;
-  },
-
-  createExamResult: async (data: ExamResultFormData) => {
-    const response = await apiClient.post<ExamResult>('/api/exams/record/', data);
+  // Get exam result by ID
+  getExamResultById: async (id: string): Promise<ExamResult> => {
+    const response = await apiClient.get(`/api/exams/record/${id}/`);
     return response.data;
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  updateExamResult: async (id: string, data: Partial<ExamResultFormData>) => {
-    throw new Error('Update exam result endpoint not implemented in backend');
-  },
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  deleteExamResult: async (id: string) => {
-    throw new Error('Delete exam result endpoint not implemented in backend');
-  },
-
-  getStudentExamResults: async (studentId: string) => {
-    const response = await apiClient.get<ExamResult[]>(`/api/students/${studentId}/exam-results/`);
+  // Create exam result
+  createExamResult: async (data: Partial<ExamResult>): Promise<ExamResult> => {
+    const response = await apiClient.post('/api/exams/record/', data);
     return response.data;
   },
 
-  downloadResults: async () => {
-    throw new Error('Download exam results endpoint not implemented in backend');
+  // Update exam result
+  updateExamResult: async (id: string, data: Partial<ExamResult>): Promise<ExamResult> => {
+    const response = await apiClient.put(`/api/exams/record/${id}/`, data);
+    return response.data;
+  },
+
+  // Delete exam result
+  deleteExamResult: async (id: string): Promise<void> => {
+    await apiClient.delete(`/api/exams/record/${id}/`);
+  },
+
+  // Download exam results
+  downloadResults: async (): Promise<Blob> => {
+    const response = await apiClient.get('/api/exams/record/download/', {
+      responseType: 'blob'
+    });
+    return response.data;
   },
 
   // Download exam PDF
@@ -124,4 +97,6 @@ export const examResultService = {
     const response = await apiClient.get('/api/teacher/exams/recent/');
     return response.data;
   }
-}; 
+};
+
+export default examResultService; 
