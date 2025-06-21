@@ -9,8 +9,7 @@ import {
   TrashIcon, 
   XMarkIcon,
   AcademicCapIcon,
-  ArrowDownTrayIcon,
-  QuestionMarkCircleIcon 
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import examResultService, { type ExamResult, type ExamResultFormData, type ExamPDF } from '@/services/examResultService';
 import { Dialog } from '@/components/ui/dialog';
@@ -21,8 +20,7 @@ export default function ExamResultsPage() {
   const [editingResult, setEditingResult] = useState<ExamResult | null>(null);
   const queryClient = useQueryClient();
   const [examPDFs, setExamPDFs] = useState<ExamPDF[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ExamResultFormData>({
     defaultValues: editingResult ? {
