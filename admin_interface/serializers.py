@@ -583,7 +583,7 @@ class ExamPDFSerializer(serializers.ModelSerializer):
         model = ExamPDF
         fields = [
             'id', 'teacher', 'teacher_name', 'exam_name', 'subject',
-            'class_assigned', 'exam_date', 'term', 'year', 'file',
+            'class_assigned', 'exam_date', 'year', 'file',
             'remarks', 'download_url', 'created_at',
             'school', 'school_name'
         ]
@@ -615,13 +615,6 @@ class ExamPDFSerializer(serializers.ModelSerializer):
         current_year = timezone.now().year
         if value > current_year:
             raise serializers.ValidationError("Year cannot be in the future")
-        return value
-        
-    def validate_term(self, value):
-        """Validate term value"""
-        valid_terms = ['Term 1', 'Term 2', 'Term 3']
-        if value not in valid_terms:
-            raise serializers.ValidationError(f"Term must be one of: {', '.join(valid_terms)}")
         return value
 
 class SchoolEventSerializer(serializers.ModelSerializer):
