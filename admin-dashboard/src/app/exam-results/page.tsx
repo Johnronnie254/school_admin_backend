@@ -186,7 +186,9 @@ export default function ExamResultsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {examResults.map((result: ExamResult) => (
                 <tr key={result.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{result.student}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {result.student_name}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">{result.exam_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{result.subject}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{result.marks}</td>
@@ -220,7 +222,7 @@ export default function ExamResultsPage() {
               <div key={result.id} className="bg-white rounded-lg shadow p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h3 className="text-base font-medium text-gray-900">{result.student}</h3>
+                    <h3 className="text-base font-medium text-gray-900">{result.student_name}</h3>
                     <p className="text-sm text-gray-500">{result.exam_name}</p>
                   </div>
                   <div className="flex space-x-2">

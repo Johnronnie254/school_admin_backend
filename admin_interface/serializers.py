@@ -318,9 +318,11 @@ class ParentRegistrationSerializer(serializers.ModelSerializer):
 
 class ExamResultSerializer(serializers.ModelSerializer):
     """Serializer for exam results"""
+    student_name = serializers.CharField(source='student.name', read_only=True)
+    
     class Meta:
         model = ExamResult
-        fields = '__all__'
+        fields = ['id', 'student', 'student_name', 'exam_name', 'subject', 'marks', 'grade', 'term', 'year', 'remarks', 'created_at']
 
 class SchoolFeeSerializer(serializers.ModelSerializer):
     """Serializer for school fees"""

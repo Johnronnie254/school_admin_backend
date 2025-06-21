@@ -3,6 +3,7 @@ import { apiClient } from '@/lib/api';
 export interface ExamResult {
   id: string;
   student: string;
+  student_name: string;
   exam_name: string;
   subject: string;
   marks: number;
