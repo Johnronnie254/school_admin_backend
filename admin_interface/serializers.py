@@ -606,12 +606,6 @@ class ExamPDFSerializer(serializers.ModelSerializer):
     def get_school_name(self, obj):
         return obj.school.name if obj.school else None
         
-    def validate_exam_date(self, value):
-        """Ensure exam date is not in the future"""
-        if value > timezone.now().date():
-            raise serializers.ValidationError("Exam date cannot be in the future")
-        return value
-        
     def validate_year(self, value):
         """Ensure year is not in the future"""
         current_year = timezone.now().year

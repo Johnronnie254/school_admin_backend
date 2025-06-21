@@ -25,6 +25,21 @@ export interface ExamResultFormData {
   remarks?: string;
 }
 
+export interface ExamPDF {
+  id: string;
+  teacher_name: string;
+  exam_name: string;
+  subject: string;
+  class_assigned: string;
+  exam_date: string;
+  year: number;
+  file: string;
+  remarks: string;
+  download_url: string;
+  created_at: string;
+  school_name: string;
+}
+
 export const examResultService = {
   getExamResults: async () => {
     try {
@@ -88,5 +103,25 @@ export const examResultService = {
 
   downloadResults: async () => {
     throw new Error('Download exam results endpoint not implemented in backend');
+  },
+
+  // Download exam PDF
+  downloadExamPDF: async (examId: string): Promise<Blob> => {
+    const response = await apiClient.get(`/api/teacher/exams/${examId}/download/`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  // Get all exam PDFs
+  getExamPDFs: async (): Promise<ExamPDF[]> => {
+    const response = await apiClient.get('/api/teacher/exams/');
+    return response.data;
+  },
+
+  // Get recent exam PDFs
+  getRecentExamPDFs: async (): Promise<ExamPDF[]> => {
+    const response = await apiClient.get('/api/teacher/exams/recent/');
+    return response.data;
   }
 }; 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -12,13 +12,18 @@ import {
   ArrowDownTrayIcon,
   QuestionMarkCircleIcon 
 } from '@heroicons/react/24/outline';
-import { examResultService, type ExamResult, type ExamResultFormData } from '@/services/examResultService';
+import { examResultService, type ExamResult, type ExamResultFormData, type ExamPDF } from '@/services/examResultService';
 import { Dialog } from '@/components/ui/dialog';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function ExamResultsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<ExamResult | null>(null);
   const queryClient = useQueryClient();
+  const [results, setResults] = useState<ExamResult[]>([]);
+  const [examPDFs, setExamPDFs] = useState<ExamPDF[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ExamResultFormData>({
     defaultValues: editingResult ? {
@@ -136,6 +141,47 @@ export default function ExamResultsPage() {
     }
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [resultsData, pdfsData] = await Promise.all([
+          examResultService.getResults(),
+          examResultService.getExamPDFs()
+        ]);
+        setResults(resultsData);
+        setExamPDFs(pdfsData);
+      } catch (err) {
+        setError('Failed to fetch exam data');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleDownloadPDF = async (examId: string, fileName: string) => {
+    try {
+      const blob = await examResultService.downloadExamPDF(examId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      setError('Failed to download PDF');
+    }
+  };
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <div className="text-red-500">{error}</div>;
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
@@ -152,6 +198,73 @@ export default function ExamResultsPage() {
             <ArrowDownTrayIcon className="h-5 w-5" />
             Download Results
           </button>
+        </div>
+      </div>
+
+      {/* Uploaded Exam PDFs Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Uploaded Exam Papers</h2>
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {examPDFs.map((exam) => (
+                <tr key={exam.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.exam_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.subject}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.class_assigned}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(exam.exam_date).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      onClick={() => handleDownloadPDF(exam.id, `${exam.exam_name}-${exam.subject}.pdf`)}
+                      className="text-indigo-600 hover:text-indigo-900 font-medium"
+                    >
+                      Download PDF
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Existing Exam Results Section */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Student Results</h2>
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {results.map((result) => (
+                <tr key={result.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.student_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.exam_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.subject}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.marks}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{result.grade}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
