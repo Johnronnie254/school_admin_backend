@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import attendanceService, { AttendanceRecord } from '@/services/attendanceService';
+import { AxiosError } from 'axios';
 
 const statusIcons = {
   present: <CheckCircleIcon className="w-5 h-5 text-green-500" />,
@@ -45,7 +46,7 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
       queryClient.invalidateQueries({ queryKey: ['attendance', selectedDate, className] });
       toast.success('Attendance marked successfully');
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError) => {
       console.error('Error marking attendance:', error);
       toast.error(error.response?.data?.message || 'Failed to mark attendance');
     }
