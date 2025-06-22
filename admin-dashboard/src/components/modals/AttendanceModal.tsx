@@ -7,6 +7,10 @@ import toast from 'react-hot-toast';
 import attendanceService, { AttendanceRecord } from '@/services/attendanceService';
 import { AxiosError } from 'axios';
 
+interface ErrorResponse {
+  message: string;
+}
+
 const statusIcons = {
   present: <CheckCircleIcon className="w-5 h-5 text-green-500" />,
   absent: <XCircleIcon className="w-5 h-5 text-red-500" />,
@@ -46,7 +50,7 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
       queryClient.invalidateQueries({ queryKey: ['attendance', selectedDate, className] });
       toast.success('Attendance marked successfully');
     },
-    onError: (error: AxiosError) => {
+    onError: (error: AxiosError<ErrorResponse>) => {
       console.error('Error marking attendance:', error);
       toast.error(error.response?.data?.message || 'Failed to mark attendance');
     }
