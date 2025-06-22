@@ -557,9 +557,11 @@ class TeacherParentAssociationSerializer(serializers.ModelSerializer):
         return data
 
 class LeaveApplicationSerializer(serializers.ModelSerializer):
+    teacher_name = serializers.CharField(source='teacher.name', read_only=True)
+    
     class Meta:
         model = LeaveApplication
-        fields = '__all__'
+        fields = ['id', 'teacher', 'teacher_name', 'leave_type', 'start_date', 'end_date', 'reason', 'status', 'created_at']
         read_only_fields = ['teacher']
 
 class ProductSerializer(serializers.ModelSerializer):
