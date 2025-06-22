@@ -78,17 +78,22 @@ const examResultService = {
     return response.data;
   },
 
+  // Get all exam PDFs
+  getExamPDFs: async (): Promise<ExamPDF[]> => {
+    try {
+      const response = await apiClient.get('/api/teacher/exams/');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch exam PDFs:', error);
+      return [];
+    }
+  },
+
   // Download exam PDF
   downloadExamPDF: async (examId: string): Promise<Blob> => {
     const response = await apiClient.get(`/api/teacher/exams/${examId}/download/`, {
       responseType: 'blob'
     });
-    return response.data;
-  },
-
-  // Get all exam PDFs
-  getExamPDFs: async (): Promise<ExamPDF[]> => {
-    const response = await apiClient.get('/api/teacher/exams/');
     return response.data;
   },
 

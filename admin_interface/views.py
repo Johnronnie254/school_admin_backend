@@ -2261,16 +2261,27 @@ class ProductViewSet(viewsets.ModelViewSet):
 class TeacherExamViewSet(viewsets.ModelViewSet):
     """ViewSet for teacher exam PDFs"""
     serializer_class = ExamPDFSerializer
-    permission_classes = [IsTeacher]
+    permission_classes = [IsAdminOrTeacher]  # Changed from IsTeacher to IsAdminOrTeacher
     parser_classes = (MultiPartParser, FormParser)
     
     def get_queryset(self):
-        """Only return exam PDFs uploaded by the requesting teacher"""
-        try:
-            teacher = Teacher.objects.get(email=self.request.user.email)
-            return ExamPDF.objects.filter(teacher=teacher).select_related('school')
-        except Teacher.DoesNotExist:
-            return ExamPDF.objects.none()
+        """Return exam PDFs based on user role"""
+        user = self.request.user
+        queryset = ExamPDF.objects.all()
+        
+        if user.role == Role.TEACHER:
+            # Teachers can only see their own PDFs
+            try:
+                teacher = Teacher.objects.get(email=user.email)
+                queryset = queryset.filter(teacher=teacher)
+            except Teacher.DoesNotExist:
+                return ExamPDF.objects.none()
+        elif user.role == Role.ADMIN:
+            # Admins can see all PDFs in their school
+            if user.school:
+                queryset = queryset.filter(school=user.school)
+        
+        return queryset.select_related('school', 'teacher')
     
     def perform_create(self, serializer):
         """Set the teacher and validate the file before saving"""
