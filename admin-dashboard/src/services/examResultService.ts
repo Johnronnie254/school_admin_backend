@@ -82,7 +82,12 @@ const examResultService = {
   getExamPDFs: async (): Promise<ExamPDF[]> => {
     try {
       const response = await apiClient.get('/api/teacher/exams/');
-      return response.data;
+      if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && 'results' in response.data) {
+        return response.data.results;
+      }
+      return [];
     } catch (error) {
       console.error('Failed to fetch exam PDFs:', error);
       return [];

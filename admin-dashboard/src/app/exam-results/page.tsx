@@ -207,16 +207,17 @@ export default function ExamResultsPage() {
       </div>
 
       {/* Uploaded Exam PDFs Section */}
-      {examPDFs.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Uploaded Exam Papers</h2>
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Uploaded Exam Papers</h2>
+        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+          {examPDFs.length > 0 ? (
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exam Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -227,24 +228,31 @@ export default function ExamResultsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.exam_name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.subject}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.class_assigned}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exam.teacher_name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(exam.exam_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={() => handleDownloadPDF(exam.id, `${exam.exam_name}-${exam.subject}.pdf`)}
-                        className="text-indigo-600 hover:text-indigo-900 font-medium"
+                        className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-900 font-medium"
                       >
-                        Download PDF
+                        <ArrowDownTrayIcon className="h-5 w-5" />
+                        Download
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No exam result pdfs have been uploaded yet.</p>
+              <p className="text-sm text-gray-400 mt-1">Exam result pdfs uploaded by teachers will appear here.</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Exam Results Section */}
       <div>
