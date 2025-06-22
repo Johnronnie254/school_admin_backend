@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { PlusIcon, PencilIcon, UserGroupIcon, AcademicCapIcon, XMarkIcon, UsersIcon, UserIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, UserGroupIcon, AcademicCapIcon, XMarkIcon, UsersIcon, UserIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { Dialog } from '@headlessui/react';
 import toast from 'react-hot-toast';
 import { teacherService, Teacher } from '@/services/teacherService';
 import { studentService, Student } from '@/services/studentService';
 import { Parent } from '@/services/parentService';
 import { AxiosError } from 'axios';
+import AttendanceModal from '@/components/modals/AttendanceModal';
 
 interface ClassData {
   name: string;
@@ -27,6 +28,8 @@ interface ClassFormData {
 
 export default function ClassesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [editingClass, setEditingClass] = useState<string | null>(null);
   const [selectedTeachers, setSelectedTeachers] = useState<string[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
@@ -204,6 +207,12 @@ export default function ClassesPage() {
     reset();
   };
 
+  const handleViewAttendance = (className: string) => {
+    setSelectedClass(className);
+    setIsAttendanceModalOpen(true);
+  };
+
+
   return (
     <div className="p-4 sm:p-6">
       {/* Header */}
@@ -234,12 +243,22 @@ export default function ClassesPage() {
             <div key={classData.name} className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-base sm:text-lg font-medium text-gray-900 truncate pr-2">{classData.name}</h3>
-                <button
-                  onClick={() => handleEditClass(classData.name)}
-                  className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
-                >
-                  <PencilIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleViewAttendance(classData.name)}
+                    className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
+                    title="View Attendance"
+                  >
+                    <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleEditClass(classData.name)}
+                    className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
+                    title="Edit Class"
+                  >
+                    <PencilIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                </div>
               </div>
               
               <div className="space-y-3">
@@ -498,6 +517,18 @@ export default function ClassesPage() {
           </Dialog.Panel>
         </div>
       </Dialog>
+
+      {/* Attendance Modal */}
+      {selectedClass && (
+        <AttendanceModal
+          isOpen={isAttendanceModalOpen}
+          onClose={() => {
+            setIsAttendanceModalOpen(false);
+            setSelectedClass(null);
+          }}
+          className={selectedClass}
+        />
+      )}
     </div>
   );
 } 
