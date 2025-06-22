@@ -6,7 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential, Attendance
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
@@ -14,7 +14,7 @@ from .serializers import (
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
     ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
-    TeacherParentAssociationSerializer, SchoolSerializer, TimeTableSerializer
+    TeacherParentAssociationSerializer, SchoolSerializer, TimeTableSerializer, AttendanceSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -2976,3 +2976,167 @@ class DirectMessagingView(APIView):
             
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class AttendanceViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing student attendance"""
+    serializer_class = AttendanceSerializer
+    permission_classes = [IsAdminOrTeacher]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['student__name', 'status', 'date']
+    ordering_fields = ['date', 'created_at']
+
+    def get_queryset(self):
+        """Filter attendance records based on user role and school"""
+        user = self.request.user
+        queryset = Attendance.objects.all()
+        
+        # Filter by school if user has a school
+        if user.school:
+            queryset = queryset.filter(
+                Q(student__school=user.school) | 
+                Q(recorded_by__school=user.school)
+            )
+        
+        # If teacher, only show records for their assigned class
+        if user.role == 'teacher':
+            try:
+                teacher = Teacher.objects.get(email=user.email)
+                if teacher.class_assigned:
+                    queryset = queryset.filter(student__class_assigned=teacher.class_assigned)
+            except Teacher.DoesNotExist:
+                return Attendance.objects.none()
+                
+        return queryset
+
+    def perform_create(self, serializer):
+        """Set the recorded_by field to the current teacher"""
+        try:
+            teacher = Teacher.objects.get(email=self.request.user.email)
+            serializer.save(recorded_by=teacher)
+        except Teacher.DoesNotExist:
+            raise serializers.ValidationError("Teacher profile not found")
+
+    @action(detail=False, methods=['post'])
+    def mark_class_attendance(self, request):
+        """Mark attendance for multiple students in a class"""
+        try:
+            teacher = Teacher.objects.get(email=request.user.email)
+            
+            if not teacher.class_assigned:
+                return Response(
+                    {"error": "Teacher must be assigned to a class"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get attendance data from request
+            date = request.data.get('date', timezone.now().date())
+            attendance_data = request.data.get('attendance', [])
+            
+            # Validate attendance data
+            if not attendance_data:
+                return Response(
+                    {"error": "No attendance data provided"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get all students in the teacher's class
+            students = Student.objects.filter(
+                class_assigned=teacher.class_assigned,
+                school=teacher.school
+            )
+            
+            # Create/Update attendance records
+            attendance_records = []
+            for record in attendance_data:
+                student_id = record.get('student_id')
+                status = record.get('status')
+                reason = record.get('reason', '')
+                
+                if not student_id or not status:
+                    continue
+                    
+                try:
+                    student = students.get(id=student_id)
+                    # Create or update attendance record
+                    attendance, created = Attendance.objects.update_or_create(
+                        student=student,
+                        date=date,
+                        defaults={
+                            'status': status,
+                            'reason': reason,
+                            'recorded_by': teacher
+                        }
+                    )
+                    attendance_records.append(attendance)
+                except Student.DoesNotExist:
+                    continue
+            
+            return Response({
+                'message': f'Attendance marked for {len(attendance_records)} students',
+                'attendance': AttendanceSerializer(attendance_records, many=True).data
+            })
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {"error": "Teacher profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(detail=False, methods=['get'])
+    def class_attendance_summary(self, request):
+        """Get attendance summary for teacher's class"""
+        try:
+            teacher = Teacher.objects.get(email=request.user.email)
+            
+            if not teacher.class_assigned:
+                return Response(
+                    {"error": "Teacher must be assigned to a class"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get date from query params or use today
+            date = request.query_params.get('date', timezone.now().date())
+            
+            # Get all students in the class
+            students = Student.objects.filter(
+                class_assigned=teacher.class_assigned,
+                school=teacher.school
+            )
+            
+            # Get attendance records for the date
+            attendance_records = Attendance.objects.filter(
+                student__in=students,
+                date=date
+            )
+            
+            # Create summary
+            summary = {
+                'total_students': students.count(),
+                'attendance_marked': attendance_records.count(),
+                'present': attendance_records.filter(status='present').count(),
+                'absent': attendance_records.filter(status='absent').count(),
+                'late': attendance_records.filter(status='late').count(),
+                'excused': attendance_records.filter(status='excused').count(),
+                'records': AttendanceSerializer(attendance_records, many=True).data,
+                'unmarked_students': []
+            }
+            
+            # Add unmarked students
+            marked_student_ids = attendance_records.values_list('student_id', flat=True)
+            unmarked_students = students.exclude(id__in=marked_student_ids)
+            summary['unmarked_students'] = [
+                {
+                    'id': str(student.id),
+                    'name': student.name,
+                    'grade': student.grade
+                }
+                for student in unmarked_students
+            ]
+            
+            return Response(summary)
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {"error": "Teacher profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )

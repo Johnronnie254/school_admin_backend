@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School, TimeTable
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School, TimeTable, Attendance
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -642,3 +642,12 @@ class TimeTableSerializer(serializers.ModelSerializer):
     class Meta:
         model = TimeTable
         fields = ['id', 'grade', 'day', 'period', 'subject', 'teacher', 'start_time', 'end_time', 'room', 'school']
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.name', read_only=True)
+    recorded_by_name = serializers.CharField(source='recorded_by.name', read_only=True)
+    
+    class Meta:
+        model = Attendance
+        fields = ['id', 'student', 'student_name', 'date', 'status', 'reason', 'recorded_by', 'recorded_by_name', 'created_at']
+        read_only_fields = ['recorded_by', 'created_at']
