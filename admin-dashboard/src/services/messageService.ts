@@ -69,13 +69,27 @@ export const messageService = {
   // Get all users for messaging
   getChatUsers: async () => {
     try {
-      // Get teachers using the correct endpoint
-      const teachersResponse = await apiClient.get<PaginatedResponse<Teacher>>('/api/teachers/');
-      const teachers = teachersResponse.data.results || [];
+      // Get teachers
+      const teachersResponse = await apiClient.get<Teacher[] | PaginatedResponse<Teacher>>('/api/teachers/');
+      let teachers: Teacher[] = [];
+      
+      // Handle both array and paginated response formats for teachers
+      if (Array.isArray(teachersResponse.data)) {
+        teachers = teachersResponse.data;
+      } else if (teachersResponse.data && typeof teachersResponse.data === 'object' && 'results' in teachersResponse.data) {
+        teachers = Array.isArray(teachersResponse.data.results) ? teachersResponse.data.results : [];
+      }
 
-      // Get parents using the same endpoint as parents page
-      const parentsResponse = await apiClient.get<PaginatedResponse<Parent>>('/api/parents/');
-      const parents = parentsResponse.data.results || [];
+      // Get parents
+      const parentsResponse = await apiClient.get<Parent[] | PaginatedResponse<Parent>>('/api/parents/');
+      let parents: Parent[] = [];
+      
+      // Handle both array and paginated response formats for parents
+      if (Array.isArray(parentsResponse.data)) {
+        parents = parentsResponse.data;
+      } else if (parentsResponse.data && typeof parentsResponse.data === 'object' && 'results' in parentsResponse.data) {
+        parents = Array.isArray(parentsResponse.data.results) ? parentsResponse.data.results : [];
+      }
 
       // Transform teachers to include role for UI consistency
       const teachersWithRole = teachers.map(teacher => ({
@@ -96,7 +110,7 @@ export const messageService = {
       // Return combined array of teachers and parents
       return [...teachersWithRole, ...parentsWithRole];
     } catch (error) {
-      console.error('Error fetching chat users:', error);
+      console.error('❌ Error fetching chat users:', error);
       return [];
     }
   }
