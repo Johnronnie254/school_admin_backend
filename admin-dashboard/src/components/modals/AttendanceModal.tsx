@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, CalendarIcon, CheckCircleIcon, XCircleIcon, ClockIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import attendanceService, { AttendanceRecord, Attendance } from '@/services/attendanceService';
+import attendanceService, { Attendance } from '@/services/attendanceService';
 import { AxiosError } from 'axios';
 
 interface Student {
@@ -39,7 +39,6 @@ interface AttendanceModalProps {
 
 export default function AttendanceModal({ isOpen, onClose, className }: AttendanceModalProps) {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const queryClient = useQueryClient();
 
   console.log('Modal Props:', { isOpen, className, selectedDate });
 
@@ -78,24 +77,6 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
 
   const isLoading = isLoadingStudents || isLoadingAttendance;
   console.log('Loading state:', { isLoadingStudents, isLoadingAttendance, isLoading });
-
-  // Mutation for marking attendance
-  const markAttendanceMutation = useMutation({
-    mutationFn: (records: AttendanceRecord[]) => 
-      attendanceService.markClassAttendance(selectedDate, records, className),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance', selectedDate, className] });
-      toast.success('Attendance marked successfully');
-    },
-    onError: (error: AxiosError<{ message: string }>) => {
-      console.error('Error marking attendance:', error);
-      toast.error(error.response?.data?.message || 'Failed to mark attendance');
-    }
-  });
-
-  const handleMarkAttendance = (studentId: string, status: AttendanceRecord['status'], reason: string = '') => {
-    markAttendanceMutation.mutate([{ student_id: studentId, status, reason }]);
-  };
 
   // Combine class students with attendance data
   const students = classData?.students || [];
@@ -149,7 +130,7 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
                   {decodeURIComponent(className)} - Attendance
                 </Dialog.Title>
                 <p className="text-sm text-gray-500">
-                  Mark and view attendance records
+                  View attendance records
                 </p>
               </div>
             </div>
@@ -245,9 +226,6 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Recorded By
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
-                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -271,22 +249,6 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {student.attendance?.recorded_by_name || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <div className="flex items-center gap-2">
-                                {['present', 'absent', 'late', 'excused'].map((status) => (
-                                  <button
-                                    key={status}
-                                    onClick={() => handleMarkAttendance(student.id, status as AttendanceRecord['status'])}
-                                    className={`p-1 rounded-md hover:bg-gray-100 ${
-                                      student.attendance?.status === status ? 'bg-gray-100' : ''
-                                    }`}
-                                    title={`Mark as ${status}`}
-                                  >
-                                    {statusIcons[status as keyof typeof statusIcons]}
-                                  </button>
-                                ))}
-                              </div>
                             </td>
                           </tr>
                         ))}
