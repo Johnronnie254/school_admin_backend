@@ -1005,11 +1005,11 @@ class ParentViewSet(viewsets.ModelViewSet):
                     'children_in_class': child_data.get(teacher.class_assigned, [])
                 })
         
-        return Response({
-                'teachers': teachers_data,
-                'count': len(teachers_data),
-                'children_classes': list(child_classes)
-            })
+            return Response({
+                    'teachers': teachers_data,
+                    'count': len(teachers_data),
+                    'children_classes': list(child_classes)
+                })
             
         except Exception as e:
             return Response(
@@ -1027,7 +1027,7 @@ class ParentViewSet(viewsets.ModelViewSet):
             self.perform_create(serializer, school=request.user.school)
         else:
             self.perform_create(serializer)
-            
+
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
             
