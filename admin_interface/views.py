@@ -529,14 +529,39 @@ class TeacherViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
+    @action(detail=False, methods=['get'], permission_classes=[IsTeacher|IsAdmin])
     def my_class_students(self, request):
         """Get students in teacher's assigned class"""
         user = request.user
         if not user.school:
-            return Response({"error": "Teacher must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "User must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
+            # For admin users, get students by class name from query params
+            if user.role == Role.ADMIN:
+                class_name = request.query_params.get('class_name')
+                if not class_name:
+                    return Response(
+                        {"error": "class_name query parameter is required for admin users"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Get students in the specified class
+                students = Student.objects.filter(
+                    class_assigned=class_name,
+                    school=user.school
+                ).select_related('parent')
+                
+                # Serialize the students data
+                serializer = StudentSerializer(students, many=True)
+                
+                return Response({
+                    'class_name': class_name,
+                    'total_students': len(students),
+                    'students': serializer.data
+                })
+            
+            # For teachers, use existing logic
             teacher = Teacher.objects.get(email=user.email)
             
             if not teacher.class_assigned:
@@ -561,6 +586,11 @@ class TeacherViewSet(viewsets.ModelViewSet):
             })
             
         except Teacher.DoesNotExist:
+            if user.role == Role.ADMIN:
+                return Response(
+                    {"error": "Invalid request"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             return Response(
                 {"error": "Teacher profile not found"},
                 status=status.HTTP_404_NOT_FOUND
@@ -962,7 +992,7 @@ class ParentViewSet(viewsets.ModelViewSet):
             teachers_data = []
             teachers_in_classes = Teacher.objects.filter(
                 class_assigned__in=child_classes,
-                school=user.school
+            school=user.school
             )
             
             for teacher in teachers_in_classes:
@@ -974,8 +1004,8 @@ class ParentViewSet(viewsets.ModelViewSet):
                     'class_assigned': teacher.class_assigned,
                     'children_in_class': child_data.get(teacher.class_assigned, [])
                 })
-            
-            return Response({
+        
+        return Response({
                 'teachers': teachers_data,
                 'count': len(teachers_data),
                 'children_classes': list(child_classes)
@@ -2274,8 +2304,8 @@ class TeacherExamViewSet(viewsets.ModelViewSet):
             try:
                 teacher = Teacher.objects.get(email=user.email)
                 queryset = queryset.filter(teacher=teacher)
-            except Teacher.DoesNotExist:
-                return ExamPDF.objects.none()
+        except Teacher.DoesNotExist:
+            return ExamPDF.objects.none()
         elif user.role == Role.ADMIN:
             # Admins can see all PDFs in their school
             if user.school:
@@ -2837,19 +2867,19 @@ class DirectMessagingView(APIView):
                         "user_role": user.role
                     })
                 
-                teachers = Teacher.objects.filter(
+            teachers = Teacher.objects.filter(
                     class_assigned__in=class_names,
-                    school=user.school
-                ).values('id', 'name', 'email', 'subjects', 'class_assigned')
-                
-                contacts = [{
+                school=user.school
+            ).values('id', 'name', 'email', 'subjects', 'class_assigned')
+            
+            contacts = [{
                     'id': str(teacher['id']),
-                    'name': teacher['name'],
-                    'email': teacher['email'],
-                    'role': 'teacher',
-                    'subjects': teacher['subjects'],
-                    'class_assigned': teacher['class_assigned']
-                } for teacher in teachers]
+                'name': teacher['name'],
+                'email': teacher['email'],
+                'role': 'teacher',
+                'subjects': teacher['subjects'],
+                'class_assigned': teacher['class_assigned']
+            } for teacher in teachers]
                 
             except Exception as e:
                 return Response({
@@ -3070,8 +3100,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                     attendance_records.append(attendance)
                 except Student.DoesNotExist:
                     continue
-            
-            return Response({
+        
+        return Response({
                 'message': f'Attendance marked for {len(attendance_records)} students',
                 'attendance': AttendanceSerializer(attendance_records, many=True).data
             })

@@ -4,11 +4,17 @@ import { XMarkIcon, CalendarIcon, CheckCircleIcon, XCircleIcon, ClockIcon, Excla
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import attendanceService, { AttendanceRecord } from '@/services/attendanceService';
+import attendanceService, { AttendanceRecord, Attendance } from '@/services/attendanceService';
 import { AxiosError } from 'axios';
 
-interface ErrorResponse {
-  message: string;
+interface Student {
+  id: string;
+  name: string;
+  grade: number;
+}
+
+interface StudentWithAttendance extends Student {
+  attendance: Attendance | null;
 }
 
 const statusIcons = {
@@ -35,22 +41,53 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const queryClient = useQueryClient();
 
-  // Get attendance summary for the selected date
-  const { data: attendanceSummary, isLoading } = useQuery({
-    queryKey: ['attendance', selectedDate, className],
-    queryFn: () => attendanceService.getClassAttendanceSummary(selectedDate),
-    enabled: isOpen // Only fetch when modal is open
+  console.log('Modal Props:', { isOpen, className, selectedDate });
+
+  // Get class students
+  const { data: classData, isLoading: isLoadingStudents } = useQuery({
+    queryKey: ['class-students', className],
+    queryFn: async () => {
+      console.log('Fetching students for class:', className);
+      try {
+        const data = await attendanceService.getClassStudents(className);
+        console.log('Received class data:', data);
+        if (!data || !data.students || !Array.isArray(data.students)) {
+          console.warn('Invalid or empty class data received:', data);
+          return { students: [], class_name: className, total_students: 0 };
+        }
+        return data;
+      } catch (error) {
+        console.error('Error fetching class students:', error);
+        throw error;
+      }
+    },
+    enabled: isOpen && !!className
   });
+
+  // Get attendance summary for the selected date
+  const { data: attendanceSummary, isLoading: isLoadingAttendance } = useQuery({
+    queryKey: ['attendance', selectedDate, className],
+    queryFn: async () => {
+      console.log('Fetching attendance for:', { date: selectedDate, class: className });
+      const data = await attendanceService.getClassAttendanceSummary(selectedDate, className);
+      console.log('Received attendance data:', data);
+      return data;
+    },
+    enabled: isOpen && !!className && !!classData
+  });
+
+  const isLoading = isLoadingStudents || isLoadingAttendance;
+  console.log('Loading state:', { isLoadingStudents, isLoadingAttendance, isLoading });
 
   // Mutation for marking attendance
   const markAttendanceMutation = useMutation({
     mutationFn: (records: AttendanceRecord[]) => 
-      attendanceService.markClassAttendance(selectedDate, records),
+      attendanceService.markClassAttendance(selectedDate, records, className),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance', selectedDate, className] });
       toast.success('Attendance marked successfully');
     },
-    onError: (error: AxiosError<ErrorResponse>) => {
+    onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error marking attendance:', error);
       toast.error(error.response?.data?.message || 'Failed to mark attendance');
     }
@@ -59,6 +96,27 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
   const handleMarkAttendance = (studentId: string, status: AttendanceRecord['status'], reason: string = '') => {
     markAttendanceMutation.mutate([{ student_id: studentId, status, reason }]);
   };
+
+  // Combine class students with attendance data
+  const students = classData?.students || [];
+  const attendanceRecords = attendanceSummary?.records || [];
+  
+  console.log('Processing data:', {
+    hasClassData: !!classData,
+    studentCount: students.length,
+    hasAttendanceSummary: !!attendanceSummary,
+    recordCount: attendanceRecords.length
+  });
+
+  const studentAttendance = students.map((student: Student): StudentWithAttendance => {
+    const attendance = attendanceRecords.find(record => record.student === student.id);
+    return {
+      ...student,
+      attendance: attendance || null
+    };
+  });
+
+  console.log('Combined Student Attendance:', studentAttendance);
 
   return (
     <Dialog
@@ -169,7 +227,7 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
                   </div>
                 )}
 
-                {/* Attendance Records */}
+                {/* Student List */}
                 <div className="bg-white rounded-lg border border-gray-200">
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -193,55 +251,26 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {attendanceSummary?.records.map((record) => (
-                          <tr key={record.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {record.student_name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ring-1 ring-inset ${statusColors[record.status]}`}>
-                                {statusIcons[record.status]}
-                                {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {record.reason || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {record.recorded_by_name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <div className="flex items-center gap-2">
-                                {['present', 'absent', 'late', 'excused'].map((status) => (
-                                  <button
-                                    key={status}
-                                    onClick={() => handleMarkAttendance(record.student, status as AttendanceRecord['status'])}
-                                    className={`p-1 rounded-md hover:bg-gray-100 ${
-                                      record.status === status ? 'bg-gray-100' : ''
-                                    }`}
-                                    title={`Mark as ${status}`}
-                                  >
-                                    {statusIcons[status as keyof typeof statusIcons]}
-                                  </button>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                        {/* Unmarked Students */}
-                        {attendanceSummary?.unmarked_students.map((student) => (
-                          <tr key={student.id} className="bg-gray-50">
+                        {studentAttendance.map((student: StudentWithAttendance) => (
+                          <tr key={student.id} className={!student.attendance ? 'bg-gray-50' : undefined}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {student.name}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              Not marked
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {student.attendance ? (
+                                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ring-1 ring-inset ${statusColors[student.attendance.status]}`}>
+                                  {statusIcons[student.attendance.status]}
+                                  {student.attendance.status.charAt(0).toUpperCase() + student.attendance.status.slice(1)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-500">Not marked</span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              -
+                              {student.attendance?.reason || '-'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              -
+                              {student.attendance?.recorded_by_name || '-'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <div className="flex items-center gap-2">
@@ -249,7 +278,9 @@ export default function AttendanceModal({ isOpen, onClose, className }: Attendan
                                   <button
                                     key={status}
                                     onClick={() => handleMarkAttendance(student.id, status as AttendanceRecord['status'])}
-                                    className="p-1 rounded-md hover:bg-gray-100"
+                                    className={`p-1 rounded-md hover:bg-gray-100 ${
+                                      student.attendance?.status === status ? 'bg-gray-100' : ''
+                                    }`}
                                     title={`Mark as ${status}`}
                                   >
                                     {statusIcons[status as keyof typeof statusIcons]}

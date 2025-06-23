@@ -35,26 +35,55 @@ export interface ClassAttendanceSummary {
 
 const attendanceService = {
   // Get attendance records for a specific date
-  getAttendance: async (date?: string) => {
-    const params = date ? `?date=${date}` : '';
-    const response = await apiClient.get(`/attendance${params}`);
+  getAttendance: async (date?: string, className?: string) => {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    if (className) params.append('class_name', className);
+    const response = await apiClient.get(`/attendance?${params.toString()}`);
     return response.data;
   },
 
   // Get attendance summary for a class
-  getClassAttendanceSummary: async (date?: string) => {
-    const params = date ? `?date=${date}` : '';
-    const response = await apiClient.get<ClassAttendanceSummary>(`/attendance/class_attendance_summary${params}`);
+  getClassAttendanceSummary: async (date?: string, className?: string) => {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    if (className) params.append('class_name', className);
+    const response = await apiClient.get<ClassAttendanceSummary>(`/attendance/class_attendance_summary?${params.toString()}`);
     return response.data;
   },
 
   // Mark attendance for multiple students
-  markClassAttendance: async (date: string, attendance: AttendanceRecord[]) => {
+  markClassAttendance: async (date: string, attendance: AttendanceRecord[], className: string) => {
     const response = await apiClient.post('/attendance/mark_class_attendance/', {
       date,
-      attendance
+      attendance,
+      class_name: className
     });
     return response.data;
+  },
+
+  // Get students in a class
+  getClassStudents: async (className: string) => {
+    try {
+      console.log('Fetching students with class:', className);
+      const response = await apiClient.get(`/teachers/my_class_students?class_name=${encodeURIComponent(className)}`);
+      console.log('Students API Response:', response.data);
+
+      // Handle both array and paginated response formats
+      const students = Array.isArray(response.data) ? response.data : response.data.results || [];
+      const totalStudents = Array.isArray(response.data) ? response.data.length : response.data.count || students.length;
+
+      const result = {
+        class_name: className,
+        total_students: totalStudents,
+        students: students
+      };
+      console.log('Processed class data:', result);
+      return result;
+    } catch (error) {
+      console.error('Error fetching class students:', error);
+      throw error;
+    }
   }
 };
 
