@@ -2304,8 +2304,8 @@ class TeacherExamViewSet(viewsets.ModelViewSet):
             try:
                 teacher = Teacher.objects.get(email=user.email)
                 queryset = queryset.filter(teacher=teacher)
-        except Teacher.DoesNotExist:
-            return ExamPDF.objects.none()
+            except Teacher.DoesNotExist:
+                return ExamPDF.objects.none()
         elif user.role == Role.ADMIN:
             # Admins can see all PDFs in their school
             if user.school:
@@ -2867,19 +2867,19 @@ class DirectMessagingView(APIView):
                         "user_role": user.role
                     })
                 
-            teachers = Teacher.objects.filter(
-                    class_assigned__in=class_names,
-                school=user.school
-            ).values('id', 'name', 'email', 'subjects', 'class_assigned')
-            
-            contacts = [{
-                    'id': str(teacher['id']),
-                'name': teacher['name'],
-                'email': teacher['email'],
-                'role': 'teacher',
-                'subjects': teacher['subjects'],
-                'class_assigned': teacher['class_assigned']
-            } for teacher in teachers]
+                teachers = Teacher.objects.filter(
+                        class_assigned__in=class_names,
+                    school=user.school
+                ).values('id', 'name', 'email', 'subjects', 'class_assigned')
+                
+                contacts = [{
+                        'id': str(teacher['id']),
+                    'name': teacher['name'],
+                    'email': teacher['email'],
+                    'role': 'teacher',
+                    'subjects': teacher['subjects'],
+                    'class_assigned': teacher['class_assigned']
+                } for teacher in teachers]
                 
             except Exception as e:
                 return Response({
@@ -3101,11 +3101,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 except Student.DoesNotExist:
                     continue
         
-        return Response({
-                'message': f'Attendance marked for {len(attendance_records)} students',
-                'attendance': AttendanceSerializer(attendance_records, many=True).data
-            })
-            
+            return Response({
+                    'message': f'Attendance marked for {len(attendance_records)} students',
+                    'attendance': AttendanceSerializer(attendance_records, many=True).data
+                })
+
         except Teacher.DoesNotExist:
             return Response(
                 {"error": "Teacher profile not found"},
