@@ -47,19 +47,22 @@ apiClient.interceptors.request.use(
       // Remove any leading/trailing slashes from baseURL
       const base = (config.baseURL || '').replace(/\/+$/, '');
       
+      // Split path and query
+      const [pathPart, queryPart] = config.url.split('?');
+      
       // Clean up the path
-      let path = config.url.replace(/^\/+/, '').replace(/\/+$/, '');
+      let path = pathPart.replace(/^\/+/, '').replace(/\/+$/, '');
       
       // Add api prefix if needed
       if (!path.startsWith('api/')) {
         path = `api/${path}`;
       }
       
-      // Add trailing slash for Django
+      // Add trailing slash to path
       path = `${path}/`;
       
-      // Construct final URL
-      config.url = `${base}/${path}`;
+      // Reconstruct URL with query parameters
+      config.url = `${base}/${path}${queryPart ? `?${queryPart}` : ''}`;
       console.log('📡 Final URL:', config.url);
     }
 

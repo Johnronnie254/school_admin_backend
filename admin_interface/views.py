@@ -3114,24 +3114,37 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def class_attendance_summary(self, request):
-        """Get attendance summary for teacher's class"""
+        """Get attendance summary for a class"""
         try:
-            teacher = Teacher.objects.get(email=request.user.email)
-            
-            if not teacher.class_assigned:
-                return Response(
-                    {"error": "Teacher must be assigned to a class"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Get date from query params or use today
+            user = request.user
             date = request.query_params.get('date', timezone.now().date())
             
-            # Get all students in the class
-            students = Student.objects.filter(
-                class_assigned=teacher.class_assigned,
-                school=teacher.school
-            )
+            # For admin users, get class name from query params
+            if user.role == Role.ADMIN:
+                class_name = request.query_params.get('class_name')
+                if not class_name:
+                    return Response(
+                        {"error": "class_name query parameter is required for admin users"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Get all students in the specified class
+                students = Student.objects.filter(
+                    class_assigned=class_name,
+                    school=user.school
+                )
+            else:
+                # For teachers, use their assigned class
+                teacher = Teacher.objects.get(email=user.email)
+                if not teacher.class_assigned:
+                    return Response(
+                        {"error": "Teacher must be assigned to a class"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                students = Student.objects.filter(
+                    class_assigned=teacher.class_assigned,
+                    school=teacher.school
+                )
             
             # Get attendance records for the date
             attendance_records = Attendance.objects.filter(
@@ -3166,6 +3179,11 @@ class AttendanceViewSet(viewsets.ModelViewSet):
             return Response(summary)
             
         except Teacher.DoesNotExist:
+            if user.role == Role.ADMIN:
+                return Response(
+                    {"error": "Invalid request"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             return Response(
                 {"error": "Teacher profile not found"},
                 status=status.HTTP_404_NOT_FOUND
