@@ -3182,3 +3182,102 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 {"error": "Teacher profile not found"},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+class OrderViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing shop orders"""
+    serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['id', 'parent__name', 'status']
+    ordering_fields = ['created_at', 'total_amount', 'status']
+
+    def get_queryset(self):
+        """
+        Filter orders:
+        - Parents see only their orders
+        - Admins see all orders for their school
+        """
+        user = self.request.user
+        queryset = Order.objects.all()
+
+        if user.role == 'parent':
+            return queryset.filter(parent=user)
+        elif user.role == 'admin':
+            return queryset.filter(school=user.school)
+        return Order.objects.none()
+
+    def get_serializer_class(self):
+        """Use different serializers for list/retrieve and create operations"""
+        if self.action == 'create':
+            return OrderCreateSerializer
+        return OrderSerializer
+
+    def perform_create(self, serializer):
+        """Set the parent and school when creating an order"""
+        user = self.request.user
+        if user.role != 'parent':
+            raise PermissionError("Only parents can create orders")
+        
+        serializer.save(
+            parent=user,
+            school=user.school,
+            status='pending'
+        )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
+    def process(self, request, pk=None):
+        """Mark an order as processing"""
+        order = self.get_object()
+        if order.status != 'pending':
+            return Response(
+                {"error": "Only pending orders can be processed"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        order.status = 'processing'
+        order.save()
+        return Response(self.get_serializer(order).data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
+    def complete(self, request, pk=None):
+        """Mark an order as completed"""
+        order = self.get_object()
+        if order.status != 'processing':
+            return Response(
+                {"error": "Only processing orders can be completed"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        order.status = 'completed'
+        order.completed_at = timezone.now()
+        order.save()
+        return Response(self.get_serializer(order).data)
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancel an order (allowed for parents and admins)"""
+        order = self.get_object()
+        if order.status not in ['pending', 'processing']:
+            return Response(
+                {"error": "Only pending or processing orders can be cancelled"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check permissions
+        user = request.user
+        if user.role == 'parent' and order.parent != user:
+            return Response(
+                {"error": "You can only cancel your own orders"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        order.status = 'cancelled'
+        order.save()
+
+        # Return stock to inventory
+        for item in order.items.all():
+            product = item.product
+            product.stock += item.quantity
+            product.save()
+
+        return Response(self.get_serializer(order).data)
