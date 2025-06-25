@@ -31,7 +31,7 @@ router.register(r'teacher-parent-associations', TeacherParentAssociationViewSet,
 router.register(r'leave-applications', LeaveApplicationViewSet, basename='leave-application')
 router.register(r'school-events', SchoolEventViewSet, basename='school-event')
 router.register(r'products', ProductViewSet, basename='product')
-router.register(r'orders', OrderViewSet)
+router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'attendance', AttendanceViewSet, basename='attendance')
 
 urlpatterns = [

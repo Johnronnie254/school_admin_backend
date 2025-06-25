@@ -3185,6 +3185,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
 class OrderViewSet(viewsets.ModelViewSet):
     """ViewSet for managing shop orders"""
+    queryset = Order.objects.all()  # Add this line
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -3198,7 +3199,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         - Admins see all orders for their school
         """
         user = self.request.user
-        queryset = Order.objects.all()
+        queryset = super().get_queryset()
 
         if user.role == 'parent':
             return queryset.filter(parent=user)
