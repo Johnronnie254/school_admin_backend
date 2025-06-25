@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School, TimeTable, Attendance
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School, TimeTable, Attendance, Order, OrderItem
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -577,6 +577,93 @@ class ProductSerializer(serializers.ModelSerializer):
         if 'image' not in validated_data and instance.image:
             validated_data['image'] = instance.image
         return super().update(instance, validated_data)
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product', 'product_name', 'quantity', 'unit_price', 'total_price']
+        read_only_fields = ['total_price']
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    parent_name = serializers.CharField(source='parent.first_name', read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'parent', 'parent_name', 'school', 'status', 'total_amount', 'items', 'created_at', 'updated_at']
+        read_only_fields = ['total_amount', 'created_at', 'updated_at']
+
+class OrderCreateSerializer(serializers.ModelSerializer):
+    items = serializers.ListField(
+        child=serializers.DictField(
+            child=serializers.CharField()
+        ),
+        write_only=True
+    )
+
+    class Meta:
+        model = Order
+        fields = ['school', 'items']
+
+    def validate_items(self, items):
+        if not items:
+            raise serializers.ValidationError("At least one item is required")
+        
+        for item in items:
+            if not all(k in item for k in ('product', 'quantity')):
+                raise serializers.ValidationError("Each item must have 'product' and 'quantity' fields")
+            try:
+                quantity = int(item['quantity'])
+                if quantity <= 0:
+                    raise serializers.ValidationError("Quantity must be positive")
+            except ValueError:
+                raise serializers.ValidationError("Quantity must be a number")
+        
+        return items
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        total_amount = 0
+
+        # Create order
+        order = Order.objects.create(
+            parent=self.context['request'].user,
+            total_amount=total_amount,
+            **validated_data
+        )
+
+        # Create order items
+        for item_data in items_data:
+            product = Product.objects.get(id=item_data['product'])
+            quantity = int(item_data['quantity'])
+            
+            if product.stock < quantity:
+                order.delete()
+                raise serializers.ValidationError(f"Not enough stock for {product.name}")
+
+            # Create order item
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=quantity,
+                unit_price=product.price,
+                total_price=product.price * quantity
+            )
+
+            # Update product stock
+            product.stock -= quantity
+            product.save()
+            
+            # Update total amount
+            total_amount += product.price * quantity
+
+        # Update order total
+        order.total_amount = total_amount
+        order.save()
+
+        return order
 
 class ExamPDFSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()

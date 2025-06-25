@@ -464,6 +464,49 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class Order(models.Model):
+    """Model for parent orders from school shop"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='orders')
+    status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled')
+    ], default='pending')
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['parent', 'status']),
+            models.Index(fields=['school', 'status']),
+        ]
+
+    def __str__(self):
+        return f"Order {self.id} by {self.parent.first_name}"
+
+
+class OrderItem(models.Model):
+    """Model for items in an order"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField()
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        self.total_price = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.quantity}x {self.product.name} in Order {self.order.id}"
+
+
 class PasswordResetToken(models.Model):
     """Model for storing password reset tokens"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

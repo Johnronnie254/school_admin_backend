@@ -6,7 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential, Attendance
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential, Attendance, Order, OrderItem
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer, 
@@ -14,7 +14,8 @@ from .serializers import (
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
     ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
-    TeacherParentAssociationSerializer, SchoolSerializer, TimeTableSerializer, AttendanceSerializer
+    TeacherParentAssociationSerializer, SchoolSerializer, TimeTableSerializer, AttendanceSerializer,
+    OrderSerializer, OrderCreateSerializer
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -2040,13 +2041,6 @@ class TeacherParentAssociationViewSet(viewsets.ModelViewSet):
         return TeacherParentAssociation.objects.none()
 
     def perform_create(self, serializer):
-        user = self.request.user
-        if user.role == Role.TEACHER:
-            serializer.save(teacher=user.teacher)
-        elif user.role == Role.PARENT:
-            serializer.save(parent=user)
-
-    def perform_update(self, serializer):
         user = self.request.user
         if user.role == Role.TEACHER:
             serializer.save(teacher=user.teacher)
