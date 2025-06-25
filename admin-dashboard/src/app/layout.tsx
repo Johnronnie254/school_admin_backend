@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { CartProvider } from '@/contexts/CartContext';
 import { ConnectivityProvider } from '@/contexts/ConnectivityContext';
 import ConnectivityStatus from '@/components/ui/ConnectivityStatus';
 import { Analytics } from '@vercel/analytics/react';
@@ -34,29 +35,31 @@ export default function RootLayout({
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <ConnectivityProvider>
-              <ProtectedRoute>{children}</ProtectedRoute>
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 3000,
-                  style: {
-                    background: '#333',
-                    color: '#fff',
-                  },
-                  success: {
+              <CartProvider>
+                <ProtectedRoute>{children}</ProtectedRoute>
+                <Toaster
+                  position="top-right"
+                  toastOptions={{
+                    duration: 3000,
                     style: {
-                      background: '#22c55e',
+                      background: '#333',
+                      color: '#fff',
                     },
-                  },
-                  error: {
-                    style: {
-                      background: '#ef4444',
+                    success: {
+                      style: {
+                        background: '#22c55e',
+                      },
                     },
-                  },
-                }}
-              />
-              <ConnectivityStatus />
-              <Analytics />
+                    error: {
+                      style: {
+                        background: '#ef4444',
+                      },
+                    },
+                  }}
+                />
+                <ConnectivityStatus />
+                <Analytics />
+              </CartProvider>
             </ConnectivityProvider>
           </AuthProvider>
         </QueryClientProvider>

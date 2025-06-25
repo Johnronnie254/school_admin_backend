@@ -69,26 +69,23 @@ const shopService = {
     const response = await apiClient.get<PaginatedResponse<Product>>('/products/');
     console.log('Products API response:', response.data);
     
-    // Log the raw product data to inspect structure
-    if (response.data.results && response.data.results.length > 0) {
-      console.log('Raw product data sample:', JSON.stringify(response.data.results[0], null, 2));
-      console.log('Product has image property:', response.data.results[0].hasOwnProperty('image'));
-      console.log('Image property value:', response.data.results[0].image);
-    }
-    
-    // Process image URLs for all products
+    // Process and validate products
     if (response.data.results) {
       response.data.results = response.data.results.map((product: Product) => {
-        console.log(`Processing product ${product.id}: ${product.name}`);
+        // Validate and convert price to number
+        const price = typeof product.price === 'string' ? parseFloat(product.price) : product.price;
+        if (isNaN(price)) {
+          console.warn(`Product ${product.id} (${product.name}) has invalid price:`, product.price);
+          return { ...product, price: 0 };
+        }
         
+        // Process image URL
         if (product.image) {
           const processedUrl = getImageUrl(product.image);
-          console.log(`Product ${product.id}: ${product.name} - Original URL: ${product.image} → Processed URL: ${processedUrl}`);
-          return { ...product, image: processedUrl };
-        } else {
-          console.log(`Product ${product.id}: ${product.name} - No image available`);
-          return product;
+          return { ...product, price, image: processedUrl };
         }
+        
+        return { ...product, price };
       });
     }
     

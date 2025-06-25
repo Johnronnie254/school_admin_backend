@@ -11,12 +11,21 @@ import {
   ShoppingBagIcon,
   PlusCircleIcon,
   CurrencyDollarIcon,
-  PhotoIcon
+  PhotoIcon,
+  ShoppingCartIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  XCircleIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline';
 import shopService, { Product, CreateProductData } from '@/services/shopService';
+import orderService, { Order } from '@/services/orderService';
 import { Dialog } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { AxiosError } from 'axios';
+import { useCart } from '@/contexts/CartContext';
+import CartModal from '@/components/modals/CartModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Helper function to compress images
 const compressImage = async (file: File): Promise<File> => {
@@ -84,10 +93,15 @@ const compressImage = async (file: File): Promise<File> => {
 
 export default function ShopPage() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<'products' | 'orders'>('products');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { addItem } = useCart();
+  const { user } = useAuth();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateProductData>();
 
@@ -364,6 +378,47 @@ export default function ShopPage() {
     reset();
   };
 
+  // Fetch orders
+  const { data: orders = [], isLoading: isLoadingOrders } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => orderService.getOrders().then(res => res.results),
+    enabled: user?.role === 'admin'
+  });
+
+  // Order processing mutations
+  const processOrderMutation = useMutation({
+    mutationFn: orderService.processOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Order marked as processing');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to process order');
+    }
+  });
+
+  const completeOrderMutation = useMutation({
+    mutationFn: orderService.completeOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Order marked as completed');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to complete order');
+    }
+  });
+
+  const cancelOrderMutation = useMutation({
+    mutationFn: orderService.cancelOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Order cancelled');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to cancel order');
+    }
+  });
+
   if (isLoading || createMutation.isPending || updateMutation.isPending || deleteMutation.isPending) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -373,199 +428,317 @@ export default function ShopPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <ShoppingBagIcon className="h-6 w-6 text-gray-600" />
-          <h1 className="text-2xl font-semibold text-gray-800">School Shop</h1>
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
+            <ShoppingBagIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+          </div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">School Shop</h1>
         </div>
-        <div className="flex gap-4">
-          <button
-            onClick={() => {
-              setEditingProduct(null);
-              reset();
-              setPreviewUrl(null);
-              setIsOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <PlusCircleIcon className="h-5 w-5" />
-            Add Product
-          </button>
+        <div className="flex gap-2">
+          {user?.role === 'admin' && (
+            <>
+              <button
+                onClick={() => {
+                  setEditingProduct(null);
+                  setIsOpen(true);
+                }}
+                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <PlusCircleIcon className="w-5 h-5 mr-2" />
+                Add Product
+              </button>
+              <div className="flex rounded-md shadow-sm" role="group">
+                <button
+                  onClick={() => setSelectedTab('products')}
+                  className={`px-4 py-2 text-sm font-medium rounded-l-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    selectedTab === 'products'
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                  }`}
+                >
+                  Products
+                </button>
+                <button
+                  onClick={() => setSelectedTab('orders')}
+                  className={`px-4 py-2 text-sm font-medium rounded-r-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                    selectedTab === 'orders'
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-300'
+                  }`}
+                >
+                  Orders
+                </button>
+              </div>
+            </>
+          )}
+          {user?.role === 'parent' && (
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <ShoppingCartIcon className="w-5 h-5 mr-2" />
+              View Cart
+            </button>
+          )}
         </div>
       </div>
 
-      {products.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <ShoppingBagIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No products</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by adding a new product to the shop.</p>
+      {/* Content */}
+      {selectedTab === 'products' ? (
+        // Products Grid (existing code)
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          {products.map((product) => (
+            <div key={product.id} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+              {/* Product Image */}
+              <div className="relative aspect-square">
+                <Image
+                  src={product.image || '/placeholder-image.png'}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              {/* Product Details */}
+              <div className="p-4">
+                <h3 className="text-lg font-medium text-gray-900">{product.name}</h3>
+                <p className="mt-1 text-sm text-gray-500 line-clamp-2">{product.description}</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-lg font-semibold text-gray-900">
+                    KES {(typeof product.price === 'number' ? product.price : 0).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-500">{product.stock} in stock</p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="mt-4 flex gap-2">
+                  {user?.role === 'admin' ? (
+                    <>
+                      <button
+                        onClick={() => handleEdit(product)}
+                        className="flex-1 flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <PencilIcon className="w-4 h-4 mr-2" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="flex-1 flex items-center justify-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      >
+                        <TrashIcon className="w-4 h-4 mr-2" />
+                        Delete
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        addItem(product, 1);
+                        toast.success('Added to cart');
+                      }}
+                      disabled={product.stock === 0}
+                      className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <>
-          {/* Desktop Table - Hidden on mobile */}
-          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700 max-w-xs truncate">{product.description}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-700">
-                        <span className="inline-flex items-center">
-                          <CurrencyDollarIcon className="h-4 w-4 text-green-600 mr-1" />
-                          Ksh {typeof product.price === 'number' 
-                            ? product.price.toFixed(2) 
-                            : parseFloat(product.price || '0').toFixed(2)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.stock > 10 
-                          ? 'bg-green-100 text-green-800' 
-                          : product.stock > 0 
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {product.stock} in stock
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.image ? (
-                        <div className="relative w-20 h-20">
-                          <Image 
-                            src={product.image} 
-                            alt={product.name} 
-                            fill
-                            sizes="80px"
-                            className="rounded-lg object-contain"
-                            style={{ objectFit: 'contain' }}
-                            onError={(e) => {
-                              console.error(`Error loading image for product ${product.id} (${product.name}):`, e);
-                              e.currentTarget.src = '/placeholder-image.png';
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-20 w-20 rounded-lg bg-gray-100 flex items-center justify-center">
-                          <PhotoIcon className="h-8 w-8 text-gray-400" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700"
-                        >
-                          <PencilIcon className="h-4 w-4 mr-1" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
-                        >
-                          <TrashIcon className="h-4 w-4 mr-1" />
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        // Orders Section (Admin Only)
+        <div className="mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
+            {isLoadingOrders && (
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500"></div>
+            )}
           </div>
-          
-          {/* Mobile Cards - Shown only on mobile */}
-          <div className="grid grid-cols-1 gap-4 sm:hidden">
-            {products.map((product) => (
-              <div key={product.id} className="bg-white rounded-lg shadow p-4">
-                <div className="flex justify-between">
-                  <h3 className="text-base font-medium text-gray-900 mb-1">{product.name}</h3>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(product)}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      <PencilIcon className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <TrashIcon className="w-5 h-5" />
-                    </button>
+
+          <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Order ID
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Parent
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total Amount
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {orders.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        #{order.id.slice(-6)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {order.parent_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        KES {order.total_amount.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex items-center gap-2">
+                          {order.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => processOrderMutation.mutate(order.id)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Process Order"
+                              >
+                                <ClockIcon className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => cancelOrderMutation.mutate(order.id)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Cancel Order"
+                              >
+                                <XCircleIcon className="h-5 w-5" />
+                              </button>
+                            </>
+                          )}
+                          {order.status === 'processing' && (
+                            <button
+                              onClick={() => completeOrderMutation.mutate(order.id)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Complete Order"
+                            >
+                              <CheckCircleIcon className="h-5 w-5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className="text-gray-600 hover:text-gray-900"
+                            title="View Details"
+                          >
+                            <EyeIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      <Dialog
+        open={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <Dialog.Title className="text-lg font-semibold text-gray-900">
+                  Order Details #{selectedOrder?.id.slice(-6)}
+                </Dialog.Title>
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-8rem)]">
+              {selectedOrder && (
+                <div className="space-y-6">
+                  {/* Order Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Parent</p>
+                      <p className="mt-1 text-sm text-gray-900">{selectedOrder.parent_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Status</p>
+                      <p className="mt-1">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          selectedOrder.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                          selectedOrder.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Order Date</p>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {new Date(selectedOrder.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Total Amount</p>
+                      <p className="mt-1 text-sm text-gray-900">KES {selectedOrder.total_amount.toFixed(2)}</p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex mt-2">
-                  {/* Image */}
-                  <div className="mr-3">
-                    {product.image ? (
-                      <div className="relative w-16 h-16">
-                        <Image 
-                          src={product.image} 
-                          alt={product.name} 
-                          fill
-                          sizes="64px"
-                          className="rounded-lg object-contain"
-                          style={{ objectFit: 'contain' }}
-                          onError={(e) => {
-                            console.error(`Error loading mobile image for product ${product.id} (${product.name}):`, e);
-                            e.currentTarget.src = '/placeholder-image.png';
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="h-16 w-16 rounded-lg bg-gray-100 flex items-center justify-center">
-                        <PhotoIcon className="h-6 w-6 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Info */}
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-700 line-clamp-2 mb-2">{product.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900 flex items-center">
-                        <CurrencyDollarIcon className="h-4 w-4 text-green-600 mr-1" />
-                        Ksh {typeof product.price === 'number' 
-                          ? product.price.toFixed(2) 
-                          : parseFloat(product.price || '0').toFixed(2)}
-                      </span>
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                        product.stock > 10 
-                          ? 'bg-green-100 text-green-800' 
-                          : product.stock > 0 
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {product.stock} in stock
-                      </span>
+
+                  {/* Order Items */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">Order Items</h4>
+                    <div className="border rounded-lg divide-y">
+                      {selectedOrder.items.map((item) => (
+                        <div key={item.id} className="p-4 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{item.product_name}</p>
+                            <p className="text-sm text-gray-500">
+                              KES {item.unit_price.toFixed(2)} × {item.quantity}
+                            </p>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900">
+                            KES {item.total_price.toFixed(2)}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+              )}
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
 
       <Dialog
         open={isOpen}
@@ -760,6 +933,11 @@ export default function ShopPage() {
           </Dialog.Panel>
         </div>
       </Dialog>
+
+      {/* Cart Modal */}
+      {user?.role === 'parent' && (
+        <CartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      )}
     </div>
   );
 }
