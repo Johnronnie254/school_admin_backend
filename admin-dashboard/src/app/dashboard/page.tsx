@@ -1,10 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { schoolService } from '@/services/schoolService';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { EventBanner } from '@/components/EventBanner';
 import { InternetStatus } from '@/components/InternetStatus';
+import { schoolService } from '@/services/schoolService';
 import {
   UserGroupIcon,
   UsersIcon,

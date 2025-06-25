@@ -3,7 +3,7 @@ import { XMarkIcon, MinusIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/o
 import { useCart } from '@/contexts/CartContext';
 import { useMutation } from '@tanstack/react-query';
 import orderService from '@/services/orderService';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 
