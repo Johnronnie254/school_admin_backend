@@ -18,12 +18,12 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
 
   const createOrderMutation = useMutation({
     mutationFn: () => {
-      if (!user?.school) {
+      if (!user?.school_id) {
         throw new Error('No school associated with user');
       }
 
       return orderService.createOrder({
-        school: user.school,
+        school: user.school_id.toString(),
         items: cart.items.map(item => ({
           product: item.product.id,
           quantity: item.quantity
