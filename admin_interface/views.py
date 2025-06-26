@@ -9,8 +9,8 @@ import time
 from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential, Attendance, Order, OrderItem
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
-    ParentSerializer, ParentRegistrationSerializer, 
-    ExamResultSerializer, SchoolFeeSerializer, 
+    ParentSerializer, ParentRegistrationSerializer,
+    ExamResultSerializer, SchoolFeeSerializer,
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
     ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
@@ -48,7 +48,7 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             refresh = RefreshToken.for_user(user)
-            
+
             # If registering a parent, also create a Parent record
             if user.role == Role.PARENT:
                 try:
@@ -65,7 +65,7 @@ class RegisterView(APIView):
                 except Exception as e:
                     print(f"Error creating parent record: {str(e)}")
                     # Continue even if parent record creation fails
-            
+
             return Response({
                 'user': {
                     'id': user.id,
@@ -594,6 +594,90 @@ class TeacherViewSet(viewsets.ModelViewSet):
                 )
             return Response(
                 {"error": "Teacher profile not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
+    def my_profile(self, request):
+        """Get the current authenticated teacher's profile information"""
+        try:
+            teacher = Teacher.objects.get(email=request.user.email)
+            serializer = TeacherSerializer(teacher)
+            
+            # Add additional information that might be useful
+            profile_data = serializer.data
+            profile_data.update({
+                'date_joined': teacher.created_at.strftime('%Y-%m-%d') if teacher.created_at else None,
+                'school_name': teacher.school.name if teacher.school else None,
+                'user_role': request.user.role,
+                'is_active': request.user.is_active,
+            })
+            
+            return Response({
+                'success': True,
+                'teacher_profile': profile_data
+            })
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {
+                    'success': False,
+                    'error': 'Teacher profile not found. Please contact administrator.'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    @action(detail=False, methods=['put'], permission_classes=[IsTeacher])
+    def update_my_profile(self, request):
+        """Update the current authenticated teacher's profile information"""
+        try:
+            teacher = Teacher.objects.get(email=request.user.email)
+            
+            # Allow updating specific fields only
+            allowed_fields = ['name', 'phone_number', 'subjects']
+            update_data = {key: value for key, value in request.data.items() if key in allowed_fields}
+            
+            if not update_data:
+                return Response(
+                    {
+                        'success': False,
+                        'error': 'No valid fields provided for update. Allowed fields: name, phone_number, subjects'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            serializer = TeacherSerializer(teacher, data=update_data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                
+                # Return updated profile
+                updated_data = serializer.data
+                updated_data.update({
+                    'date_joined': teacher.created_at.strftime('%Y-%m-%d') if teacher.created_at else None,
+                    'school_name': teacher.school.name if teacher.school else None,
+                })
+                
+                return Response({
+                    'success': True,
+                    'message': 'Profile updated successfully',
+                    'teacher_profile': updated_data
+                })
+            else:
+                return Response(
+                    {
+                        'success': False,
+                        'error': 'Invalid data provided',
+                        'details': serializer.errors
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+        except Teacher.DoesNotExist:
+            return Response(
+                {
+                    'success': False,
+                    'error': 'Teacher profile not found. Please contact administrator.'
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
 
