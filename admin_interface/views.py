@@ -681,6 +681,91 @@ class TeacherViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+    @action(detail=False, methods=['delete'], permission_classes=[IsTeacher])
+    def delete_exam_result(self, request):
+        """Delete an exam result"""
+        try:
+            exam_id = request.data.get('exam_id')
+            
+            if not exam_id:
+                return Response(
+                    {
+                        'success': False,
+                        'error': 'exam_id is required'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                # Validate UUID format
+                import uuid
+                uuid.UUID(str(exam_id))
+            except ValueError:
+                return Response(
+                    {
+                        'success': False,
+                        'error': 'Invalid exam_id format'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get the exam result
+            try:
+                exam_result = ExamResult.objects.get(id=exam_id)
+            except ExamResult.DoesNotExist:
+                return Response(
+                    {
+                        'success': False,
+                        'error': 'Exam result not found'
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Verify teacher has permission (same school)
+            teacher = Teacher.objects.get(email=request.user.email)
+            if exam_result.school != teacher.school:
+                return Response(
+                    {
+                        'success': False,
+                        'error': 'You can only delete exam results from your school'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Store exam info before deletion
+            exam_info = {
+                'exam_name': exam_result.exam_name,
+                'student_name': exam_result.student.name if exam_result.student else 'Unknown',
+                'subject': exam_result.subject,
+                'marks': exam_result.marks
+            }
+            
+            # Delete the exam result
+            exam_result.delete()
+            
+            return Response({
+                'success': True,
+                'message': 'Exam result deleted successfully',
+                'deleted_exam': exam_info
+            })
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {
+                    'success': False,
+                    'error': 'Teacher profile not found. Please contact administrator.'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {
+                    'success': False,
+                    'error': f'An error occurred: {str(e)}'
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class StudentViewSet(viewsets.ModelViewSet):
     """ViewSet for Student operations"""
     serializer_class = StudentSerializer
