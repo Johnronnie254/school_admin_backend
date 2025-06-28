@@ -6,11 +6,11 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 import time
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential, Attendance, Order, OrderItem
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, Document, Role, Message, LeaveApplication, TimeTable, Product, ExamPDF, SchoolEvent, PasswordResetToken, TeacherParentAssociation, School, AdminCredential, Attendance, Order, OrderItem
 from .serializers import (
     TeacherSerializer, StudentSerializer, NotificationSerializer,
     ParentSerializer, ParentRegistrationSerializer,
-    ExamResultSerializer, SchoolFeeSerializer,
+    ExamResultSerializer,
     StudentDetailSerializer, RegisterSerializer, LoginSerializer,
     UserSerializer, DocumentSerializer, MessageSerializer, LeaveApplicationSerializer, ProductSerializer,
     ExamPDFSerializer, SchoolEventSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
@@ -138,27 +138,7 @@ class AdminViewSet(viewsets.ViewSet):
             'term': term
         })
 
-    @action(detail=False, methods=['post'])
-    def clear_fee_records(self, request):
-        year = request.data.get('year')
-        status_type = request.data.get('status')
-        
-        queryset = SchoolFee.objects.all()
-        if hasattr(request.user, 'school') and request.user.school:
-            queryset = queryset.filter(school=request.user.school)
-            
-        if year:
-            queryset = queryset.filter(year=year)
-        if status_type:
-            queryset = queryset.filter(status=status_type)
-            
-        count = queryset.count()
-        queryset.delete()
-        return Response({
-            'message': f'Deleted {count} fee records',
-            'year': year,
-            'status': status_type
-        })
+
 
     @action(detail=False, methods=['put'])
     def update_school_settings(self, request):
@@ -916,37 +896,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer = ExamResultSerializer(queryset, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
-    def fee_records(self, request, pk=None):
-        student = self.get_object()
-        queryset = student.fee_records.filter(
-            year=request.query_params.get('year', None),
-            term=request.query_params.get('term', None)
-        )
-        serializer = SchoolFeeSerializer(queryset, many=True)
-        return Response(serializer.data)
 
-    @action(detail=True, methods=['post'])
-    def initiate_payment(self, request, pk=None):
-        student = self.get_object()
-        try:
-            payment = SchoolFee.objects.create(
-                student=student,
-                amount=request.data.get('amount'),
-                term=request.data.get('term'),
-                year=request.data.get('year'),
-                payment_method=request.data.get('payment_method'),
-                payment_date=timezone.now(),
-                transaction_id=uuid.uuid4(),
-                status='pending'
-            )
-            return Response({
-                'payment_id': payment.id,
-                'transaction_id': payment.transaction_id,
-                'amount': payment.amount
-            })
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['put'], permission_classes=[IsTeacher|IsAdmin])
     def update_student_details(self, request, pk=None):
@@ -1187,6 +1137,52 @@ class ParentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'], permission_classes=[IsParent])
+    def me(self, request):
+        """Get current parent's profile information including children and date joined"""
+        try:
+            parent = request.user
+            
+            # Verify user is a parent
+            if parent.role != Role.PARENT:
+                return Response(
+                    {"error": "User is not a parent"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get all children for the parent
+            children = Student.objects.filter(parent=parent).order_by('name')
+            children_data = []
+            
+            for child in children:
+                children_data.append({
+                    'id': child.id,
+                    'name': child.name,
+                    'grade': child.grade,
+                    'student_id': child.student_id,
+                    'date_of_birth': child.date_of_birth,
+                    'school': child.school.name if child.school else None,
+                    'guardian': child.guardian
+                })
+
+            return Response({
+                'id': parent.id,
+                'name': parent.first_name,
+                'email': parent.email,
+                'phone_number': parent.phone_number,
+                'address': parent.address,
+                'school': parent.school.name if parent.school else None,
+                'date_joined': parent.date_joined,
+                'children': children_data,
+                'children_count': len(children_data)
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     def create(self, request, *args, **kwargs):
         """Override create to set the school automatically"""
         serializer = self.get_serializer(data=request.data)
@@ -1271,47 +1267,6 @@ class ExamResultView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SchoolFeeViewSet(viewsets.ModelViewSet):
-    """ViewSet for SchoolFee operations"""
-    queryset = SchoolFee.objects.all()
-    serializer_class = SchoolFeeSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['student__name', 'transaction_id', 'status']
-    ordering_fields = ['payment_date', 'amount', 'created_at']
-    
-    def get_queryset(self):
-        """Filter fee records by school"""
-        user = self.request.user
-        queryset = SchoolFee.objects.all()
-        
-        # Filter by school if user has a school
-        if user.school:
-            queryset = queryset.filter(school=user.school)
-            
-        return queryset
-        
-    def perform_create(self, serializer):
-        """Set the school field when creating new fee records"""
-        user = self.request.user
-        if user.school:
-            serializer.save(school=user.school)
-        else:
-            serializer.save()
-
-    @action(detail=True, methods=['patch'])
-    def edit_payment_status(self, request, pk=None):
-        """Edit payment status"""
-        payment = self.get_object()
-        try:
-            payment.status = request.data.get('status', payment.status)
-            payment.save()
-            return Response({
-                'message': 'Payment status updated',
-                'payment': SchoolFeeSerializer(payment).data
-            })
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class NotificationView(viewsets.ModelViewSet):
     """ViewSet for managing notifications"""
@@ -1620,66 +1575,9 @@ class StudentExamResultsView(APIView):
         serializer = self.serializer_class(queryset, many=True)
         return Response(serializer.data)
 
-class StudentFeeRecordsView(APIView):
-    """Get fee records for a student"""
-    serializer_class = SchoolFeeSerializer
-    permission_classes = [IsAuthenticated]
 
-    def get(self, request, student_id):
-        year = request.query_params.get('year')
-        term = request.query_params.get('term')
-        
-        queryset = SchoolFee.objects.filter(student_id=student_id)
-        if year:
-            queryset = queryset.filter(year=year)
-        if term:
-            queryset = queryset.filter(term=term)
-        serializer = self.serializer_class(queryset, many=True)
-        return Response(serializer.data)
 
-class InitiateFeesPaymentView(APIView):
-    """Initiate a new fee payment"""
-    permission_classes = [IsAuthenticated]
 
-    def post(self, request, student_id):
-        try:
-            student = Student.objects.get(id=student_id)
-            amount = request.data.get('amount')
-            term = request.data.get('term')
-            year = request.data.get('year')
-            payment_method = request.data.get('payment_method')
-
-            # Create a pending payment record
-            payment = SchoolFee.objects.create(
-                student=student,
-                amount=amount,
-                term=term,
-                year=year,
-                payment_method=payment_method,
-                payment_date=timezone.now(),
-                transaction_id=uuid.uuid4(),
-                status='pending'
-            )
-
-            # Here you would integrate with your payment gateway
-            # For now, we'll just return the payment details
-            return Response({
-                'payment_id': payment.id,
-                'transaction_id': payment.transaction_id,
-                'amount': payment.amount,
-                # Add payment gateway specific details here
-            })
-
-        except Student.DoesNotExist:
-            return Response(
-                {'error': 'Student not found'}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            return Response(
-                {'error': str(e)}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
 class DocumentUploadView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1692,35 +1590,7 @@ class DocumentUploadView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class FeePaymentView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
 
-    def initiate_payment(self, request):
-        data = request.data.copy()
-        if 'payment_date' not in data:
-            data['payment_date'] = timezone.now().date()
-            
-        serializer = SchoolFeeSerializer(data=data)
-        if serializer.is_valid():
-            fee = serializer.save()
-            return Response({
-                'transaction_id': str(fee.transaction_id),
-                'status': 'pending'
-            })
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def confirm_payment(self, request):
-        transaction_id = request.data.get('transaction_id')
-        try:
-            fee = SchoolFee.objects.get(transaction_id=transaction_id)
-            fee.status = 'completed'
-            fee.save()
-            return Response({'status': 'completed'})
-        except SchoolFee.DoesNotExist:
-            return Response(
-                {'error': 'Payment not found'}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
 
 class MessageViewSet(viewsets.ModelViewSet):
     """ViewSet for chat messages"""

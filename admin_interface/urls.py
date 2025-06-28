@@ -3,12 +3,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.routers import DefaultRouter
 from .views import (
     TeacherViewSet, StudentViewSet, DocumentUploadView,
-    FeePaymentView, ExamResultView, NotificationView,
+    ExamResultView, NotificationView,
     RegisterView, LoginView, LogoutView,
     ParentChildrenView, StudentExamResultsView,
-    StudentFeeRecordsView, TeachersBySubjectView,
+    TeachersBySubjectView,
     SchoolStatisticsView, AdminViewSet,
-    InitiateFeesPaymentView,
     MessageViewSet, LeaveApplicationViewSet,
     ProductViewSet, TeacherScheduleView, TeacherProfilePicView,
     TeacherExamViewSet, PasswordResetRequestView,
@@ -51,22 +50,19 @@ urlpatterns = [
     # Documents
     path('documents/upload/', DocumentUploadView.as_view(), name='document-upload'),
 
-    # Fees
-    path('fees/initiate/', FeePaymentView.as_view({'post': 'initiate_payment'}), name='initiate-fee-payment'),
-    path('fees/confirm/', FeePaymentView.as_view({'post': 'confirm_payment'}), name='confirm-fee-payment'),
+
 
     # Exam Results
     path('exams/record/', ExamResultView.as_view(), name='record-exam-result'),
 
     # Parents
+    path('parents/me/', ParentViewSet.as_view({'get': 'me'}), name='parent-me'),
     path('parents/children/', ParentChildrenView.as_view(), name='parent-children'),
     path('parents/<uuid:parent_id>/children/', ParentChildrenView.as_view(), name='parent-specific-children'),
     path('parents/children/<uuid:student_id>/', ParentChildrenView.as_view(), name='parent-manage-child'),
 
     # Students
     path('students/<uuid:student_id>/exam-results/', StudentExamResultsView.as_view(), name='student-exam-results'),
-    path('students/<uuid:student_id>/fee-records/', StudentFeeRecordsView.as_view(), name='student-fee-records'),
-    path('students/<uuid:student_id>/initiate_payment/', InitiateFeesPaymentView.as_view(), name='initiate-payment'),
 
     # Teachers
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),
