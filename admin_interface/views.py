@@ -3240,9 +3240,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = super().get_queryset()
 
-        if user.role == 'parent':
+        if user.role == Role.PARENT:
             return queryset.filter(parent=user)
-        elif user.role == 'admin':
+        elif user.role == Role.ADMIN:
             return queryset.filter(school=user.school)
         return Order.objects.none()
 
@@ -3255,7 +3255,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Set the parent and school when creating an order"""
         user = self.request.user
-        if user.role != 'parent':
+        if user.role != Role.PARENT:
             raise PermissionError("Only parents can create orders")
         
         serializer.save(
@@ -3305,7 +3305,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         # Check permissions
         user = request.user
-        if user.role == 'parent' and order.parent != user:
+        if user.role == Role.PARENT and order.parent != user:
             return Response(
                 {"error": "You can only cancel your own orders"},
                 status=status.HTTP_403_FORBIDDEN

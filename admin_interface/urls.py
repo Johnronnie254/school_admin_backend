@@ -57,6 +57,7 @@ urlpatterns = [
 
     # Parents
     path('parents/me/', ParentViewSet.as_view({'get': 'me'}), name='parent-me'),
+    path('parents/available_teachers/', ParentViewSet.as_view({'get': 'available_teachers'}), name='parent-available-teachers'),
     path('parents/children/', ParentChildrenView.as_view(), name='parent-children'),
     path('parents/<uuid:parent_id>/children/', ParentChildrenView.as_view(), name='parent-specific-children'),
     path('parents/children/<uuid:student_id>/', ParentChildrenView.as_view(), name='parent-manage-child'),
