@@ -3228,7 +3228,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['id', 'parent__name', 'status']
+    search_fields = ['id', 'parent__first_name', 'parent__email', 'status']
     ordering_fields = ['created_at', 'total_amount', 'status']
 
     def get_queryset(self):
