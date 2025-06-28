@@ -1156,21 +1156,20 @@ class ParentViewSet(viewsets.ModelViewSet):
             
             for child in children:
                 children_data.append({
-                    'id': child.id,
+                    'id': str(child.id),
                     'name': child.name,
                     'grade': child.grade,
-                    'student_id': child.student_id,
-                    'date_of_birth': child.date_of_birth,
+                    'class_assigned': child.class_assigned,
+                    'contact': child.contact,
                     'school': child.school.name if child.school else None,
-                    'guardian': child.guardian
+                    'created_at': child.created_at
                 })
 
             return Response({
-                'id': parent.id,
-                'name': parent.first_name,
+                'id': str(parent.id),
+                'name': parent.first_name or "",
                 'email': parent.email,
-                'phone_number': parent.phone_number,
-                'address': parent.address,
+                'last_name': parent.last_name or "",
                 'school': parent.school.name if parent.school else None,
                 'date_joined': parent.date_joined,
                 'children': children_data,
