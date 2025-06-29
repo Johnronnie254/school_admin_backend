@@ -1565,6 +1565,74 @@ class StudentDetailView(APIView):
         student.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+class ComprehensiveStudentDetailView(APIView):
+    """Get comprehensive student details including all related data"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, student_id):
+        """Get complete student information including attendance, exam results, teachers, parent info, etc."""
+        try:
+            # Get the student with related data to optimize queries
+            student = Student.objects.select_related(
+                'parent', 'school'
+            ).prefetch_related(
+                'exam_results', 'attendance_records__recorded_by'
+            ).get(id=student_id)
+            
+            # Check permissions - ensure user can access this student's data
+            user = request.user
+            if user.role == Role.PARENT:
+                # Parents can only access their own children's data
+                if student.parent != user:
+                    return Response(
+                        {"error": "You do not have permission to access this student's data"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            elif user.role == Role.TEACHER:
+                # Teachers can access students in their class or school
+                if student.school != user.school:
+                    return Response(
+                        {"error": "You do not have permission to access this student's data"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            elif user.role == Role.ADMIN:
+                # Admins can access students in their school
+                if student.school != user.school:
+                    return Response(
+                        {"error": "You do not have permission to access this student's data"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            else:
+                return Response(
+                    {"error": "Invalid user role"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Serialize the comprehensive student data
+            from .serializers import ComprehensiveStudentSerializer
+            serializer = ComprehensiveStudentSerializer(student, context={'request': request})
+            
+            from django.utils import timezone
+            return Response({
+                'student': serializer.data,
+                'metadata': {
+                    'retrieved_at': timezone.now(),
+                    'retrieved_by': user.email,
+                    'user_role': user.role
+                }
+            })
+            
+        except Student.DoesNotExist:
+            return Response(
+                {"error": "Student not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error retrieving student data: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class StudentByGradeView(APIView):
     """Filters students by grade."""
     serializer_class = StudentSerializer

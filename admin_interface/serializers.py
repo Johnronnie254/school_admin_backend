@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Teacher, Student, Notification, Parent, ExamResult, SchoolFee, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School, TimeTable, Attendance, Order, OrderItem
+from .models import User, Teacher, Student, Notification, Parent, ExamResult, Role, Document, Message, LeaveApplication, Product, ExamPDF, SchoolEvent, TeacherParentAssociation, School, TimeTable, Attendance, Order, OrderItem
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
@@ -324,16 +324,11 @@ class ExamResultSerializer(serializers.ModelSerializer):
         model = ExamResult
         fields = ['id', 'student', 'student_name', 'exam_name', 'subject', 'marks', 'grade', 'term', 'year', 'remarks', 'created_at']
 
-class SchoolFeeSerializer(serializers.ModelSerializer):
-    """Serializer for school fees"""
-    class Meta:
-        model = SchoolFee
-        fields = '__all__'
+
 
 class StudentDetailSerializer(serializers.ModelSerializer):
     """Detailed Student serializer including exam results"""
     exam_results = ExamResultSerializer(many=True, read_only=True)
-    fee_records = SchoolFeeSerializer(many=True, read_only=True)
 
     class Meta:
         model = Student
@@ -738,3 +733,164 @@ class AttendanceSerializer(serializers.ModelSerializer):
         model = Attendance
         fields = ['id', 'student', 'student_name', 'date', 'status', 'reason', 'recorded_by', 'recorded_by_name', 'created_at']
         read_only_fields = ['recorded_by', 'created_at']
+
+class ComprehensiveStudentSerializer(serializers.ModelSerializer):
+    """Comprehensive Student serializer with all related data"""
+    exam_results = ExamResultSerializer(many=True, read_only=True)
+    attendance_records = AttendanceSerializer(many=True, read_only=True)
+    
+    # Parent information
+    parent_name = serializers.CharField(source='parent.first_name', read_only=True)
+    parent_email = serializers.CharField(source='parent.email', read_only=True)
+    parent_id = serializers.UUIDField(source='parent.id', read_only=True)
+    
+    # School information
+    school_name = serializers.CharField(source='school.name', read_only=True)
+    school_id = serializers.UUIDField(source='school.id', read_only=True)
+    school_address = serializers.CharField(source='school.address', read_only=True)
+    school_phone = serializers.CharField(source='school.phone_number', read_only=True)
+    school_email = serializers.EmailField(source='school.email', read_only=True)
+    
+    # Class teachers (teachers assigned to the same class)
+    class_teachers = serializers.SerializerMethodField()
+    
+    # Attendance statistics
+    attendance_statistics = serializers.SerializerMethodField()
+    
+    # Academic performance summary
+    academic_summary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Student
+        fields = [
+            # Basic student info
+            'id', 'name', 'contact', 'grade', 'class_assigned', 'created_at', 'updated_at',
+            
+            # Parent info
+            'parent', 'parent_id', 'parent_name', 'parent_email',
+            
+            # School info
+            'school', 'school_id', 'school_name', 'school_address', 'school_phone', 'school_email',
+            
+            # Class info
+            'class_teachers',
+            
+            # Academic data
+            'exam_results', 'academic_summary',
+            
+            # Attendance data
+            'attendance_records', 'attendance_statistics'
+        ]
+
+    def get_class_teachers(self, obj):
+        """Get all teachers assigned to the student's class"""
+        if not obj.class_assigned:
+            return []
+        
+        teachers = Teacher.objects.filter(class_assigned=obj.class_assigned, school=obj.school)
+        return [{
+            'id': str(teacher.id),
+            'name': teacher.name,
+            'email': teacher.email,
+            'phone_number': teacher.phone_number,
+            'subjects': teacher.subjects,
+            'class_assigned': teacher.class_assigned
+        } for teacher in teachers]
+
+    def get_attendance_statistics(self, obj):
+        """Calculate attendance statistics for the student"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Get attendance records for current academic year
+        current_year = timezone.now().year
+        
+        # Get records for the last 90 days as a reasonable sample
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=90)
+        
+        attendance_records = obj.attendance_records.filter(
+            date__gte=start_date,
+            date__lte=end_date
+        )
+        
+        total_days = attendance_records.count()
+        if total_days == 0:
+            return {
+                'total_days_recorded': 0,
+                'present_days': 0,
+                'absent_days': 0,
+                'late_days': 0,
+                'excused_days': 0,
+                'attendance_percentage': 0.0,
+                'period': f'{start_date} to {end_date}'
+            }
+        
+        present_days = attendance_records.filter(status='present').count()
+        absent_days = attendance_records.filter(status='absent').count()
+        late_days = attendance_records.filter(status='late').count()
+        excused_days = attendance_records.filter(status='excused').count()
+        
+        attendance_percentage = (present_days / total_days) * 100 if total_days > 0 else 0
+        
+        return {
+            'total_days_recorded': total_days,
+            'present_days': present_days,
+            'absent_days': absent_days,
+            'late_days': late_days,
+            'excused_days': excused_days,
+            'attendance_percentage': round(attendance_percentage, 2),
+            'period': f'{start_date} to {end_date}'
+        }
+
+    def get_academic_summary(self, obj):
+        """Calculate academic performance summary"""
+        exam_results = obj.exam_results.all()
+        
+        if not exam_results.exists():
+            return {
+                'total_exams': 0,
+                'average_marks': 0.0,
+                'highest_mark': 0.0,
+                'lowest_mark': 0.0,
+                'subjects_count': 0,
+                'grade_distribution': {},
+                'recent_performance': []
+            }
+        
+        total_exams = exam_results.count()
+        total_marks = sum([float(result.marks) for result in exam_results])
+        average_marks = total_marks / total_exams if total_exams > 0 else 0
+        
+        marks_list = [float(result.marks) for result in exam_results]
+        highest_mark = max(marks_list) if marks_list else 0
+        lowest_mark = min(marks_list) if marks_list else 0
+        
+        # Count unique subjects
+        subjects_count = exam_results.values('subject').distinct().count()
+        
+        # Grade distribution
+        grade_distribution = {}
+        for result in exam_results:
+            grade = result.grade
+            grade_distribution[grade] = grade_distribution.get(grade, 0) + 1
+        
+        # Recent performance (last 5 exams)
+        recent_results = exam_results.order_by('-created_at')[:5]
+        recent_performance = [{
+            'exam_name': result.exam_name,
+            'subject': result.subject,
+            'marks': float(result.marks),
+            'grade': result.grade,
+            'date': result.created_at.date()
+        } for result in recent_results]
+        
+        return {
+            'total_exams': total_exams,
+            'average_marks': round(average_marks, 2),
+            'highest_mark': highest_mark,
+            'lowest_mark': lowest_mark,
+            'subjects_count': subjects_count,
+            'grade_distribution': grade_distribution,
+            'recent_performance': recent_performance
+        }

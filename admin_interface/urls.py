@@ -14,7 +14,7 @@ from .views import (
     PasswordResetConfirmView, TeacherParentAssociationViewSet,
     SchoolViewSet, ParentViewSet, SchoolEventViewSet, SuperUserViewSet,
     CurrentSchoolView, DirectMessagingView, AttendanceViewSet,
-    OrderViewSet
+    OrderViewSet, ComprehensiveStudentDetailView
 )
 
 router = DefaultRouter()
@@ -67,6 +67,7 @@ urlpatterns = [
 
     # Students
     path('students/<uuid:student_id>/exam-results/', StudentExamResultsView.as_view(), name='student-exam-results'),
+    path('students/<uuid:student_id>/', ComprehensiveStudentDetailView.as_view(), name='comprehensive-student-detail'),
 
     # Teachers
     path('teachers/by-subject/<str:subject>/', TeachersBySubjectView.as_view(), name='teachers-by-subject'),
