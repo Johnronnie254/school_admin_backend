@@ -1156,20 +1156,17 @@ class ParentViewSet(viewsets.ModelViewSet):
             
             for child in children:
                 children_data.append({
-                    'id': str(child.id),
+                    'id': child.id,
                     'name': child.name,
                     'grade': child.grade,
                     'class_assigned': child.class_assigned,
-                    'contact': child.contact,
                     'school': child.school.name if child.school else None,
-                    'created_at': child.created_at
                 })
 
             return Response({
-                'id': str(parent.id),
-                'name': parent.first_name or "",
+                'id': parent.id,
+                'name': parent.first_name if parent.first_name else parent.email.split('@')[0],
                 'email': parent.email,
-                'last_name': parent.last_name or "",
                 'school': parent.school.name if parent.school else None,
                 'date_joined': parent.date_joined,
                 'children': children_data,
@@ -1178,8 +1175,253 @@ class ParentViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": f"Error fetching parent profile: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], permission_classes=[IsParent])
+    def exam_pdfs(self, request):
+        """Get exam PDFs for parent's children's classes"""
+        try:
+            parent = request.user
+            
+            # Verify user is a parent
+            if parent.role != Role.PARENT:
+                return Response(
+                    {"error": "User is not a parent"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get all children for the parent
+            children = Student.objects.filter(parent=parent)
+            
+            if not children.exists():
+                return Response({
+                    'message': 'No children found for this parent',
+                    'exam_pdfs': []
+                })
+
+            # Get unique class assignments from children
+            child_classes = children.values_list('class_assigned', flat=True).distinct()
+            child_classes = [cls for cls in child_classes if cls]  # Remove None values
+            
+            if not child_classes:
+                return Response({
+                    'message': 'No classes assigned to children',
+                    'exam_pdfs': []
+                })
+
+            # Get exam PDFs for these classes from the parent's school
+            exam_pdfs_queryset = ExamPDF.objects.filter(
+                class_assigned__in=child_classes,
+                school=parent.school
+            ).select_related('teacher', 'school').order_by('-created_at')
+
+            # Optional filtering by query parameters
+            year = request.query_params.get('year')
+            subject = request.query_params.get('subject')
+            
+            if year:
+                exam_pdfs_queryset = exam_pdfs_queryset.filter(year=year)
+            if subject:
+                exam_pdfs_queryset = exam_pdfs_queryset.filter(subject__icontains=subject)
+
+            # Serialize the results
+            from .serializers import ExamPDFSerializer
+            serializer = ExamPDFSerializer(exam_pdfs_queryset, many=True, context={'request': request})
+            
+            return Response({
+                'child_classes': list(child_classes),
+                'total_pdfs': exam_pdfs_queryset.count(),
+                'exam_pdfs': serializer.data
+            })
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error fetching exam PDFs: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], permission_classes=[IsParent])
+    def exam_results(self, request):
+        """Get exam results for parent's children"""
+        try:
+            parent = request.user
+            
+            # Verify user is a parent
+            if parent.role != Role.PARENT:
+                return Response(
+                    {"error": "User is not a parent"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get all children for the parent
+            children = Student.objects.filter(parent=parent)
+            
+            if not children.exists():
+                return Response({
+                    'message': 'No children found for this parent',
+                    'exam_results': []
+                })
+
+            # Get exam results for all children
+            exam_results_queryset = ExamResult.objects.filter(
+                student__in=children,
+                school=parent.school
+            ).select_related('student').order_by('-created_at')
+
+            # Optional filtering by query parameters
+            year = request.query_params.get('year')
+            term = request.query_params.get('term')
+            student_id = request.query_params.get('student_id')
+            subject = request.query_params.get('subject')
+            
+            if year:
+                exam_results_queryset = exam_results_queryset.filter(year=year)
+            if term:
+                exam_results_queryset = exam_results_queryset.filter(term=term)
+            if student_id:
+                # Ensure the student belongs to this parent
+                if children.filter(id=student_id).exists():
+                    exam_results_queryset = exam_results_queryset.filter(student_id=student_id)
+                else:
+                    return Response(
+                        {"error": "Student does not belong to this parent"},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            if subject:
+                exam_results_queryset = exam_results_queryset.filter(subject__icontains=subject)
+
+            # Group results by child
+            results_by_child = {}
+            for child in children:
+                child_results = exam_results_queryset.filter(student=child)
+                from .serializers import ExamResultSerializer
+                results_by_child[str(child.id)] = {
+                    'child_name': child.name,
+                    'child_grade': child.grade,
+                    'child_class': child.class_assigned,
+                    'results_count': child_results.count(),
+                    'results': ExamResultSerializer(child_results, many=True).data
+                }
+
+            return Response({
+                'total_children': children.count(),
+                'total_results': exam_results_queryset.count(),
+                'results_by_child': results_by_child
+            })
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error fetching exam results: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], permission_classes=[IsParent])
+    def attendance_summary(self, request):
+        """Get attendance summary for parent's children"""
+        try:
+            parent = request.user
+            
+            # Verify user is a parent
+            if parent.role != Role.PARENT:
+                return Response(
+                    {"error": "User is not a parent"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Get all children for the parent
+            children = Student.objects.filter(parent=parent)
+            
+            if not children.exists():
+                return Response({
+                    'message': 'No children found for this parent',
+                    'attendance_summary': []
+                })
+
+            # Optional date filtering
+            from django.utils import timezone
+            from datetime import datetime, timedelta
+            
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            days = request.query_params.get('days')  # Last N days
+            
+            # Set default date range (last 30 days if no parameters provided)
+            if not start_date and not end_date and not days:
+                end_date = timezone.now().date()
+                start_date = end_date - timedelta(days=30)
+            elif days:
+                end_date = timezone.now().date()
+                start_date = end_date - timedelta(days=int(days))
+            else:
+                if start_date:
+                    start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                if end_date:
+                    end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+            # Get attendance records for all children
+            attendance_queryset = Attendance.objects.filter(
+                student__in=children
+            ).select_related('student', 'recorded_by')
+
+            if start_date:
+                attendance_queryset = attendance_queryset.filter(date__gte=start_date)
+            if end_date:
+                attendance_queryset = attendance_queryset.filter(date__lte=end_date)
+
+            # Group by child and calculate statistics
+            attendance_by_child = {}
+            overall_stats = {
+                'total_children': children.count(),
+                'date_range': {
+                    'start_date': start_date.isoformat() if start_date else None,
+                    'end_date': end_date.isoformat() if end_date else None
+                },
+                'total_records': attendance_queryset.count()
+            }
+
+            for child in children:
+                child_attendance = attendance_queryset.filter(student=child)
+                
+                # Calculate statistics
+                total_records = child_attendance.count()
+                present_count = child_attendance.filter(status='present').count()
+                absent_count = child_attendance.filter(status='absent').count()
+                late_count = child_attendance.filter(status='late').count()
+                excused_count = child_attendance.filter(status='excused').count()
+                
+                # Calculate attendance percentage
+                attendance_percentage = (present_count / total_records * 100) if total_records > 0 else 0
+
+                # Get recent attendance records (last 10)
+                recent_records = child_attendance.order_by('-date')[:10]
+                from .serializers import AttendanceSerializer
+                
+                attendance_by_child[str(child.id)] = {
+                    'child_name': child.name,
+                    'child_grade': child.grade,
+                    'child_class': child.class_assigned,
+                    'statistics': {
+                        'total_records': total_records,
+                        'present': present_count,
+                        'absent': absent_count,
+                        'late': late_count,
+                        'excused': excused_count,
+                        'attendance_percentage': round(attendance_percentage, 2)
+                    },
+                    'recent_records': AttendanceSerializer(recent_records, many=True).data
+                }
+
+            return Response({
+                'overall_stats': overall_stats,
+                'attendance_by_child': attendance_by_child
+            })
+
+        except Exception as e:
+            return Response(
+                {"error": f"Error fetching attendance summary: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     def create(self, request, *args, **kwargs):
