@@ -619,46 +619,101 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         return items
 
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
-        total_amount = 0
+        try:
+            items_data = validated_data.pop('items')
+            total_amount = 0
 
-        # Create order
-        order = Order.objects.create(
-            parent=self.context['request'].user,
-            total_amount=total_amount,
-            **validated_data
-        )
+            # Debug: Check what's in validated_data
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"DEBUG - validated_data: {validated_data}")
+            logger.error(f"DEBUG - items_data: {items_data}")
 
-        # Create order items
-        for item_data in items_data:
-            product = Product.objects.get(id=item_data['product'])
-            quantity = int(item_data['quantity'])
-            
-            if product.stock < quantity:
+            # Create order - parent, school, status are set by perform_create() in the view
+            try:
+                order = Order.objects.create(
+                    total_amount=total_amount,
+                    **validated_data
+                )
+                logger.error(f"DEBUG - Order created successfully: {order.id}")
+            except Exception as e:
+                logger.error(f"ERROR - Order creation failed: {type(e).__name__}: {str(e)}")
+                logger.error(f"ERROR - validated_data was: {validated_data}")
+                raise serializers.ValidationError(f"Order creation failed: {str(e)}")
+
+            # Create order items
+            for i, item_data in enumerate(items_data):
+                try:
+                    logger.error(f"DEBUG - Processing item {i}: {item_data}")
+                    
+                    product_id = item_data['product']
+                    logger.error(f"DEBUG - Looking for product: {product_id}")
+                    
+                    try:
+                        product = Product.objects.get(id=product_id)
+                        logger.error(f"DEBUG - Product found: {product.name} (Stock: {product.stock})")
+                    except Product.DoesNotExist:
+                        order.delete()
+                        raise serializers.ValidationError(f"Product with ID '{product_id}' not found")
+                    except Exception as e:
+                        order.delete()
+                        raise serializers.ValidationError(f"Product lookup error: {type(e).__name__}: {str(e)}")
+                    
+                    quantity = int(item_data['quantity'])
+                    logger.error(f"DEBUG - Quantity: {quantity}")
+                    
+                    if product.stock < quantity:
+                        order.delete()
+                        raise serializers.ValidationError(f"Not enough stock for {product.name}. Available: {product.stock}, Requested: {quantity}")
+
+                    # Create order item
+                    try:
+                        order_item = OrderItem.objects.create(
+                            order=order,
+                            product=product,
+                            quantity=quantity,
+                            unit_price=product.price,
+                            total_price=product.price * quantity
+                        )
+                        logger.error(f"DEBUG - OrderItem created: {order_item.id}")
+                    except Exception as e:
+                        order.delete()
+                        raise serializers.ValidationError(f"OrderItem creation failed: {type(e).__name__}: {str(e)}")
+
+                    # Update product stock
+                    try:
+                        product.stock -= quantity
+                        product.save()
+                        logger.error(f"DEBUG - Product stock updated: {product.name} now has {product.stock}")
+                    except Exception as e:
+                        order.delete()
+                        raise serializers.ValidationError(f"Product stock update failed: {type(e).__name__}: {str(e)}")
+                    
+                    # Update total amount
+                    total_amount += product.price * quantity
+                    logger.error(f"DEBUG - Total amount now: {total_amount}")
+                    
+                except Exception as e:
+                    logger.error(f"ERROR - Item {i} processing failed: {type(e).__name__}: {str(e)}")
+                    if 'order' in locals():
+                        order.delete()
+                    raise
+
+            # Update order total
+            try:
+                order.total_amount = total_amount
+                order.save()
+                logger.error(f"DEBUG - Order total updated: {total_amount}")
+            except Exception as e:
                 order.delete()
-                raise serializers.ValidationError(f"Not enough stock for {product.name}")
+                raise serializers.ValidationError(f"Order total update failed: {type(e).__name__}: {str(e)}")
 
-            # Create order item
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=quantity,
-                unit_price=product.price,
-                total_price=product.price * quantity
-            )
-
-            # Update product stock
-            product.stock -= quantity
-            product.save()
+            logger.error(f"DEBUG - Order creation successful: {order.id}")
+            return order
             
-            # Update total amount
-            total_amount += product.price * quantity
-
-        # Update order total
-        order.total_amount = total_amount
-        order.save()
-
-        return order
+        except Exception as e:
+            logger.error(f"FATAL ERROR in OrderCreateSerializer.create: {type(e).__name__}: {str(e)}")
+            raise
 
 class ExamPDFSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()
