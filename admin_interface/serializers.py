@@ -401,14 +401,9 @@ class MessageSerializer(serializers.ModelSerializer):
         
     def create(self, validated_data):
         """Custom create method to handle teacher and parent direct connections"""
-        import logging
-        logger = logging.getLogger(__name__)
-        
         # Extract non-model fields
         receiver_email = validated_data.pop('receiver_email', None)
         receiver_role = validated_data.pop('receiver_role', None)
-        
-        logger.error(f"🔍 CREATE - RECEIVER EMAIL: {receiver_email}, ROLE: {receiver_role}")
         
         # Get receiver from validated data if it exists
         receiver = validated_data.get('receiver', None)
@@ -419,7 +414,6 @@ class MessageSerializer(serializers.ModelSerializer):
                 try:
                     # Find teacher directly
                     teacher = Teacher.objects.get(email=receiver_email)
-                    logger.error(f"✅ FOUND TEACHER DIRECTLY: {teacher.id}")
                     validated_data['teacher'] = teacher
                     # Create a basic User if needed for compatibility
                     user, created = User.objects.get_or_create(
@@ -432,21 +426,18 @@ class MessageSerializer(serializers.ModelSerializer):
                     )
                     validated_data['receiver'] = user
                 except Teacher.DoesNotExist:
-                    logger.error(f"❌ NO TEACHER FOUND WITH EMAIL: {receiver_email}")
                     # Try by ID if provided in receiver field
                     if 'receiver' in validated_data and validated_data['receiver']:
                         try:
                             teacher_id = validated_data['receiver']
                             teacher = Teacher.objects.get(id=teacher_id)
-                            logger.error(f"✅ FOUND TEACHER BY ID: {teacher.id}")
                             validated_data['teacher'] = teacher
                         except Teacher.DoesNotExist:
-                            logger.error(f"❌ NO TEACHER FOUND WITH ID: {teacher_id}")
+                            pass
             elif receiver_role == 'parent':
                 try:
                     # Find parent directly
                     parent = Parent.objects.get(email=receiver_email)
-                    logger.error(f"✅ FOUND PARENT DIRECTLY: {parent.id}")
                     validated_data['parent'] = parent
                     # Create a basic User if needed for compatibility
                     user, created = User.objects.get_or_create(
@@ -459,16 +450,14 @@ class MessageSerializer(serializers.ModelSerializer):
                     )
                     validated_data['receiver'] = user
                 except Parent.DoesNotExist:
-                    logger.error(f"❌ NO PARENT FOUND WITH EMAIL: {receiver_email}")
                     # Try by ID if provided in receiver field
                     if 'receiver' in validated_data and validated_data['receiver']:
                         try:
                             parent_id = validated_data['receiver']
                             parent = Parent.objects.get(id=parent_id)
-                            logger.error(f"✅ FOUND PARENT BY ID: {parent.id}")
                             validated_data['parent'] = parent
                         except Parent.DoesNotExist:
-                            logger.error(f"❌ NO PARENT FOUND WITH ID: {parent_id}")
+                            pass
         
         # Create the message
         message = Message.objects.create(**validated_data)
@@ -476,49 +465,29 @@ class MessageSerializer(serializers.ModelSerializer):
         
     def validate_receiver(self, value):
         """Allow receiver to be specified as a Teacher or Parent ID"""
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        # Log all initial data to see what's being sent
-        logger.error(f"🔍 VALIDATING RECEIVER - INITIAL DATA: {self.initial_data}")
-        logger.error(f"🔍 RECEIVER VALUE: {value}, TYPE: {type(value)}")
-        
-        receiver_email = self.initial_data.get('receiver_email')
-        receiver_role = self.initial_data.get('receiver_role')
-        receiver_id = str(value) if value else None
-        
         # If we have a receiver ID, check if it's a Teacher or Parent ID directly
-        if receiver_id:
-            logger.error(f"🔍 CHECKING IF RECEIVER ID IS A TEACHER/PARENT: {receiver_id}")
+        if value:
             try:
-                teacher = Teacher.objects.get(id=receiver_id)
-                logger.error(f"✅ FOUND TEACHER DIRECTLY BY ID: {teacher.id}")
+                teacher = Teacher.objects.get(id=value)
                 # We'll handle this in create() - just pass the value through
                 return value
             except Teacher.DoesNotExist:
-                logger.error(f"❌ NOT A TEACHER ID")
-                
-            try:
-                parent = Parent.objects.get(id=receiver_id)
-                logger.error(f"✅ FOUND PARENT DIRECTLY BY ID: {parent.id}")
-                # We'll handle this in create() - just pass the value through
-                return value
-            except Parent.DoesNotExist:
-                logger.error(f"❌ NOT A PARENT ID")
+                try:
+                    parent = Parent.objects.get(id=value)
+                    # We'll handle this in create() - just pass the value through
+                    return value
+                except Parent.DoesNotExist:
+                    pass
         
         # If email is provided, just pass through and handle in create()
         if receiver_email:
-            logger.error(f"🔍 EMAIL PROVIDED, WILL HANDLE IN CREATE(): {receiver_email}")
             return value
                 
         # Legacy behavior - try to find a User
         try:
-            user = User.objects.get(id=receiver_id)
-            logger.error(f"✅ FOUND USER DIRECTLY: {user.id}")
+            user = User.objects.get(id=value)
             return user
         except User.DoesNotExist:
-            logger.error(f"❌ NOT A USER ID")
-            # Just pass the value through to be handled in create()
             return value
 
 class TeacherParentAssociationSerializer(serializers.ModelSerializer):
@@ -562,10 +531,15 @@ class LeaveApplicationSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     """Serializer for products in the school shop"""
     image = serializers.ImageField(required=True, allow_null=False)
+    price = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = '__all__'
+        
+    def get_price(self, obj):
+        """Convert price to float for frontend compatibility"""
+        return float(obj.price) if obj.price else 0.0
 
     def update(self, instance, validated_data):
         # If no new image is provided and there's an existing image, keep the existing one
@@ -575,20 +549,35 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    unit_price = serializers.SerializerMethodField()
+    total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
         fields = ['id', 'product', 'product_name', 'quantity', 'unit_price', 'total_price']
         read_only_fields = ['total_price']
+        
+    def get_unit_price(self, obj):
+        """Convert unit_price to float for frontend compatibility"""
+        return float(obj.unit_price) if obj.unit_price else 0.0
+        
+    def get_total_price(self, obj):
+        """Convert total_price to float for frontend compatibility"""
+        return float(obj.total_price) if obj.total_price else 0.0
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     parent_name = serializers.CharField(source='parent.first_name', read_only=True)
+    total_amount = serializers.SerializerMethodField()  # Custom method to ensure it's a number
 
     class Meta:
         model = Order
         fields = ['id', 'parent', 'parent_name', 'school', 'status', 'total_amount', 'items', 'created_at', 'updated_at']
         read_only_fields = ['total_amount', 'created_at', 'updated_at']
+    
+    def get_total_amount(self, obj):
+        """Convert total_amount to float for frontend compatibility"""
+        return float(obj.total_amount) if obj.total_amount else 0.0
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     items = serializers.ListField(
@@ -623,35 +612,23 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             items_data = validated_data.pop('items')
             total_amount = 0
 
-            # Debug: Check what's in validated_data
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"DEBUG - validated_data: {validated_data}")
-            logger.error(f"DEBUG - items_data: {items_data}")
-
             # Create order - parent, school, status are set by perform_create() in the view
             try:
                 order = Order.objects.create(
                     total_amount=total_amount,
                     **validated_data
                 )
-                logger.error(f"DEBUG - Order created successfully: {order.id}")
             except Exception as e:
-                logger.error(f"ERROR - Order creation failed: {type(e).__name__}: {str(e)}")
-                logger.error(f"ERROR - validated_data was: {validated_data}")
                 raise serializers.ValidationError(f"Order creation failed: {str(e)}")
 
             # Create order items
             for i, item_data in enumerate(items_data):
                 try:
-                    logger.error(f"DEBUG - Processing item {i}: {item_data}")
-                    
                     product_id = item_data['product']
-                    logger.error(f"DEBUG - Looking for product: {product_id}")
-                    
+
                     try:
                         product = Product.objects.get(id=product_id)
-                        logger.error(f"DEBUG - Product found: {product.name} (Stock: {product.stock})")
+
                     except Product.DoesNotExist:
                         order.delete()
                         raise serializers.ValidationError(f"Product with ID '{product_id}' not found")
@@ -660,8 +637,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                         raise serializers.ValidationError(f"Product lookup error: {type(e).__name__}: {str(e)}")
                     
                     quantity = int(item_data['quantity'])
-                    logger.error(f"DEBUG - Quantity: {quantity}")
-                    
+
                     if product.stock < quantity:
                         order.delete()
                         raise serializers.ValidationError(f"Not enough stock for {product.name}. Available: {product.stock}, Requested: {quantity}")
@@ -675,7 +651,6 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                             unit_price=product.price,
                             total_price=product.price * quantity
                         )
-                        logger.error(f"DEBUG - OrderItem created: {order_item.id}")
                     except Exception as e:
                         order.delete()
                         raise serializers.ValidationError(f"OrderItem creation failed: {type(e).__name__}: {str(e)}")
@@ -684,17 +659,14 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     try:
                         product.stock -= quantity
                         product.save()
-                        logger.error(f"DEBUG - Product stock updated: {product.name} now has {product.stock}")
                     except Exception as e:
                         order.delete()
                         raise serializers.ValidationError(f"Product stock update failed: {type(e).__name__}: {str(e)}")
                     
                     # Update total amount
                     total_amount += product.price * quantity
-                    logger.error(f"DEBUG - Total amount now: {total_amount}")
-                    
+
                 except Exception as e:
-                    logger.error(f"ERROR - Item {i} processing failed: {type(e).__name__}: {str(e)}")
                     if 'order' in locals():
                         order.delete()
                     raise
@@ -703,17 +675,13 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             try:
                 order.total_amount = total_amount
                 order.save()
-                logger.error(f"DEBUG - Order total updated: {total_amount}")
             except Exception as e:
                 order.delete()
                 raise serializers.ValidationError(f"Order total update failed: {type(e).__name__}: {str(e)}")
-
-            logger.error(f"DEBUG - Order creation successful: {order.id}")
             return order
             
         except Exception as e:
-            logger.error(f"FATAL ERROR in OrderCreateSerializer.create: {type(e).__name__}: {str(e)}")
-            raise
+            raise serializers.ValidationError(f"Order creation failed: {type(e).__name__}: {str(e)}")
 
 class ExamPDFSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()
