@@ -58,6 +58,7 @@ urlpatterns = [
     # Parents
     path('parents/me/', ParentViewSet.as_view({'get': 'me'}), name='parent-me'),
     path('parents/available_teachers/', ParentViewSet.as_view({'get': 'available_teachers'}), name='parent-available-teachers'),
+    path('parents/available_admins/', ParentViewSet.as_view({'get': 'available_admins'}), name='parent-available-admins'),
     path('parents/exam_pdfs/', ParentViewSet.as_view({'get': 'exam_pdfs'}), name='parent-exam-pdfs'),
     path('parents/exam_results/', ParentViewSet.as_view({'get': 'exam_results'}), name='parent-exam-results'),
     path('parents/attendance_summary/', ParentViewSet.as_view({'get': 'attendance_summary'}), name='parent-attendance-summary'),

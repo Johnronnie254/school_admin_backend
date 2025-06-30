@@ -1180,6 +1180,53 @@ class ParentViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=False, methods=['get'], permission_classes=[IsParent])
+    def available_admins(self, request):
+        """Get school administrators that the parent can message"""
+        user = request.user
+        if not user.school:
+            return Response({"error": "Parent must be associated with a school"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Get all admins in the parent's school
+            admins = User.objects.filter(
+                school=user.school,
+                role=Role.ADMIN,
+                is_active=True
+            ).select_related('school')
+            
+            if not admins.exists():
+                return Response({
+                    'admins': [],
+                    'count': 0,
+                    'message': 'No administrators found in this school'
+                })
+            
+            # Format admin data
+            admins_data = []
+            for admin in admins:
+                admins_data.append({
+                    'id': str(admin.id),
+                    'name': f"{admin.first_name} {admin.last_name}".strip() if admin.first_name or admin.last_name else admin.email.split('@')[0],
+                    'email': admin.email,
+                    'role': 'admin',
+                    'title': getattr(admin, 'title', 'Administrator'),
+                    'department': 'Administration',
+                    'school': admin.school.name if admin.school else None
+                })
+        
+            return Response({
+                'admins': admins_data,
+                'count': len(admins_data),
+                'school': user.school.name if user.school else None
+            })
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Error fetching available administrators: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'], permission_classes=[IsParent])
     def exam_pdfs(self, request):
         """Get exam PDFs for parent's children's classes"""
         try:
