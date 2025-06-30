@@ -1112,7 +1112,7 @@ class ParentViewSet(viewsets.ModelViewSet):
             teachers_data = []
             teachers_in_classes = Teacher.objects.filter(
                 class_assigned__in=child_classes,
-            school=user.school
+                school=user.school
             )
             
             for teacher in teachers_in_classes:
@@ -1126,10 +1126,10 @@ class ParentViewSet(viewsets.ModelViewSet):
                 })
         
             return Response({
-                    'teachers': teachers_data,
-                    'count': len(teachers_data),
-                    'children_classes': list(child_classes)
-                })
+                'teachers': teachers_data,
+                'count': len(teachers_data),
+                'children_classes': list(child_classes)
+            })
             
         except Exception as e:
             return Response(
