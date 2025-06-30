@@ -28,7 +28,7 @@ import CartModal from '@/components/modals/CartModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Helper function to safely format currency
-const formatCurrency = (value: any): string => {
+const formatCurrency = (value: string | number | undefined | null): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
   return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
 };
