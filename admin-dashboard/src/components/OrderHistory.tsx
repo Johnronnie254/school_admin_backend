@@ -9,6 +9,12 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
+// Helper function to safely format currency
+const formatCurrency = (value: any): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
+  return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+};
+
 const statusIcons = {
   pending: <ClockIcon className="h-5 w-5 text-yellow-500" />,
   processing: <ArrowPathIcon className="h-5 w-5 text-blue-500" />,
@@ -129,7 +135,7 @@ export default function OrderHistory() {
                     <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                   </div>
                   <div className="text-sm font-medium text-gray-900">
-                    KES {item.total_price.toFixed(2)}
+                    KES {formatCurrency(item.total_price)}
                   </div>
                 </div>
               ))}
@@ -139,7 +145,7 @@ export default function OrderHistory() {
           {/* Order footer */}
           <div className="px-6 py-4 bg-gray-50 flex items-center justify-between">
             <div className="text-sm font-medium text-gray-900">
-              Total: KES {order.total_amount.toFixed(2)}
+              Total: KES {formatCurrency(order.total_amount)}
             </div>
             <div className="flex gap-2">
               {user?.role === 'admin' ? (

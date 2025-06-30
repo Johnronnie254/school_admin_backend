@@ -7,6 +7,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 
+// Helper function to safely format currency
+const formatCurrency = (value: any): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
+  return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+};
+
 interface CartModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -97,7 +103,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                     {/* Product details */}
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{item.product.name}</h3>
-                      <p className="text-sm text-gray-500">KES {typeof item.product.price === 'number' ? item.product.price.toFixed(2) : '0.00'}</p>
+                      <p className="text-sm text-gray-500">KES {formatCurrency(item.product.price)}</p>
                     </div>
 
                     {/* Quantity controls */}
@@ -119,7 +125,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
 
                     {/* Subtotal */}
                     <div className="text-right min-w-[100px]">
-                      <p className="font-medium">KES {(item.product.price * item.quantity).toFixed(2)}</p>
+                      <p className="font-medium">KES {formatCurrency(item.product.price * item.quantity)}</p>
                     </div>
 
                     {/* Remove button */}
@@ -137,7 +143,7 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                   <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-900">Total</span>
                     <span className="text-lg font-semibold text-gray-900">
-                      KES {cart.total.toFixed(2)}
+                      KES {formatCurrency(cart.total)}
                     </span>
                   </div>
                 </div>

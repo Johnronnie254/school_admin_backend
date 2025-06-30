@@ -27,6 +27,12 @@ import { useCart } from '@/contexts/CartContext';
 import CartModal from '@/components/modals/CartModal';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Helper function to safely format currency
+const formatCurrency = (value: any): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
+  return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+};
+
 // Helper function to compress images
 const compressImage = async (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -505,12 +511,12 @@ export default function ShopPage() {
               {/* Product Details */}
               <div className="p-4">
                 <h3 className="text-lg font-medium text-gray-900">{product.name}</h3>
-                <p className="mt-1 text-sm text-gray-500 line-clamp-2">{product.description}</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-lg font-semibold text-gray-900">
-                    KES {(typeof product.price === 'number' ? product.price : 0).toFixed(2)}
-                  </p>
-                  <p className="text-sm text-gray-500">{product.stock} in stock</p>
+                <p className="text-sm text-gray-500 mb-2">{product.description}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900">KES {formatCurrency(product.price)}</p>
+                    <p className="text-sm text-gray-500">Stock: {product.stock}</p>
+                  </div>
                 </div>
 
                 {/* Action Buttons */}
@@ -604,7 +610,7 @@ export default function ShopPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        KES {order.total_amount.toFixed(2)}
+                        KES {formatCurrency(order.total_amount)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(order.created_at).toLocaleDateString()}
@@ -710,7 +716,7 @@ export default function ShopPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Total Amount</p>
-                      <p className="mt-1 text-sm text-gray-900">KES {selectedOrder.total_amount.toFixed(2)}</p>
+                      <p className="mt-1 text-sm text-gray-900">KES {formatCurrency(selectedOrder.total_amount)}</p>
                     </div>
                   </div>
 
@@ -723,11 +729,11 @@ export default function ShopPage() {
                           <div>
                             <p className="text-sm font-medium text-gray-900">{item.product_name}</p>
                             <p className="text-sm text-gray-500">
-                              KES {item.unit_price.toFixed(2)} × {item.quantity}
+                              KES {formatCurrency(item.unit_price)} × {item.quantity}
                             </p>
                           </div>
                           <p className="text-sm font-medium text-gray-900">
-                            KES {item.total_price.toFixed(2)}
+                            KES {formatCurrency(item.total_price)}
                           </p>
                         </div>
                       ))}
