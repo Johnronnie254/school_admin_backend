@@ -1613,13 +1613,12 @@ class StudentDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ComprehensiveStudentDetailView(APIView):
-    """Get comprehensive student details including all related data"""
+    """Get, update, and delete comprehensive student details including all related data"""
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, student_id):
-        """Get complete student information including attendance, exam results, teachers, parent info, etc."""
+    def _get_student_and_check_permissions(self, request, student_id):
+        """Helper method to get student and check permissions"""
         try:
-            # Get the student with related data to optimize queries
             student = Student.objects.select_related(
                 'parent', 'school'
             ).prefetch_related(
@@ -1631,29 +1630,44 @@ class ComprehensiveStudentDetailView(APIView):
             if user.role == Role.PARENT:
                 # Parents can only access their own children's data
                 if student.parent != user:
-                    return Response(
+                    return None, Response(
                         {"error": "You do not have permission to access this student's data"},
                         status=status.HTTP_403_FORBIDDEN
                     )
             elif user.role == Role.TEACHER:
                 # Teachers can access students in their class or school
                 if student.school != user.school:
-                    return Response(
+                    return None, Response(
                         {"error": "You do not have permission to access this student's data"},
                         status=status.HTTP_403_FORBIDDEN
                     )
             elif user.role == Role.ADMIN:
                 # Admins can access students in their school
                 if student.school != user.school:
-                    return Response(
+                    return None, Response(
                         {"error": "You do not have permission to access this student's data"},
                         status=status.HTTP_403_FORBIDDEN
                     )
             else:
-                return Response(
+                return None, Response(
                     {"error": "Invalid user role"},
                     status=status.HTTP_403_FORBIDDEN
                 )
+            
+            return student, None
+            
+        except Student.DoesNotExist:
+            return None, Response(
+                {"error": "Student not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    def get(self, request, student_id):
+        """Get complete student information including attendance, exam results, teachers, parent info, etc."""
+        try:
+            student, error_response = self._get_student_and_check_permissions(request, student_id)
+            if error_response:
+                return error_response
             
             # Serialize the comprehensive student data
             from .serializers import ComprehensiveStudentSerializer
@@ -1664,19 +1678,176 @@ class ComprehensiveStudentDetailView(APIView):
                 'student': serializer.data,
                 'metadata': {
                     'retrieved_at': timezone.now(),
-                    'retrieved_by': user.email,
-                    'user_role': user.role
+                    'retrieved_by': request.user.email,
+                    'user_role': request.user.role
                 }
             })
             
-        except Student.DoesNotExist:
-            return Response(
-                {"error": "Student not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
         except Exception as e:
             return Response(
                 {"error": f"Error retrieving student data: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def patch(self, request, student_id):
+        """Partially update student information"""
+        try:
+            student, error_response = self._get_student_and_check_permissions(request, student_id)
+            if error_response:
+                return error_response
+            
+            # Check update permissions
+            user = request.user
+            if user.role == Role.PARENT and student.parent != user:
+                return Response(
+                    {"error": "You can only update your own children's records"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            elif user.role not in [Role.ADMIN, Role.TEACHER, Role.PARENT]:
+                return Response(
+                    {"error": "You do not have permission to update student records"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Validate parent if being changed
+            if 'parent' in request.data:
+                parent_data = request.data['parent']
+                if isinstance(parent_data, str):
+                    # If parent is provided as ID string
+                    try:
+                        parent = User.objects.get(id=parent_data, role=Role.PARENT)
+                        if user.school and parent.school and user.school != parent.school:
+                            return Response(
+                                {"error": "Parent must belong to the same school"},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+                    except User.DoesNotExist:
+                        return Response(
+                            {"error": "Parent not found or does not have parent role"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+            
+            # Update the student
+            serializer = StudentSerializer(student, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                
+                # Return comprehensive data after update
+                from .serializers import ComprehensiveStudentSerializer
+                comprehensive_serializer = ComprehensiveStudentSerializer(student, context={'request': request})
+                
+                return Response({
+                    'message': 'Student updated successfully',
+                    'student': comprehensive_serializer.data
+                })
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            return Response(
+                {"error": f"Error updating student: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def put(self, request, student_id):
+        """Fully update student information"""
+        try:
+            student, error_response = self._get_student_and_check_permissions(request, student_id)
+            if error_response:
+                return error_response
+            
+            # Check update permissions
+            user = request.user
+            if user.role == Role.PARENT and student.parent != user:
+                return Response(
+                    {"error": "You can only update your own children's records"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            elif user.role not in [Role.ADMIN, Role.TEACHER, Role.PARENT]:
+                return Response(
+                    {"error": "You do not have permission to update student records"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Validate parent if being changed
+            if 'parent' in request.data:
+                parent_data = request.data['parent']
+                if isinstance(parent_data, str):
+                    # If parent is provided as ID string
+                    try:
+                        parent = User.objects.get(id=parent_data, role=Role.PARENT)
+                        if user.school and parent.school and user.school != parent.school:
+                            return Response(
+                                {"error": "Parent must belong to the same school"},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+                    except User.DoesNotExist:
+                        return Response(
+                            {"error": "Parent not found or does not have parent role"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+            
+            # Update the student
+            serializer = StudentSerializer(student, data=request.data, partial=False)
+            if serializer.is_valid():
+                serializer.save()
+                
+                # Return comprehensive data after update
+                from .serializers import ComprehensiveStudentSerializer
+                comprehensive_serializer = ComprehensiveStudentSerializer(student, context={'request': request})
+                
+                return Response({
+                    'message': 'Student updated successfully',
+                    'student': comprehensive_serializer.data
+                })
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            return Response(
+                {"error": f"Error updating student: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def delete(self, request, student_id):
+        """Delete student record"""
+        try:
+            student, error_response = self._get_student_and_check_permissions(request, student_id)
+            if error_response:
+                return error_response
+            
+            # Check delete permissions
+            user = request.user
+            if user.role == Role.PARENT and student.parent != user:
+                return Response(
+                    {"error": "You can only delete your own children's records"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            elif user.role not in [Role.ADMIN, Role.TEACHER, Role.PARENT]:
+                return Response(
+                    {"error": "You do not have permission to delete student records"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Store student info before deletion
+            student_info = {
+                'id': str(student.id),
+                'name': student.name,
+                'grade': student.grade,
+                'class_assigned': student.class_assigned
+            }
+            
+            # Delete the student
+            student.delete()
+            
+            return Response({
+                'message': 'Student deleted successfully',
+                'deleted_student': student_info
+            }, status=status.HTTP_204_NO_CONTENT)
+                
+        except Exception as e:
+            return Response(
+                {"error": f"Error deleting student: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
