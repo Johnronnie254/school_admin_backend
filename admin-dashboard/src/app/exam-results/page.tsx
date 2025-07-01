@@ -61,7 +61,7 @@ export default function ExamResultsPage() {
 
       {/* Uploaded Exam PDFs Section */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Uploaded Exam Papers</h2>
+        <h2 className="text-xl font-semibold mb-4 text-black">Uploaded Exam Papers</h2>
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
           {examPDFs.length > 0 ? (
             <table className="min-w-full divide-y divide-gray-200">
