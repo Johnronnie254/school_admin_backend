@@ -22,11 +22,12 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'your-secret-key-here')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [
-    'http://localhost:3000',
+    'localhost',
     '127.0.0.1',
     '78.111.67.196',
     'educitebackend.co.ke',
     'www.educitebackend.co.ke',
+    'testserver',  # Added for testing
 ]
 
 # Add CSRF_TRUSTED_ORIGINS
