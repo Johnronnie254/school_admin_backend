@@ -3079,7 +3079,15 @@ class PasswordResetRequestView(APIView):
     serializer_class = PasswordResetRequestSerializer
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+        # Ensure we have DRF request data
+        if hasattr(request, 'data'):
+            data = request.data
+        else:
+            # Fallback for WSGIRequest
+            import json
+            data = json.loads(request.body.decode('utf-8'))
+        
+        serializer = self.serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
 
