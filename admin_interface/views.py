@@ -3189,24 +3189,52 @@ Educite School Management System
 © {timezone.now().year} Educite. All rights reserved.
             """
             
-            # Send the email
+            # Send the email with proper error handling
             from django.core.mail import EmailMultiAlternatives
             
-            msg = EmailMultiAlternatives(
-                subject=subject,
-                body=text_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email]
-            )
-            msg.attach_alternative(html_message, "text/html")
-            msg.send()
+            try:
+                msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=text_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[user.email]
+                )
+                msg.attach_alternative(html_message, "text/html")
+                msg.send()
 
-            return Response({
-                "status": "success",
-                "message": "Password reset link has been sent to your email",
-                "email": email,
-                "expires_in": "1 hour"
-            })
+                return Response({
+                    "status": "success",
+                    "message": "Password reset link has been sent to your email",
+                    "email": email,
+                    "expires_in": "1 hour"
+                })
+                
+            except Exception as email_error:
+                # Log the email error but still return success for security
+                import logging
+                import traceback
+                logger = logging.getLogger(__name__)
+                logger.error(f"SMTP Email failed for {email}: {str(email_error)}")
+                logger.error(f"Full email traceback: {traceback.format_exc()}")
+                
+                # For development, we can return the actual error
+                if settings.DEBUG:
+                    return Response({
+                        "status": "success", 
+                        "message": "Password reset token created (email failed in dev mode)",
+                        "email": email,
+                        "expires_in": "1 hour",
+                        "debug_email_error": str(email_error),
+                        "reset_token": str(reset_token.token)  # Only for debugging
+                    })
+                else:
+                    # In production, don't reveal email issues for security
+                    return Response({
+                        "status": "success", 
+                        "message": "Password reset link has been sent to your email",
+                        "email": email,
+                        "expires_in": "1 hour"
+                    })
 
         except User.DoesNotExist:
             # We don't want to reveal if the email exists or not for security
