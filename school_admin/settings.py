@@ -241,7 +241,7 @@ DEFAULT_FROM_EMAIL = 'educite0@gmail.com'
 SERVER_EMAIL = 'educite0@gmail.com'
 
 # Frontend URL for password reset
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://educitebackend.co.ke')
 
 # Cron Jobs Configuration
 CRONJOBS = [

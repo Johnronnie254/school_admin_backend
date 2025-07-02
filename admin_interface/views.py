@@ -3211,12 +3211,15 @@ Educite School Management System
         except Exception as e:
             # Log the error for debugging but don't expose it to the user
             import logging
+            import traceback
             logger = logging.getLogger(__name__)
             logger.error(f"Password reset email failed for {email}: {str(e)}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             
             return Response({
                 "status": "error",
-                "message": "There was an error sending the password reset email. Please try again later."
+                "message": "There was an error sending the password reset email. Please try again later.",
+                "debug_info": str(e) if settings.DEBUG else None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PasswordResetConfirmView(APIView):
