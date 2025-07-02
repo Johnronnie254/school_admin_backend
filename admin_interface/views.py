@@ -3079,28 +3079,43 @@ class PasswordResetRequestView(APIView):
     serializer_class = PasswordResetRequestSerializer
 
     def post(self, request):
+        debug_info = []
+        debug_info.append("PasswordResetRequestView.post() called")
+        debug_info.append(f"Request type: {type(request)}")
+        
         # Ensure we have DRF request data
         if hasattr(request, 'data'):
             data = request.data
+            debug_info.append("Using request.data")
         else:
             # Fallback for WSGIRequest
             import json
             data = json.loads(request.body.decode('utf-8'))
+            debug_info.append("Using request.body fallback")
+        
+        debug_info.append(f"Data received: {data}")
         
         serializer = self.serializer_class(data=data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
+        debug_info.append(f"Email validated: {email}")
 
         try:
+            debug_info.append("Looking up user...")
             user = User.objects.get(email=email)
+            debug_info.append(f"User found: {user.id} - {user.email}")
+            
             # Create reset token that expires in 1 hour
+            debug_info.append("Creating reset token...")
             reset_token = PasswordResetToken.objects.create(
                 user=user,
                 expires_at=timezone.now() + timezone.timedelta(hours=1)
             )
+            debug_info.append(f"Reset token created: {reset_token.token}")
 
             # Send email with reset link
             reset_url = f"{settings.FRONTEND_URL}/reset-password/{reset_token.token}"
+            debug_info.append(f"Reset URL: {reset_url}")
             
             subject = "🔐 Password Reset Request - Educite"
             
@@ -3189,27 +3204,45 @@ Educite School Management System
 © {timezone.now().year} Educite. All rights reserved.
             """
             
+            debug_info.append("About to send email...")
+            debug_info.append(f"Subject: {subject}")
+            debug_info.append(f"To: {user.email}")
+            debug_info.append(f"From: {settings.DEFAULT_FROM_EMAIL}")
+            
             # Send the email with proper error handling
             from django.core.mail import EmailMultiAlternatives
             
             try:
+                debug_info.append("Creating EmailMultiAlternatives object...")
                 msg = EmailMultiAlternatives(
                     subject=subject,
                     body=text_message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     to=[user.email]
                 )
+                debug_info.append("EmailMultiAlternatives created successfully")
+                
+                debug_info.append("Attaching HTML alternative...")
                 msg.attach_alternative(html_message, "text/html")
+                debug_info.append("HTML alternative attached")
+                
+                debug_info.append("About to call msg.send()...")
                 msg.send()
+                debug_info.append("msg.send() completed successfully!")
 
                 return Response({
                     "status": "success",
                     "message": "Password reset link has been sent to your email",
                     "email": email,
-                    "expires_in": "1 hour"
+                    "expires_in": "1 hour",
+                    "debug_flow": debug_info if settings.DEBUG else []
                 })
                 
             except Exception as email_error:
+                debug_info.append(f"EMAIL SENDING FAILED: {type(email_error).__name__}")
+                debug_info.append(f"Email error message: {str(email_error)}")
+                debug_info.append("This exception was caught in the inner try-catch block!")
+                
                 # Log the email error but still return success for security
                 import logging
                 import traceback
@@ -3219,13 +3252,15 @@ Educite School Management System
                 
                 # For development, we can return the actual error
                 if settings.DEBUG:
+                    debug_info.append("Returning debug response due to email failure")
                     return Response({
                         "status": "success", 
                         "message": "Password reset token created (email failed in dev mode)",
                         "email": email,
                         "expires_in": "1 hour",
                         "debug_email_error": str(email_error),
-                        "reset_token": str(reset_token.token)  # Only for debugging
+                        "reset_token": str(reset_token.token),
+                        "debug_flow": debug_info
                     })
                 else:
                     # In production, don't reveal email issues for security
@@ -3237,14 +3272,19 @@ Educite School Management System
                     })
 
         except User.DoesNotExist:
+            debug_info.append(f"User not found for email: {email}")
             # We don't want to reveal if the email exists or not for security
             return Response({
                 "status": "success", 
                 "message": "If an account exists with this email, a password reset link will be sent",
                 "email": email,
-                "expires_in": "1 hour"
+                "expires_in": "1 hour",
+                "debug_flow": debug_info if settings.DEBUG else []
             })
         except Exception as e:
+            debug_info.append(f"OUTER EXCEPTION: {type(e).__name__}")
+            debug_info.append(f"Outer exception message: {str(e)}")
+            
             # Log the error for debugging but don't expose it to the user
             import logging
             import traceback
@@ -3255,7 +3295,8 @@ Educite School Management System
             return Response({
                 "status": "error",
                 "message": "There was an error sending the password reset email. Please try again later.",
-                "debug_info": str(e) if settings.DEBUG else None
+                "debug_info": str(e) if settings.DEBUG else None,
+                "debug_flow": debug_info if settings.DEBUG else []
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PasswordResetConfirmView(APIView):
