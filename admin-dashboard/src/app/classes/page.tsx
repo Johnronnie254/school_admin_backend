@@ -509,7 +509,7 @@ export default function ClassesPage() {
                       Updating...
                     </div>
                   ) : (
-                    editingClass ? 'Update Assignment' : 'Create Assignment'
+                    editingClass ? 'Update Class' : 'Assign Class'
                   )}
                 </button>
               </div>
@@ -531,4 +531,4 @@ export default function ClassesPage() {
       )}
     </div>
   );
-} 
+}

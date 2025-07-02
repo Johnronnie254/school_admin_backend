@@ -893,7 +893,7 @@ class StudentViewSet(viewsets.ModelViewSet):
             year=request.query_params.get('year', None),
             term=request.query_params.get('term', None)
         )
-        serializer = ExamResultSerializer(queryset, many=True)
+        serializer = self.serializer_class(queryset, many=True)
         return Response(serializer.data)
 
 
@@ -3093,39 +3093,131 @@ class PasswordResetRequestView(APIView):
 
             # Send email with reset link
             reset_url = f"{settings.FRONTEND_URL}/reset-password/{reset_token.token}"
-            subject = "Password Reset Request"
-            message = f"""
-            Hello {user.first_name},
-
-            You have requested to reset your password. Please click the link below to reset your password:
-
-            {reset_url}
-
-            This link will expire in 1 hour.
-
-            If you did not request this password reset, please ignore this email.
-
-            Best regards,
-            School Admin Team
+            
+            subject = "🔐 Password Reset Request - Educite"
+            
+            # Create HTML email content
+            html_message = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Password Reset - Educite</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }}
+                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }}
+                    .content {{ padding: 30px 20px; }}
+                    .reset-button {{ display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; margin: 20px 0; }}
+                    .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }}
+                    .warning {{ background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🔐 Password Reset Request</h1>
+                        <p>Educite School Management System</p>
+                    </div>
+                    <div class="content">
+                        <h2>Hello {user.first_name or user.email.split('@')[0]},</h2>
+                        <p>We received a request to reset your password for your Educite account.</p>
+                        <p>Click the button below to reset your password:</p>
+                        
+                        <div style="text-align: center;">
+                            <a href="{reset_url}" class="reset-button">Reset My Password</a>
+                        </div>
+                        
+                        <p>Or copy and paste this link into your browser:</p>
+                        <p style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; word-break: break-all; font-family: monospace;">
+                            {reset_url}
+                        </p>
+                        
+                        <div class="warning">
+                            <strong>⚠️ Important Security Information:</strong>
+                            <ul>
+                                <li>This link will expire in <strong>1 hour</strong></li>
+                                <li>If you didn't request this password reset, please ignore this email</li>
+                                <li>Your password will remain unchanged until you complete the reset process</li>
+                                <li>For security reasons, don't share this link with anyone</li>
+                            </ul>
+                        </div>
+                        
+                        <p>If you're having trouble with the button above, copy and paste the URL below into your web browser:</p>
+                        <p style="color: #667eea; word-break: break-all;">{reset_url}</p>
+                    </div>
+                    <div class="footer">
+                        <p>This is an automated message from Educite School Management System</p>
+                        <p>If you need help, please contact your school administrator</p>
+                        <p>&copy; {timezone.now().year} Educite. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
             """
             
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
+            # Plain text version for email clients that don't support HTML
+            text_message = f"""
+Password Reset Request - Educite
+
+Hello {user.first_name or user.email.split('@')[0]},
+
+We received a request to reset your password for your Educite account.
+
+Please click the link below to reset your password:
+{reset_url}
+
+⚠️ IMPORTANT:
+- This link will expire in 1 hour
+- If you didn't request this password reset, please ignore this email
+- Your password will remain unchanged until you complete the reset process
+
+If you're having trouble accessing the link, copy and paste it into your browser.
+
+Best regards,
+Educite School Management System
+
+© {timezone.now().year} Educite. All rights reserved.
+            """
+            
+            # Send the email
+            from django.core.mail import EmailMultiAlternatives
+            
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email]
             )
+            msg.attach_alternative(html_message, "text/html")
+            msg.send()
 
             return Response({
-                "message": "Password reset link has been sent to your email"
+                "status": "success",
+                "message": "Password reset link has been sent to your email",
+                "email": email,
+                "expires_in": "1 hour"
             })
 
         except User.DoesNotExist:
-            # We don't want to reveal if the email exists or not
+            # We don't want to reveal if the email exists or not for security
             return Response({
-                "message": "If an account exists with this email, a password reset link will be sent"
+                "status": "success", 
+                "message": "If an account exists with this email, a password reset link will be sent",
+                "email": email,
+                "expires_in": "1 hour"
             })
+        except Exception as e:
+            # Log the error for debugging but don't expose it to the user
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Password reset email failed for {email}: {str(e)}")
+            
+            return Response({
+                "status": "error",
+                "message": "There was an error sending the password reset email. Please try again later."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PasswordResetConfirmView(APIView):
     """Handle password reset confirmation"""
