@@ -241,8 +241,8 @@ EMAIL_HOST_PASSWORD = 'zztj trga ywwm qwxe'
 DEFAULT_FROM_EMAIL = 'educite0@gmail.com'
 SERVER_EMAIL = 'educite0@gmail.com'
 
-# Frontend URL for password reset
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://educitebackend.co.ke')
+# Frontend URL for password reset - Flutter Mobile App Deep Linking
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'educite://app')
 
 # Cron Jobs Configuration
 CRONJOBS = [
