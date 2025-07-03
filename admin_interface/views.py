@@ -3152,9 +3152,6 @@ class PasswordResetRequestView(APIView):
                                 <li>For security reasons, don't share this link with anyone</li>
                             </ul>
                         </div>
-                        
-                        <p>If you're having trouble with the button above, copy and paste the URL below into your web browser:</p>
-                        <p style="color: #667eea; word-break: break-all;">{reset_url}</p>
                     </div>
                     <div class="footer">
                         <p>This is an automated message from Educite School Management System</p>
