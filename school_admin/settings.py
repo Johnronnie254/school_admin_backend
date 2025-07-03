@@ -240,6 +240,7 @@ EMAIL_HOST_USER = 'educite0@gmail.com'
 EMAIL_HOST_PASSWORD = 'zztj trga ywwm qwxe'
 DEFAULT_FROM_EMAIL = 'educite0@gmail.com'
 SERVER_EMAIL = 'educite0@gmail.com'
+EMAIL_TIMEOUT = 30  # SMTP connection timeout in seconds
 
 # Frontend URL for password reset - Flutter Mobile App Deep Linking
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'educite://app')
