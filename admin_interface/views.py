@@ -3299,6 +3299,126 @@ class PasswordResetConfirmView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+class PasswordResetRedirectView(APIView):
+    """Redirect HTTPS password reset links to Flutter app deep links"""
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        """Redirect to Flutter app with the reset token"""
+        try:
+            # Validate that the token exists and is not expired
+            reset_token = PasswordResetToken.objects.get(
+                token=token,
+                used=False
+            )
+            
+            if not reset_token.is_valid():
+                # Token expired - show error page or redirect to login
+                return Response(
+                    {"error": "Reset token has expired. Please request a new password reset."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Create the deep link for the Flutter app
+            app_deep_link = f"educite://app/reset-password/{token}"
+            
+            # Return HTML that redirects to the app
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Opening Educite App...</title>
+                <style>
+                    body {{ 
+                        font-family: Arial, sans-serif; 
+                        text-align: center; 
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 50px 20px;
+                        margin: 0;
+                    }}
+                    .container {{ 
+                        max-width: 500px; 
+                        margin: 0 auto; 
+                        background: rgba(255,255,255,0.1);
+                        padding: 40px;
+                        border-radius: 15px;
+                        backdrop-filter: blur(10px);
+                    }}
+                    .spinner {{ 
+                        border: 4px solid rgba(255,255,255,0.3);
+                        border-top: 4px solid white;
+                        border-radius: 50%;
+                        width: 50px;
+                        height: 50px;
+                        animation: spin 1s linear infinite;
+                        margin: 20px auto;
+                    }}
+                    @keyframes spin {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+                    .manual-link {{ 
+                        background: rgba(255,255,255,0.2);
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin: 20px 0;
+                        word-break: break-all;
+                        font-family: monospace;
+                    }}
+                    .instructions {{ 
+                        background: rgba(255,255,255,0.1);
+                        padding: 20px;
+                        border-radius: 10px;
+                        margin: 20px 0;
+                        text-align: left;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>🔐 Opening Educite App...</h1>
+                    <div class="spinner"></div>
+                    <p>Redirecting you to the Educite app to reset your password.</p>
+                    
+                    <div class="instructions">
+                        <strong>If the app doesn't open automatically:</strong>
+                        <ol>
+                            <li>Make sure the Educite app is installed</li>
+                            <li>Copy the link below and paste it in your browser</li>
+                            <li>Or contact your school administrator for help</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="manual-link">
+                        <strong>Manual Link:</strong><br>
+                        {app_deep_link}
+                    </div>
+                    
+                    <p><small>Token expires in 1 hour from when it was requested.</small></p>
+                </div>
+                
+                <script>
+                    // Try to open the app immediately
+                    window.location.href = "{app_deep_link}";
+                    
+                    // Fallback: If app doesn't open, show instructions
+                    setTimeout(function() {{
+                        document.querySelector('.spinner').style.display = 'none';
+                        document.querySelector('h1').innerHTML = '📱 Tap the manual link above';
+                    }}, 3000);
+                </script>
+            </body>
+            </html>
+            """
+            
+            return HttpResponse(html_content, content_type='text/html')
+            
+        except PasswordResetToken.DoesNotExist:
+            return Response(
+                {"error": "Invalid reset token"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 # Create a custom permission for superuser
 class IsSuperUser(IsAuthenticated):
     """

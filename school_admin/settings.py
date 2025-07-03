@@ -242,8 +242,8 @@ DEFAULT_FROM_EMAIL = 'educite0@gmail.com'
 SERVER_EMAIL = 'educite0@gmail.com'
 EMAIL_TIMEOUT = 30  # SMTP connection timeout in seconds
 
-# Frontend URL for password reset - Flutter Mobile App Deep Linking
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'educite://app')
+# Frontend URL for password reset - Android App Links
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://educitebackend.co.ke/app')
 
 # Cron Jobs Configuration
 CRONJOBS = [

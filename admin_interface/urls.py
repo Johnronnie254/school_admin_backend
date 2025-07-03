@@ -11,7 +11,7 @@ from .views import (
     MessageViewSet, LeaveApplicationViewSet,
     ProductViewSet, TeacherScheduleView, TeacherProfilePicView,
     TeacherExamViewSet, PasswordResetRequestView,
-    PasswordResetConfirmView, TeacherParentAssociationViewSet,
+    PasswordResetConfirmView, PasswordResetRedirectView, TeacherParentAssociationViewSet,
     SchoolViewSet, ParentViewSet, SchoolEventViewSet, SuperUserViewSet,
     CurrentSchoolView, DirectMessagingView, AttendanceViewSet,
     OrderViewSet, ComprehensiveStudentDetailView
@@ -42,6 +42,7 @@ urlpatterns = [
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/password/reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('auth/password/reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
+    path('app/reset-password/<uuid:token>/', PasswordResetRedirectView.as_view(), name='password-reset-redirect'),
 
     # School
     path('current-school/', CurrentSchoolView.as_view(), name='current-school'),
