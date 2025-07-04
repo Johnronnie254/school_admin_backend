@@ -51,10 +51,9 @@ urlpatterns = [
     # Documents
     path('documents/upload/', DocumentUploadView.as_view(), name='document-upload'),
 
-
-
     # Exam Results
     path('exams/record/', ExamResultView.as_view(), name='record-exam-result'),
+    path('exam-results/', ExamResultView.as_view(), name='exam-results'),
 
     # Parents
     path('parents/me/', ParentViewSet.as_view({'get': 'me'}), name='parent-me'),
