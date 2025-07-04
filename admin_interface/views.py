@@ -1522,26 +1522,81 @@ class ExamResultView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Retrieve all exam results, optionally filtered by school"""
+        """Retrieve exam results with proper role-based filtering"""
+        user = request.user
         queryset = ExamResult.objects.all()
         
-        # Filter by school if user has a school
-        if request.user.school:
-            queryset = queryset.filter(school=request.user.school)
+        # Role-based filtering - CRITICAL SECURITY FIX
+        if user.role == Role.TEACHER:
+            # Teachers can only see exam results for students in their assigned class
+            try:
+                teacher = Teacher.objects.get(email=user.email)
+                if not teacher.class_assigned:
+                    return Response({
+                        "error": "Teacher must be assigned to a class to view exam results"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Filter to only students in the teacher's assigned class and school
+                queryset = queryset.filter(
+                    student__class_assigned=teacher.class_assigned,
+                    school=teacher.school
+                )
+            except Teacher.DoesNotExist:
+                return Response({
+                    "error": "Teacher profile not found"
+                }, status=status.HTTP_404_NOT_FOUND)
+                
+        elif user.role == Role.PARENT:
+            # Parents can only see exam results for their own children
+            queryset = queryset.filter(
+                student__parent=user,
+                school=user.school
+            )
+            
+        elif user.role == Role.ADMIN:
+            # Admins can see all exam results in their school
+            if user.school:
+                queryset = queryset.filter(school=user.school)
+        else:
+            # Other roles have no access
+            return Response({
+                "error": "You do not have permission to view exam results"
+            }, status=status.HTTP_403_FORBIDDEN)
             
         # Optional query parameters for filtering
         year = request.query_params.get('year')
         term = request.query_params.get('term')
         student_id = request.query_params.get('student_id')
+        subject = request.query_params.get('subject')
         
         if year:
             queryset = queryset.filter(year=year)
         if term:
             queryset = queryset.filter(term=term)
         if student_id:
+            # Additional security check: ensure teacher can access this student
+            if user.role == Role.TEACHER:
+                try:
+                    teacher = Teacher.objects.get(email=user.email)
+                    student = Student.objects.get(id=student_id)
+                    if student.class_assigned != teacher.class_assigned:
+                        return Response({
+                            "error": "You can only view exam results for students in your assigned class"
+                        }, status=status.HTTP_403_FORBIDDEN)
+                except (Teacher.DoesNotExist, Student.DoesNotExist):
+                    return Response({
+                        "error": "Invalid teacher or student"
+                    }, status=status.HTTP_400_BAD_REQUEST)
             queryset = queryset.filter(student_id=student_id)
+        if subject:
+            queryset = queryset.filter(subject__icontains=subject)
+            
+        # Order by most recent first
+        queryset = queryset.order_by('-created_at')
             
         serializer = ExamResultSerializer(queryset, many=True)
+        
+        # Return just the results data for backward compatibility
         return Response(serializer.data)
 
     def post(self, request):
