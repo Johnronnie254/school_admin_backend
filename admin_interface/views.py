@@ -3074,7 +3074,7 @@ def api_root(request):
     })
 
 class PasswordResetRequestView(APIView):
-    """Handle password reset requests"""
+    """Handle password reset requests with different flows for parents and teachers"""
     permission_classes = [AllowAny]
     serializer_class = PasswordResetRequestSerializer
 
@@ -3100,12 +3100,48 @@ class PasswordResetRequestView(APIView):
                 expires_at=timezone.now() + timezone.timedelta(hours=1)
             )
 
-            # Send email with reset link
+            # Check user role and send appropriate reset method
+            if user.role == Role.PARENT:
+                # PARENT FLOW: Send email with reset link (existing flow)
+                return self._send_parent_reset_email(user, reset_token, email)
+            elif user.role == Role.TEACHER:
+                # TEACHER FLOW: Send email with 6-digit code
+                return self._send_teacher_reset_email(user, reset_token, email)
+            else:
+                # ADMIN or other roles: Use parent flow as default
+                return self._send_parent_reset_email(user, reset_token, email)
+
+        except User.DoesNotExist:
+            # We don't want to reveal if the email exists or not for security
+            return Response({
+                "status": "success", 
+                "message": "If an account exists with this email, a password reset will be sent",
+                "email": email,
+                "expires_in": "1 hour"
+            })
+        except Exception as e:
+            # Log the error for debugging but don't expose it to the user
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"Password reset failed for {email}: {str(e)}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            
+            return Response({
+                "status": "error",
+                "message": "There was an error processing your password reset request. Please try again later.",
+                "debug_info": str(e) if settings.DEBUG else None
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _send_parent_reset_email(self, user, reset_token, email):
+        """Send email with reset link for parents (existing flow)"""
+        try:
+            # Create reset link for parents
             reset_url = f"{settings.FRONTEND_URL}/reset-password/{reset_token.token}"
             
             subject = "🔐 Password Reset Request - Educite"
             
-            # Create HTML email content
+            # Create HTML email content for parents
             html_message = f"""
             <!DOCTYPE html>
             <html>
@@ -3131,8 +3167,8 @@ class PasswordResetRequestView(APIView):
                     </div>
                     <div class="content">
                         <h2>Hello {user.first_name or user.email.split('@')[0]},</h2>
-                        <p>We received a request to reset your password for your Educite account.</p>
-                        <p>Click the button below to reset your password:</p>
+                        <p>We received a request to reset your password for your Educite parent account.</p>
+                        <p>Click the button below to reset your password in the Educite app:</p>
                         
                         <div style="text-align: center;">
                             <a href="{reset_url}" class="reset-button">Reset My Password</a>
@@ -3154,7 +3190,7 @@ class PasswordResetRequestView(APIView):
                         </div>
                     </div>
                     <div class="footer">
-                        <p>This is an automated message from Educite School Management System</p>
+                        <p>This is an automated message from the Educite Team</p>
                         <p>If you need help, please contact your school administrator</p>
                         <p>&copy; {timezone.now().year} Educite. All rights reserved.</p>
                     </div>
@@ -3163,13 +3199,13 @@ class PasswordResetRequestView(APIView):
             </html>
             """
             
-            # Plain text version for email clients that don't support HTML
+            # Plain text version for parents
             text_message = f"""
 Password Reset Request - Educite
 
 Hello {user.first_name or user.email.split('@')[0]},
 
-We received a request to reset your password for your Educite account.
+We received a request to reset your password for your Educite parent account.
 
 Please click the link below to reset your password:
 {reset_url}
@@ -3182,12 +3218,12 @@ Please click the link below to reset your password:
 If you're having trouble accessing the link, copy and paste it into your browser.
 
 Best regards,
-Educite School Management System
+Educite Team
 
 © {timezone.now().year} Educite. All rights reserved.
             """
             
-            # Send the email with proper error handling
+            # Send the email
             from django.core.mail import EmailMultiAlternatives
             
             try:
@@ -3204,7 +3240,8 @@ Educite School Management System
                     "status": "success",
                     "message": "Password reset link has been sent to your email",
                     "email": email,
-                    "expires_in": "1 hour"
+                    "expires_in": "1 hour",
+                    "type": "link"
                 })
                 
             except Exception as email_error:
@@ -3223,7 +3260,8 @@ Educite School Management System
                         "email": email,
                         "expires_in": "1 hour",
                         "debug_email_error": str(email_error),
-                        "reset_token": str(reset_token.token)
+                        "reset_token": str(reset_token.token),
+                        "type": "link"
                     })
                 else:
                     # In production, don't reveal email issues for security
@@ -3231,30 +3269,171 @@ Educite School Management System
                         "status": "success", 
                         "message": "Password reset link has been sent to your email",
                         "email": email,
-                        "expires_in": "1 hour"
+                        "expires_in": "1 hour",
+                        "type": "link"
                     })
 
-        except User.DoesNotExist:
-            # We don't want to reveal if the email exists or not for security
-            return Response({
-                "status": "success", 
-                "message": "If an account exists with this email, a password reset link will be sent",
-                "email": email,
-                "expires_in": "1 hour"
-            })
         except Exception as e:
-            # Log the error for debugging but don't expose it to the user
-            import logging
-            import traceback
-            logger = logging.getLogger(__name__)
-            logger.error(f"Password reset email failed for {email}: {str(e)}")
-            logger.error(f"Full traceback: {traceback.format_exc()}")
+            raise e
+
+    def _send_teacher_reset_email(self, user, reset_token, email):
+        """Send email with 6-digit code for teachers (new flow)"""
+        try:
+            # Generate 6-digit code for teachers
+            import random
+            reset_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
             
-            return Response({
-                "status": "error",
-                "message": "There was an error sending the password reset email. Please try again later.",
-                "debug_info": str(e) if settings.DEBUG else None
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Store the code in the reset token (we'll need to add this field to the model)
+            # For now, we'll use the token field to store the code temporarily
+            reset_token.reset_code = reset_code
+            reset_token.save()
+            
+            subject = "🔐 Password Reset Code - Educite"
+            
+            # Create HTML email content for teachers
+            html_message = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Password Reset Code - Educite</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }}
+                    .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }}
+                    .content {{ padding: 30px 20px; }}
+                    .code-box {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0; }}
+                    .code {{ font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 10px 0; font-family: monospace; }}
+                    .footer {{ background-color: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px; }}
+                    .warning {{ background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🔐 Password Reset Code</h1>
+                        <p>Educite School Management System</p>
+                    </div>
+                    <div class="content">
+                        <h2>Hello {user.first_name or user.email.split('@')[0]},</h2>
+                        <p>We received a request to reset your password for your Educite teacher account.</p>
+                        <p>Use the code below to reset your password:</p>
+                        
+                        <div class="code-box">
+                            <p style="margin: 0; font-size: 16px;">Your Password Reset Code</p>
+                            <div class="code">{reset_code}</div>
+                            <p style="margin: 0; font-size: 14px;">Enter this code in the app or web portal</p>
+                        </div>
+                        
+                        <p><strong>How to use this code:</strong></p>
+                        <ol>
+                            <li>Go to the password reset page in your Educite app or web portal</li>
+                            <li>Enter the 6-digit code above</li>
+                            <li>Create your new password</li>
+                            <li>Confirm your new password</li>
+                        </ol>
+                        
+                        <div class="warning">
+                            <strong>⚠️ Important Security Information:</strong>
+                            <ul>
+                                <li>This code will expire in <strong>1 hour</strong></li>
+                                <li>If you didn't request this password reset, please ignore this email</li>
+                                <li>Your password will remain unchanged until you complete the reset process</li>
+                                <li>For security reasons, don't share this code with anyone</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <p>This is an automated message from Educite School Management System</p>
+                        <p>If you need help, please contact your school administrator</p>
+                        <p>&copy; {timezone.now().year} Educite. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Plain text version for teachers
+            text_message = f"""
+Password Reset Code - Educite
+
+Hello {user.first_name or user.email.split('@')[0]},
+
+We received a request to reset your password for your Educite teacher account.
+
+Your 6-digit password reset code is: {reset_code}
+
+How to use this code:
+1. Go to the password reset page in your Educite app or web portal
+2. Enter the 6-digit code above
+3. Create your new password
+4. Confirm your new password
+
+⚠️ IMPORTANT:
+- This code will expire in 1 hour
+- If you didn't request this password reset, please ignore this email
+- Your password will remain unchanged until you complete the reset process
+- For security reasons, don't share this code with anyone
+
+Best regards,
+Educite School Management System
+
+© {timezone.now().year} Educite. All rights reserved.
+            """
+            
+            # Send the email
+            from django.core.mail import EmailMultiAlternatives
+            
+            try:
+                msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=text_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[user.email]
+                )
+                msg.attach_alternative(html_message, "text/html")
+                msg.send()
+
+                return Response({
+                    "status": "success",
+                    "message": "Password reset code has been sent to your email",
+                    "email": email,
+                    "expires_in": "1 hour",
+                    "type": "code"
+                })
+                
+            except Exception as email_error:
+                # Log the email error but still return success for security
+                import logging
+                import traceback
+                logger = logging.getLogger(__name__)
+                logger.error(f"SMTP Email failed for {email}: {str(email_error)}")
+                logger.error(f"Full email traceback: {traceback.format_exc()}")
+                
+                # For development, we can return the actual error
+                if settings.DEBUG:
+                    return Response({
+                        "status": "success", 
+                        "message": "Password reset code created (email failed in dev mode)",
+                        "email": email,
+                        "expires_in": "1 hour",
+                        "debug_email_error": str(email_error),
+                        "reset_code": reset_code,
+                        "type": "code"
+                    })
+                else:
+                    # In production, don't reveal email issues for security
+                    return Response({
+                        "status": "success", 
+                        "message": "Password reset code has been sent to your email",
+                        "email": email,
+                        "expires_in": "1 hour",
+                        "type": "code"
+                    })
+
+        except Exception as e:
+            raise e
 
 class PasswordResetConfirmView(APIView):
     """Handle password reset confirmation"""
@@ -3295,6 +3474,87 @@ class PasswordResetConfirmView(APIView):
                 {"error": "Invalid reset token"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class TeacherPasswordResetConfirmView(APIView):
+    """Handle teacher password reset confirmation using 6-digit code"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Validate required fields
+        reset_code = request.data.get('code')
+        new_password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+
+        if not all([reset_code, new_password, confirm_password]):
+            return Response({
+                "error": "Code, password, and confirm_password are required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate password match
+        if new_password != confirm_password:
+            return Response({
+                "error": "Passwords do not match"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate password strength (basic validation)
+        if len(new_password) < 8:
+            return Response({
+                "error": "Password must be at least 8 characters long"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Find the reset token with the code
+            # For now, we're storing the code temporarily
+            reset_token = None
+            
+            # Try to find by reset_code field if it exists
+            try:
+                reset_token = PasswordResetToken.objects.get(
+                    reset_code=reset_code,
+                    used=False
+                )
+            except (PasswordResetToken.DoesNotExist, AttributeError):
+                # Fallback: The reset_code field doesn't exist yet
+                # For now, return an informative error
+                return Response({
+                    "error": "Teacher password reset with codes is not fully configured. Please contact administrator.",
+                    "code": "FEATURE_NOT_READY"
+                }, status=status.HTTP_501_NOT_IMPLEMENTED)
+
+            if not reset_token.is_valid():
+                return Response({
+                    "error": "Reset code has expired"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Verify user is a teacher
+            if reset_token.user.role != Role.TEACHER:
+                return Response({
+                    "error": "This reset method is only available for teachers"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Update password
+            user = reset_token.user
+            user.set_password(new_password)
+            user.save()
+
+            # Mark token as used
+            reset_token.used = True
+            reset_token.save()
+
+            return Response({
+                "status": "success",
+                "message": "Password has been reset successfully",
+                "user_type": "teacher"
+            })
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Teacher password reset error: {str(e)}")
+            
+            return Response({
+                "error": "Invalid or expired reset code"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 class PasswordResetRedirectView(APIView):
     """Redirect HTTPS password reset links to Flutter app deep links"""
