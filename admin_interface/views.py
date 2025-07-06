@@ -661,7 +661,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    @action(detail=False, methods=['delete'], permission_classes=[IsTeacher])
+    @action(detail=False, methods=['delete', 'post'], permission_classes=[IsTeacher])
     def delete_exam_result(self, request):
         """Delete an exam result"""
         try:
