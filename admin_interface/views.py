@@ -3047,11 +3047,8 @@ class SchoolEventViewSet(viewsets.ModelViewSet):
         if event_type:
             queryset = queryset.filter(event_type=event_type)
             
-        # If not admin, only show events relevant to the user's role
-        if user.role != Role.ADMIN:
-            queryset = queryset.filter(
-                models.Q(participants='all') | models.Q(participants=user.role)
-            )
+        # REMOVED: Role-based filtering - now all users in a school see all events
+        # All users (parents, teachers, admins) can see all events in their school
             
         return queryset
         
