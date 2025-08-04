@@ -428,20 +428,26 @@ export default function ShopPage() {
   if (isLoading || createMutation.isPending || updateMutation.isPending || deleteMutation.isPending) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100/50 p-8 shadow-soft backdrop-blur-sm border border-blue-200/20 max-w-md mx-auto">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-blue-600 text-sm font-medium text-center">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 min-h-screen bg-gradient-to-br from-blue-50/30 via-white to-blue-50/20">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
-            <ShoppingBagIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+          <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 p-2 shadow-soft">
+            <ShoppingBagIcon className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">School Shop</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-blue-600">School Shop</h1>
+            <p className="text-sm text-gray-600">Manage products and orders</p>
+          </div>
         </div>
         <div className="flex gap-2">
           {user?.role === 'admin' && (
@@ -451,28 +457,28 @@ export default function ShopPage() {
                   setEditingProduct(null);
                   setIsOpen(true);
                 }}
-                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="flex items-center justify-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-blue-600 shadow-soft transition-all duration-200"
               >
                 <PlusCircleIcon className="w-5 h-5 mr-2" />
                 Add Product
               </button>
-              <div className="flex rounded-md shadow-sm" role="group">
+              <div className="flex rounded-lg shadow-soft overflow-hidden bg-white/70 backdrop-blur-sm border border-blue-100/50" role="group">
                 <button
                   onClick={() => setSelectedTab('products')}
-                  className={`px-4 py-2 text-sm font-medium rounded-l-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  className={`px-4 py-2 text-sm font-semibold transition-all duration-200 ${
                     selectedTab === 'products'
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-soft'
+                      : 'text-blue-600 hover:bg-blue-50'
                   }`}
                 >
                   Products
                 </button>
                 <button
                   onClick={() => setSelectedTab('orders')}
-                  className={`px-4 py-2 text-sm font-medium rounded-r-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  className={`px-4 py-2 text-sm font-semibold transition-all duration-200 border-l border-blue-100/50 ${
                     selectedTab === 'orders'
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-l-0 border-gray-300'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-soft'
+                      : 'text-blue-600 hover:bg-blue-50'
                   }`}
                 >
                   Orders
@@ -483,7 +489,7 @@ export default function ShopPage() {
           {user?.role === 'parent' && (
             <button
               onClick={() => setIsCartOpen(true)}
-              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="flex items-center justify-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-blue-600 shadow-soft transition-all duration-200"
             >
               <ShoppingCartIcon className="w-5 h-5 mr-2" />
               View Cart
@@ -497,7 +503,7 @@ export default function ShopPage() {
         // Products Grid (existing code)
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {products.map((product) => (
-            <div key={product.id} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+            <div key={product.id} className="bg-white/70 backdrop-blur-sm rounded-xl shadow-soft border border-blue-100/50 overflow-hidden hover:shadow-lg hover:border-blue-200/60 transition-all duration-200">
               {/* Product Image */}
               <div className="relative aspect-square">
                 <Image
@@ -506,33 +512,38 @@ export default function ShopPage() {
                   fill
                   className="object-cover"
                 />
+                {product.stock === 0 && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <span className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-semibold">Out of Stock</span>
+                  </div>
+                )}
               </div>
 
               {/* Product Details */}
               <div className="p-4">
-                <h3 className="text-lg font-medium text-gray-900">{product.name}</h3>
-                <p className="text-sm text-gray-500 mb-2">{product.description}</p>
-                <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h3>
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-lg font-semibold text-gray-900">KES {formatCurrency(product.price)}</p>
+                    <p className="text-xl font-bold text-blue-600">KES {formatCurrency(product.price)}</p>
                     <p className="text-sm text-gray-500">Stock: {product.stock}</p>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="mt-4 flex gap-2">
+                <div className="flex gap-2">
                   {user?.role === 'admin' ? (
                     <>
                       <button
                         onClick={() => handleEdit(product)}
-                        className="flex-1 flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        className="flex-1 flex items-center justify-center px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-blue-600 shadow-soft transition-all duration-200"
                       >
                         <PencilIcon className="w-4 h-4 mr-2" />
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(product.id)}
-                        className="flex-1 flex items-center justify-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        className="flex-1 flex items-center justify-center px-3 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm font-semibold rounded-lg hover:from-red-700 hover:to-red-600 shadow-soft transition-all duration-200"
                       >
                         <TrashIcon className="w-4 h-4 mr-2" />
                         Delete
@@ -545,7 +556,7 @@ export default function ShopPage() {
                         toast.success('Added to cart');
                       }}
                       disabled={product.stock === 0}
-                      className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-blue-600 shadow-soft transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-blue-600 disabled:hover:to-blue-500"
                     >
                       {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                     </button>
@@ -558,61 +569,67 @@ export default function ShopPage() {
       ) : (
         // Orders Section (Admin Only)
         <div className="mt-8">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 p-2 shadow-soft">
+              <ShoppingCartIcon className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-blue-600">Recent Orders</h2>
+              <p className="text-sm text-gray-600">Track and manage customer orders</p>
+            </div>
             {isLoadingOrders && (
-              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
             )}
           </div>
 
-          <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-soft border border-blue-100/50 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-blue-100/50">
+                <thead className="bg-gradient-to-r from-blue-50/80 to-blue-100/60 backdrop-blur-sm">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">
                       Order ID
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">
                       Parent
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">
                       Status
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">
                       Total Amount
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">
                       Date
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-blue-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white/50 backdrop-blur-sm divide-y divide-blue-100/30">
                   {orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tr key={order.id} className="hover:bg-blue-50/30 transition-colors duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                         #{order.id.slice(-6)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         {order.parent_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold shadow-soft backdrop-blur-sm ${
+                          order.status === 'pending' ? 'bg-yellow-100/80 text-yellow-800 border border-yellow-200/50' :
+                          order.status === 'processing' ? 'bg-blue-100/80 text-blue-800 border border-blue-200/50' :
+                          order.status === 'completed' ? 'bg-green-100/80 text-green-800 border border-green-200/50' :
+                          'bg-red-100/80 text-red-800 border border-red-200/50'
                         }`}>
                           {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                         KES {formatCurrency(order.total_amount)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         {new Date(order.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -621,35 +638,35 @@ export default function ShopPage() {
                             <>
                               <button
                                 onClick={() => processOrderMutation.mutate(order.id)}
-                                className="text-blue-600 hover:text-blue-900"
+                                className="inline-flex items-center p-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 shadow-soft transition-all duration-200"
                                 title="Process Order"
                               >
-                                <ClockIcon className="h-5 w-5" />
+                                <ClockIcon className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => cancelOrderMutation.mutate(order.id)}
-                                className="text-red-600 hover:text-red-900"
+                                className="inline-flex items-center p-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 shadow-soft transition-all duration-200"
                                 title="Cancel Order"
                               >
-                                <XCircleIcon className="h-5 w-5" />
+                                <XCircleIcon className="h-4 w-4" />
                               </button>
                             </>
                           )}
                           {order.status === 'processing' && (
                             <button
                               onClick={() => completeOrderMutation.mutate(order.id)}
-                              className="text-green-600 hover:text-green-900"
+                              className="inline-flex items-center p-2 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg hover:from-green-700 hover:to-green-600 shadow-soft transition-all duration-200"
                               title="Complete Order"
                             >
-                              <CheckCircleIcon className="h-5 w-5" />
+                              <CheckCircleIcon className="h-4 w-4" />
                             </button>
                           )}
                           <button
                             onClick={() => setSelectedOrder(order)}
-                            className="text-gray-600 hover:text-gray-900"
+                            className="inline-flex items-center p-2 bg-gradient-to-r from-gray-600 to-gray-500 text-white rounded-lg hover:from-gray-700 hover:to-gray-600 shadow-soft transition-all duration-200"
                             title="View Details"
                           >
-                            <EyeIcon className="h-5 w-5" />
+                            <EyeIcon className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
@@ -671,68 +688,71 @@ export default function ShopPage() {
         <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <Dialog.Panel className="bg-white/90 backdrop-blur-sm rounded-xl shadow-soft border border-blue-100/50 max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-blue-100/50 bg-gradient-to-r from-blue-50/80 to-blue-100/60">
               <div className="flex items-center justify-between">
-                <Dialog.Title className="text-lg font-semibold text-gray-900">
-                  Order Details #{selectedOrder?.id.slice(-6)}
-                </Dialog.Title>
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 p-2 shadow-soft">
+                    <ShoppingCartIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <Dialog.Title className="text-xl font-bold text-blue-600">
+                    Order Details #{selectedOrder?.id.slice(-6)}
+                  </Dialog.Title>
+                </div>
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="text-gray-400 hover:text-gray-500"
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors duration-200"
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>
               </div>
             </div>
             
-            <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-8rem)]">
+            <div className="px-6 py-6 overflow-y-auto max-h-[calc(90vh-8rem)]">
               {selectedOrder && (
                 <div className="space-y-6">
                   {/* Order Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Parent</p>
-                      <p className="mt-1 text-sm text-gray-900">{selectedOrder.parent_name}</p>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border border-blue-100/30">
+                      <p className="text-sm font-semibold text-blue-600 mb-1">Parent</p>
+                      <p className="text-lg font-bold text-gray-900">{selectedOrder.parent_name}</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Status</p>
-                      <p className="mt-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          selectedOrder.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          selectedOrder.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                          selectedOrder.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
-                        </span>
-                      </p>
+                    <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border border-blue-100/30">
+                      <p className="text-sm font-semibold text-blue-600 mb-1">Status</p>
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold shadow-soft backdrop-blur-sm ${
+                        selectedOrder.status === 'pending' ? 'bg-yellow-100/80 text-yellow-800 border border-yellow-200/50' :
+                        selectedOrder.status === 'processing' ? 'bg-blue-100/80 text-blue-800 border border-blue-200/50' :
+                        selectedOrder.status === 'completed' ? 'bg-green-100/80 text-green-800 border border-green-200/50' :
+                        'bg-red-100/80 text-red-800 border border-red-200/50'
+                      }`}>
+                        {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                      </span>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Order Date</p>
-                      <p className="mt-1 text-sm text-gray-900">
+                    <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border border-blue-100/30">
+                      <p className="text-sm font-semibold text-blue-600 mb-1">Order Date</p>
+                      <p className="text-lg font-bold text-gray-900">
                         {new Date(selectedOrder.created_at).toLocaleString()}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Total Amount</p>
-                      <p className="mt-1 text-sm text-gray-900">KES {formatCurrency(selectedOrder.total_amount)}</p>
+                    <div className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border border-blue-100/30">
+                      <p className="text-sm font-semibold text-blue-600 mb-1">Total Amount</p>
+                      <p className="text-lg font-bold text-blue-600">KES {formatCurrency(selectedOrder.total_amount)}</p>
                     </div>
                   </div>
 
                   {/* Order Items */}
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Order Items</h4>
-                    <div className="border rounded-lg divide-y">
+                    <h4 className="text-lg font-bold text-blue-600 mb-4">Order Items</h4>
+                    <div className="bg-white/50 backdrop-blur-sm border border-blue-100/30 rounded-xl divide-y divide-blue-100/30 overflow-hidden">
                       {selectedOrder.items.map((item) => (
-                        <div key={item.id} className="p-4 flex items-center justify-between">
+                        <div key={item.id} className="p-4 flex items-center justify-between hover:bg-blue-50/30 transition-colors duration-200">
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{item.product_name}</p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-base font-semibold text-gray-900">{item.product_name}</p>
+                            <p className="text-sm text-gray-600">
                               KES {formatCurrency(item.unit_price)} × {item.quantity}
                             </p>
                           </div>
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-lg font-bold text-blue-600">
                             KES {formatCurrency(item.total_price)}
                           </p>
                         </div>
@@ -756,71 +776,72 @@ export default function ShopPage() {
 
         {/* Modal container - full screen on mobile */}
         <div className="fixed inset-0 flex items-center justify-center sm:p-4">
-          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white/90 backdrop-blur-sm sm:rounded-xl px-4 sm:px-6 py-6 sm:py-8 shadow-soft transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto border border-blue-100/50">
             <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors duration-200"
               >
                 <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
-                <ShoppingBagIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+              <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 p-2 shadow-soft">
+                <ShoppingBagIcon className="h-6 w-6 text-white" />
               </div>
-              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
-                {editingProduct ? 'Edit Product' : 'Add New Product'}
-              </Dialog.Title>
+              <div>
+                <Dialog.Title className="text-xl font-bold text-blue-600">
+                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                </Dialog.Title>
+                <p className="text-sm text-gray-600">
+                  {editingProduct ? 'Update product information' : 'Create a new product for the school shop'}
+                </p>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" encType="multipart/form-data">
-              <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-semibold text-blue-600 mb-2">
                     Product Name
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      {...register('name', { required: 'Product name is required' })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter product name"
-                    />
-                    {errors.name && (
-                      <p className="mt-2 text-sm text-red-600">{errors.name.message}</p>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    {...register('name', { required: 'Product name is required' })}
+                    className="block w-full rounded-lg border-0 py-3 px-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200/50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-white/70 backdrop-blur-sm transition-all duration-200"
+                    placeholder="Enter product name"
+                  />
+                  {errors.name && (
+                    <p className="mt-2 text-sm text-red-600 font-medium">{errors.name.message}</p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-semibold text-blue-600 mb-2">
                     Description
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2">
-                    <textarea
-                      rows={3}
-                      {...register('description', { required: 'Description is required' })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter product description"
-                    />
-                    {errors.description && (
-                      <p className="mt-2 text-sm text-red-600">{errors.description.message}</p>
-                    )}
-                  </div>
+                  <textarea
+                    rows={3}
+                    {...register('description', { required: 'Description is required' })}
+                    className="block w-full rounded-lg border-0 py-3 px-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200/50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-white/70 backdrop-blur-sm transition-all duration-200"
+                    placeholder="Enter product description"
+                  />
+                  {errors.description && (
+                    <p className="mt-2 text-sm text-red-600 font-medium">{errors.description.message}</p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-semibold text-blue-600 mb-2">
                     Price (Ksh)
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2 relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <CurrencyDollarIcon className="h-5 w-5 text-gray-400" />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <CurrencyDollarIcon className="h-5 w-5 text-blue-400" />
                     </div>
                     <input
                       type="number"
@@ -829,43 +850,41 @@ export default function ShopPage() {
                         required: 'Price is required',
                         min: { value: 0, message: 'Price must be positive' }
                       })}
-                      className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                      className="block w-full rounded-lg border-0 py-3 pl-12 pr-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200/50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-white/70 backdrop-blur-sm transition-all duration-200"
                       placeholder="0.00"
                     />
                     {errors.price && (
-                      <p className="mt-2 text-sm text-red-600">{errors.price.message}</p>
+                      <p className="mt-2 text-sm text-red-600 font-medium">{errors.price.message}</p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-semibold text-blue-600 mb-2">
                     Stock
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="mt-2">
-                    <input
-                      type="number"
-                      {...register('stock', { 
-                        required: 'Stock is required',
-                        min: { value: 0, message: 'Stock must be positive' }
-                      })}
-                      className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                      placeholder="Enter stock quantity"
-                    />
-                    {errors.stock && (
-                      <p className="mt-2 text-sm text-red-600">{errors.stock.message}</p>
-                    )}
-                  </div>
+                  <input
+                    type="number"
+                    {...register('stock', { 
+                      required: 'Stock is required',
+                      min: { value: 0, message: 'Stock must be positive' }
+                    })}
+                    className="block w-full rounded-lg border-0 py-3 px-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200/50 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-white/70 backdrop-blur-sm transition-all duration-200"
+                    placeholder="Enter stock quantity"
+                  />
+                  {errors.stock && (
+                    <p className="mt-2 text-sm text-red-600 font-medium">{errors.stock.message}</p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-blue-600 mb-3">
                     Product Image
                   </label>
                   <div className="flex items-start space-x-4">
                     {/* Image Preview */}
-                    <div className="w-32 h-32 border rounded-md overflow-hidden flex items-center justify-center bg-gray-50">
+                    <div className="w-32 h-32 border border-blue-200/50 rounded-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-50/50 to-blue-100/30 backdrop-blur-sm shadow-soft">
                       {previewUrl ? (
                         <Image 
                           src={previewUrl} 
@@ -880,8 +899,8 @@ export default function ShopPage() {
                         />
                       ) : (
                         <div className="text-center p-4">
-                          <PhotoIcon className="h-10 w-10 text-gray-300 mx-auto" />
-                          <p className="text-xs text-gray-500 mt-2">No image</p>
+                          <PhotoIcon className="h-10 w-10 text-blue-300 mx-auto" />
+                          <p className="text-xs text-blue-500 mt-2">No image</p>
                         </div>
                       )}
                     </div>
@@ -893,15 +912,15 @@ export default function ShopPage() {
                         type="file"
                         accept="image/*"
                         onChange={handleImageChange}
-                        className="block w-full text-sm text-gray-500
-                          file:mr-4 file:py-2 file:px-4
-                          file:rounded-md file:border-0
+                        className="block w-full text-sm text-gray-700
+                          file:mr-4 file:py-3 file:px-6
+                          file:rounded-lg file:border-0
                           file:text-sm file:font-semibold
-                          file:bg-blue-50 file:text-blue-700
-                          hover:file:bg-blue-100"
+                          file:bg-gradient-to-r file:from-blue-600 file:to-blue-500 file:text-white
+                          hover:file:from-blue-700 hover:file:to-blue-600 file:shadow-soft file:transition-all file:duration-200"
                       />
-                      <p className="mt-2 text-xs text-gray-500">
-                        Select an image file (PNG, JPG, GIF up to 2MB)
+                      <p className="mt-2 text-xs text-gray-600">
+                        Select an image file (PNG, JPG, GIF up to 10MB)
                       </p>
                     </div>
                   </div>
@@ -912,14 +931,14 @@ export default function ShopPage() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-lg px-6 py-3 text-sm font-semibold text-gray-700 bg-white/70 backdrop-blur-sm shadow-soft ring-1 ring-inset ring-blue-200/50 hover:bg-white/90 transition-all duration-200 disabled:opacity-50"
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
+                  className="inline-flex justify-center rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-soft hover:from-blue-700 hover:to-blue-600 transition-all duration-200 disabled:opacity-50"
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   {createMutation.isPending || updateMutation.isPending ? (

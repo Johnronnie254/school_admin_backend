@@ -40,19 +40,44 @@ export default function RootLayout({
                 <Toaster
                   position="top-right"
                   toastOptions={{
-                    duration: 3000,
+                    duration: 4000,
                     style: {
-                      background: '#333',
-                      color: '#fff',
+                      background: 'rgba(255, 255, 255, 0.95)',
+                      backdropFilter: 'blur(10px)',
+                      color: '#0f172a',
+                      border: '1px solid rgba(226, 232, 240, 0.5)',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 20px 25px -5px rgba(0, 0, 0, 0.04)',
+                      fontSize: '14px',
+                      fontWeight: '500',
                     },
                     success: {
                       style: {
-                        background: '#22c55e',
+                        background: 'rgba(34, 197, 94, 0.95)',
+                        color: '#ffffff',
+                        border: '1px solid rgba(34, 197, 94, 0.3)',
+                      },
+                      iconTheme: {
+                        primary: '#ffffff',
+                        secondary: '#22c55e',
                       },
                     },
                     error: {
                       style: {
-                        background: '#ef4444',
+                        background: 'rgba(239, 68, 68, 0.95)',
+                        color: '#ffffff',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                      },
+                      iconTheme: {
+                        primary: '#ffffff',
+                        secondary: '#ef4444',
+                      },
+                    },
+                    loading: {
+                      style: {
+                        background: 'rgba(59, 130, 246, 0.95)',
+                        color: '#ffffff',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
                       },
                     },
                   }}

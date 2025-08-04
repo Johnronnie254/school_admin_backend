@@ -152,32 +152,38 @@ export default function ParentsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <UserGroupIcon className="h-6 w-6 text-gray-600" />
-          <h1 className="text-2xl font-semibold text-gray-800">Parents</h1>
+    <div className="container mx-auto px-6 py-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-soft">
+            <UserGroupIcon className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-blue-900 mb-1">Parents</h1>
+            <p className="text-gray-600 font-medium">Manage your school&apos;s parent community</p>
+          </div>
         </div>
         <button
           onClick={handleAddParent}
           disabled={createMutation.isPending || updateMutation.isPending}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-soft hover:shadow-medium disabled:opacity-50"
         >
-          <PlusIcon className="h-5 w-5" />
+          <PlusIcon className="w-5 h-5" />
           Add Parent
         </button>
       </div>
 
       {/* Search bar and Show All button */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+      <div className="mb-8 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-grow">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-500" />
           </div>
           <input
             type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            placeholder="Search parents..."
+            className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 sm:text-sm shadow-sm"
+            placeholder="Search parents by name, email, or phone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -185,15 +191,15 @@ export default function ParentsPage() {
         {!isListVisible && !searchQuery && (
           <button
             onClick={() => setIsListVisible(true)}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
           >
-            Show All
+            Show All Parents
           </button>
         )}
         {isListVisible && !searchQuery && (
           <button
             onClick={() => setIsListVisible(false)}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
           >
             Hide All
           </button>
@@ -201,7 +207,7 @@ export default function ParentsPage() {
         {shouldDisplayParents && !showAll && filteredParents.length > 5 && (
           <button
             onClick={() => setShowAll(true)}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
           >
             Show More ({filteredParents.length})
           </button>
@@ -209,7 +215,7 @@ export default function ParentsPage() {
         {shouldDisplayParents && showAll && filteredParents.length > 5 && (
           <button
             onClick={() => setShowAll(false)}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
           >
             Show Less
           </button>
@@ -221,103 +227,117 @@ export default function ParentsPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : !shouldDisplayParents ? (
-        <div className="text-center p-12 bg-white rounded-lg shadow">
-          <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Search or show all parents</h3>
-          <p className="mt-1 text-sm text-gray-500">Use the search bar above to find specific parents or click &quot;Show All&quot; to view all parents.</p>
+        <div className="text-center p-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft border border-blue-200/50">
+          <div className="p-4 bg-blue-50 rounded-xl inline-block mb-4">
+            <UserGroupIcon className="mx-auto h-12 w-12 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">Search or show all parents</h3>
+          <p className="text-gray-600">Use the search bar above to find specific parents or click &quot;Show All Parents&quot; to view all parents.</p>
         </div>
       ) : !displayedParents.length ? (
-        <div className="text-center py-12">
+        <div className="text-center p-12 bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft border border-blue-200/50">
           {searchQuery ? (
             <>
-              <XMarkIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No results found</h3>
-              <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter to find what you&rsquo;re looking for.</p>
+              <div className="p-4 bg-red-50 rounded-xl inline-block mb-4">
+                <XMarkIcon className="mx-auto h-12 w-12 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
+              <p className="text-gray-600">Try adjusting your search or filter to find what you&rsquo;re looking for.</p>
             </>
           ) : (
             <>
-          <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No parents</h3>
-          <p className="mt-1 text-sm text-gray-500">Get started by adding a new parent.</p>
+              <div className="p-4 bg-blue-50 rounded-xl inline-block mb-4">
+                <UserGroupIcon className="mx-auto h-12 w-12 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">No parents</h3>
+              <p className="text-gray-600">Get started by adding a new parent.</p>
             </>
           )}
         </div>
       ) : (
         <>
           {/* Desktop Table - Hidden on mobile */}
-          <div className="hidden sm:block bg-white rounded-lg shadow overflow-hidden">
+          <div className="hidden sm:block bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft border border-blue-200/50 overflow-hidden">
             <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-blue-100">
+                <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Phone</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-blue-700 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white/60 backdrop-blur-sm divide-y divide-blue-100">
                   {displayedParents.map((parent: Parent) => (
-                <tr 
-                  key={parent.id} 
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={(e) => {
-                    // Prevent click when clicking action buttons
-                    if ((e.target as HTMLElement).closest('button')) return;
-                    handleViewParent(parent);
-                  }}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{parent.phone_number}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
+                    <tr 
+                      key={parent.id} 
+                      className="hover:bg-blue-50/50 cursor-pointer transition-all duration-200"
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(parent);
+                        // Prevent click when clicking action buttons
+                        if ((e.target as HTMLElement).closest('button')) return;
+                        handleViewParent(parent);
                       }}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
                     >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(parent.id);
-                      }}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{parent.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{parent.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{parent.phone_number}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(parent);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 mr-4 p-2 rounded-lg hover:bg-blue-50 transition-all duration-200"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(parent.id);
+                          }}
+                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all duration-200"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
           
           {/* Mobile Cards - Shown only on mobile */}
-          <div className="grid grid-cols-1 gap-4 sm:hidden">
+          <div className="grid grid-cols-1 gap-6 sm:hidden">
             {displayedParents.map((parent: Parent) => (
               <div 
                 key={parent.id} 
-                className="bg-white rounded-lg shadow p-4 cursor-pointer"
+                className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft border border-blue-200/50 p-6 cursor-pointer hover:shadow-medium transition-all duration-300"
                 onClick={(e) => {
                   // Prevent click when clicking action buttons
                   if ((e.target as HTMLElement).closest('button')) return;
                   handleViewParent(parent);
                 }}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-base font-medium text-gray-900">{parent.name}</h3>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="p-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl">
+                      <UserGroupIcon className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{parent.name}</h3>
+                      <p className="text-sm text-gray-600">{parent.email}</p>
+                    </div>
+                  </div>
                   <div className="flex space-x-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEdit(parent);
                       }}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="p-2 rounded-xl text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-all duration-200"
                     >
                       <PencilIcon className="w-5 h-5" />
                     </button>
@@ -326,20 +346,20 @@ export default function ParentsPage() {
                         e.stopPropagation();
                         handleDelete(parent.id);
                       }}
-                      className="text-red-600 hover:text-red-900"
+                      className="p-2 rounded-xl text-red-600 hover:text-red-800 hover:bg-red-50 transition-all duration-200"
                     >
                       <TrashIcon className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
                 
-                <div className="space-y-1 text-sm">
-                  <p className="text-gray-600">
-                    <span className="font-medium text-gray-700">Email:</span> {parent.email}
-                  </p>
-                  <p className="text-gray-600">
-                    <span className="font-medium text-gray-700">Phone:</span> {parent.phone_number}
-                  </p>
+                <div className="mt-4">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span className="font-medium text-blue-700">Phone:</span>
+                    <span className="ml-2 px-3 py-1 text-xs font-medium bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-full border border-blue-200">
+                      {parent.phone_number}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -358,11 +378,13 @@ export default function ParentsPage() {
         }}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-gray-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
+        {/* Background blur - visible only on non-mobile */}
+        <div className="fixed inset-0 bg-blue-500/10 backdrop-blur-sm hidden sm:block" aria-hidden="true" />
         
+        {/* Modal container - full screen on mobile */}
         <div className="fixed inset-0 flex items-center justify-center sm:p-4">
-          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-lg px-4 sm:px-6 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
-            <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
+          <Dialog.Panel className="relative transform overflow-hidden bg-white sm:rounded-2xl px-4 sm:px-8 py-6 sm:py-8 shadow-xl transition-all w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[95vh] overflow-y-auto">
+            <div className="absolute right-3 top-3 sm:right-6 sm:top-6">
               <button
                 onClick={() => {
                   setIsModalOpen(false);
@@ -370,69 +392,74 @@ export default function ParentsPage() {
                   setCreatedCredentials(null);
                   reset();
                 }}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                className="text-gray-400 hover:text-gray-500 focus:outline-none p-2 rounded-xl hover:bg-gray-100 transition-all duration-200"
               >
                 <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-              <div className="rounded-full bg-blue-50 p-1.5 sm:p-2">
-                <UserGroupIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+            <div className="flex items-center gap-3 sm:gap-4 mb-8 sm:mb-10">
+              <div className="rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 p-2 sm:p-3 border border-blue-200">
+                <UserGroupIcon className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
               </div>
-              <Dialog.Title className="text-base sm:text-lg font-semibold leading-6 text-gray-900">
+              <Dialog.Title className="text-xl sm:text-2xl font-bold leading-6 text-blue-900">
                 {editingParent ? 'Edit Parent Information' : 'Add New Parent'}
               </Dialog.Title>
             </div>
 
             {/* Credentials display after successful parent creation */}
             {createdCredentials && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-                <h3 className="text-sm font-medium text-green-800 mb-2">Parent created successfully!</h3>
-                <p className="text-sm text-green-700 mb-2">Please share these login credentials with the parent:</p>
+              <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl shadow-soft">
+                <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Parent created successfully!
+                </h3>
+                <p className="text-sm text-green-700 mb-4">Please share these login credentials with the parent:</p>
                 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-green-300 shadow-soft">
                     <div className="text-sm">
-                      <span className="font-medium">Username/Email:</span>
-                      <code className="ml-2 font-mono text-green-900">{createdCredentials.email}</code>
+                      <span className="font-semibold text-gray-700">Username/Email:</span>
+                      <code className="ml-3 font-mono text-green-900 bg-green-100 px-2 py-1 rounded">{createdCredentials.email}</code>
                     </div>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(createdCredentials.email);
                         toast.success('Email copied to clipboard');
                       }}
-                      className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                      className="ml-3 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-colors duration-200"
                     >
                       Copy
                     </button>
                   </div>
                   
-                  <div className="flex items-center justify-between bg-white p-2 rounded border border-green-300">
+                  <div className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-green-300 shadow-soft">
                     <div className="text-sm">
-                      <span className="font-medium">Password:</span>
-                      <code className="ml-2 font-mono text-green-900">{createdCredentials.password}</code>
+                      <span className="font-semibold text-gray-700">Password:</span>
+                      <code className="ml-3 font-mono text-green-900 bg-green-100 px-2 py-1 rounded">{createdCredentials.password}</code>
                     </div>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(createdCredentials.password);
                         toast.success('Password copied to clipboard');
                       }}
-                      className="ml-2 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200"
+                      className="ml-3 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-colors duration-200"
                     >
                       Copy
                     </button>
                   </div>
                 </div>
                 
-                <div className="mt-4 flex justify-end">
+                <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => {
                       setIsModalOpen(false);
                       setCreatedCredentials(null);
                       reset();
                     }}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                    className="px-6 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-soft"
                   >
                     Close
                   </button>
@@ -441,82 +468,82 @@ export default function ParentsPage() {
             )}
 
             {!createdCredentials && (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6" autoComplete="off">
-                <div className="grid grid-cols-1 gap-x-4 sm:gap-x-6 gap-y-5 sm:gap-y-8 sm:grid-cols-2">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8" autoComplete="off">
+                <div className="grid grid-cols-1 gap-x-6 sm:gap-x-8 gap-y-6 sm:gap-y-8 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-semibold text-gray-700">
                       Full Name
                       <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1.5 sm:mt-2">
-                    <input
-                      type="text"
+                    <div className="mt-2">
+                      <input
+                        type="text"
                         autoComplete="off"
-                      {...register('name', { 
-                        required: 'Name is required',
-                        minLength: { value: 2, message: 'Name must be at least 2 characters' }
-                      })}
-                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                        {...register('name', { 
+                          required: 'Name is required',
+                          minLength: { value: 2, message: 'Name must be at least 2 characters' }
+                        })}
+                        className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200 placeholder:text-blue-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-blue-50/50 backdrop-blur-sm text-sm sm:leading-6 transition-all duration-200"
                         placeholder="Enter parent's full name"
                       />
                       {errors.name && (
-                        <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
+                        <p className="mt-2 text-xs sm:text-sm text-red-600">{errors.name.message}</p>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-semibold text-gray-700">
                       Email Address
                       <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1.5 sm:mt-2">
-                    <input
-                      type="email"
+                    <div className="mt-2">
+                      <input
+                        type="email"
                         autoComplete="off"
-                      {...register('email', { 
-                        required: 'Email is required',
-                        pattern: {
-                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: 'Please enter a valid email address'
-                        }
-                      })}
-                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                        {...register('email', { 
+                          required: 'Email is required',
+                          pattern: {
+                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                            message: 'Please enter a valid email address'
+                          }
+                        })}
+                        className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200 placeholder:text-blue-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-blue-50/50 backdrop-blur-sm text-sm sm:leading-6 transition-all duration-200"
                         placeholder="Enter email address"
                       />
                       {errors.email && (
-                        <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.email.message}</p>
+                        <p className="mt-2 text-xs sm:text-sm text-red-600">{errors.email.message}</p>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-sm font-semibold text-gray-700">
                       Phone Number
                       <span className="text-red-500 ml-1">*</span>
                     </label>
-                    <div className="mt-1.5 sm:mt-2 relative">
-                    <input
-                      type="tel"
+                    <div className="mt-2 relative">
+                      <input
+                        type="tel"
                         autoComplete="off"
-                      {...register('phone_number', { 
-                        required: 'Phone number is required',
-                        pattern: {
-                          value: /^07[0-9]{8}$/,
-                          message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
-                        }
-                      })}
-                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
+                        {...register('phone_number', { 
+                          required: 'Phone number is required',
+                          pattern: {
+                            value: /^07[0-9]{8}$/,
+                            message: 'Please enter a valid phone number (format: 07XXXXXXXX)'
+                          }
+                        })}
+                        className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200 placeholder:text-blue-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-blue-50/50 backdrop-blur-sm text-sm sm:leading-6 transition-all duration-200"
                         placeholder="Enter phone number"
                       />
-                      <div className="absolute right-2 top-1.5 group">
-                        <QuestionMarkCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+                      <div className="absolute right-3 top-3 group">
+                        <QuestionMarkCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
                         <div className="hidden group-hover:block absolute right-0 top-6 bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
                           Enter a valid phone number (format: 07XXXXXXXX)
                         </div>
                       </div>
                       {errors.phone_number && (
-                        <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>
+                        <p className="mt-2 text-xs sm:text-sm text-red-600">{errors.phone_number.message}</p>
                       )}
                     </div>
                   </div>
@@ -525,53 +552,53 @@ export default function ParentsPage() {
                 {!editingParent && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-semibold text-gray-700">
                         Password
                         <span className="text-red-500 ml-1">*</span>
                       </label>
-                        <div className="mt-1.5 sm:mt-2">
+                      <div className="mt-2">
                         <input
                           type="password"
-                            autoComplete="new-password"
+                          autoComplete="new-password"
                           {...register('password', { 
                             required: !editingParent ? 'Password is required' : false,
                             minLength: { value: 6, message: 'Password must be at least 6 characters' }
                           })}
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                            placeholder="Enter password"
-                          />
-                          {errors.password && (
-                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
-                          )}
-                        </div>
+                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200 placeholder:text-blue-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-blue-50/50 backdrop-blur-sm text-sm sm:leading-6 transition-all duration-200"
+                          placeholder="Enter password"
+                        />
+                        {errors.password && (
+                          <p className="mt-2 text-xs sm:text-sm text-red-600">{errors.password.message}</p>
+                        )}
                       </div>
+                    </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Confirm Password
-                          <span className="text-red-500 ml-1">*</span>
-                        </label>
-                        <div className="mt-1.5 sm:mt-2">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Confirm Password
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
+                      <div className="mt-2">
                         <input
                           type="password"
-                            autoComplete="new-password"
+                          autoComplete="new-password"
                           {...register('password_confirmation', { 
                             required: !editingParent ? 'Please confirm your password' : false,
                             validate: value => !editingParent ? (value === password || 'Passwords do not match') : true
                           })}
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-sm sm:leading-6"
-                            placeholder="Confirm password"
-                          />
-                          {errors.password_confirmation && (
-                            <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
-                          )}
-                        </div>
+                          className="block w-full rounded-xl border-0 py-3 px-4 text-gray-900 shadow-soft ring-1 ring-inset ring-blue-200 placeholder:text-blue-400 focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-blue-50/50 backdrop-blur-sm text-sm sm:leading-6 transition-all duration-200"
+                          placeholder="Confirm password"
+                        />
+                        {errors.password_confirmation && (
+                          <p className="mt-2 text-xs sm:text-sm text-red-600">{errors.password_confirmation.message}</p>
+                        )}
                       </div>
-                    </>
-                  )}
+                    </div>
+                  </>
+                )}
                 </div>
 
-                <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
+                <div className="mt-8 flex flex-col sm:flex-row sm:justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => {
@@ -580,14 +607,14 @@ export default function ParentsPage() {
                       setCreatedCredentials(null);
                       reset();
                     }}
-                    className="rounded-md px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 w-full sm:w-auto order-2 sm:order-1"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                    className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2"
+                    className="rounded-xl px-6 py-3 text-sm font-semibold text-blue-700 shadow-soft ring-1 ring-inset ring-blue-200 hover:bg-blue-50 disabled:opacity-50 w-full sm:w-auto order-2 sm:order-1 bg-blue-50/50 backdrop-blur-sm transition-all duration-200"
+                    disabled={createMutation.isPending || updateMutation.isPending}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-soft hover:from-blue-700 hover:to-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 w-full sm:w-auto order-1 sm:order-2 backdrop-blur-sm transition-all duration-200"
                     disabled={createMutation.isPending || updateMutation.isPending}
                   >
                     {createMutation.isPending || updateMutation.isPending ? (

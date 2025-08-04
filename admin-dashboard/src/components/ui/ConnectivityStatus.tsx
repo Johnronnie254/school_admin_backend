@@ -51,31 +51,35 @@ export default function ConnectivityStatus() {
   if (!show || window.location.pathname === '/dashboard') return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 pointer-events-auto">
+    <div className="fixed bottom-6 right-6 z-50 pointer-events-auto animate-slide-in">
       <div
-        className={`flex items-center gap-2 p-3 rounded-md shadow-lg border transition-all duration-300 ${
+        className={`flex items-center gap-3 p-4 rounded-2xl shadow-strong border backdrop-blur-sm transition-all duration-300 ${
           isOnline
-            ? 'bg-green-100 border-green-200 text-green-800'
-            : 'bg-red-100 border-red-200 text-red-800'
+            ? 'bg-secondary-50/90 border-secondary-200/50 text-secondary-800'
+            : 'bg-red-50/90 border-red-200/50 text-red-800'
         }`}
       >
         {isOnline ? (
           <>
-            <WifiIcon className="h-5 w-5 text-green-600" />
-            <span className="text-sm font-medium">Internet connection restored</span>
+            <div className="p-1 bg-secondary-100 rounded-lg">
+              <WifiIcon className="h-5 w-5 text-secondary-600" />
+            </div>
+            <span className="text-sm font-semibold">Connection restored</span>
           </>
         ) : (
           <>
-            <NoSymbolIcon className="h-5 w-5 text-red-600 animate-pulse" />
-            <span className="text-sm font-medium">No Internet Connection</span>
+            <div className="p-1 bg-red-100 rounded-lg">
+              <NoSymbolIcon className="h-5 w-5 text-red-600 animate-pulse" />
+            </div>
+            <span className="text-sm font-semibold">No Internet Connection</span>
             <button
               onClick={handleRefresh}
-              className="ml-1 p-1 rounded-full hover:bg-red-200 transition-colors"
+              className="ml-2 p-2 rounded-xl hover:bg-red-100 transition-colors duration-200 btn-transition"
               title="Check connection again"
               disabled={checking}
             >
               <ArrowPathIcon
-                className={`h-4 w-4 text-red-700 ${checking ? 'animate-spin' : ''}`}
+                className={`h-4 w-4 text-red-600 ${checking ? 'animate-spin' : 'hover:rotate-180'} transition-transform duration-300`}
               />
             </button>
           </>

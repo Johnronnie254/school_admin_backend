@@ -48,49 +48,54 @@ export default function Sidebar() {
 
   const NavLinks = () => (
     <>
-      <nav className="flex-1 px-2 space-y-1">
-        {navigation.map((item) => {
+      <nav className="flex-1 px-3 space-y-2">
+        {navigation.map((item, index) => {
           const active = isActive(item.href);
           return (
-            <Link
+            <div
               key={item.name}
-              href={item.href}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className={`
-                group flex items-center px-2 py-2 text-sm font-medium rounded-md
-                transition-all duration-200 ease-in-out relative
-                ${active
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }
-              `}
+              className="animate-slide-in"
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <item.icon
+              <Link
+                href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={`
-                  mr-3 flex-shrink-0 h-6 w-6
-                  transition-colors duration-200 ease-in-out
+                  group flex items-center px-4 py-3 text-sm font-medium rounded-xl
+                  transition-all duration-300 ease-out relative overflow-hidden
                   ${active
-                    ? 'text-blue-600'
-                    : 'text-gray-400 group-hover:text-gray-500'
+                    ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 shadow-soft border border-blue-200/50'
+                    : 'text-gray-900 hover:bg-blue-50 hover:text-blue-900 hover:shadow-soft'
                   }
                 `}
-                aria-hidden="true"
-              />
-              {item.name}
-              {active && (
-                <div className="absolute inset-y-0 left-0 w-1 bg-blue-600 rounded-r-md" />
-              )}
-            </Link>
+              >
+                <item.icon
+                  className={`
+                    mr-4 flex-shrink-0 h-5 w-5
+                    transition-all duration-300 ease-out
+                    ${active
+                      ? 'text-blue-600'
+                      : 'text-gray-500 group-hover:text-blue-700'
+                    }
+                  `}
+                  aria-hidden="true"
+                />
+                <span className="font-medium">{item.name}</span>
+                {active && (
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
+                )}
+              </Link>
+            </div>
           );
         })}
       </nav>
-      <div className="px-2 mt-2">
+      <div className="px-3 mt-6">
         <button
           onClick={handleLogout}
-          className="w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md text-red-600 hover:bg-red-50 transition-all duration-200"
+          className="w-full group flex items-center px-4 py-3 text-sm font-medium rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-300 hover:shadow-soft btn-transition"
         >
-          <ArrowLeftOnRectangleIcon className="mr-3 flex-shrink-0 h-6 w-6 text-red-400 group-hover:text-red-500" />
-          Logout
+          <ArrowLeftOnRectangleIcon className="mr-4 flex-shrink-0 h-5 w-5 text-red-500 group-hover:text-red-600 transition-colors duration-300" />
+          <span className="font-medium">Logout</span>
         </button>
       </div>
     </>
@@ -99,20 +104,27 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile menu button */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between lg:hidden">
-        <div className="flex items-center">
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={32}
-            height={32}
-            className="h-8 w-auto"
-          />
-          <span className="ml-2 text-lg font-semibold text-gray-900">Educite</span>
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50 px-6 py-4 flex items-center justify-between lg:hidden shadow-soft">
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Image
+              src="/Logo.jpg"
+              alt="Logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-xl shadow-soft"
+            />
+          </div>
+          <div>
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              Educite
+            </span>
+            <p className="text-xs text-gray-500 font-medium">School Management</p>
+          </div>
         </div>
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none"
+          className="p-2.5 rounded-xl text-gray-500 hover:text-blue-700 hover:bg-blue-50 focus:outline-none transition-all duration-200 btn-transition"
         >
           {isMobileMenuOpen ? (
             <XMarkIcon className="h-6 w-6" />
@@ -124,26 +136,26 @@ export default function Sidebar() {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 flex">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="relative flex-1 flex flex-col max-w-xs w-full pt-16 pb-4 bg-white">
-            <div className="flex-1 flex flex-col overflow-y-auto">
+        <div className="lg:hidden fixed inset-0 z-40 flex animate-fade-in">
+          <div 
+            className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm" 
+            onClick={() => setIsMobileMenuOpen(false)} 
+          />
+          <div className="relative flex-1 flex flex-col max-w-xs w-full pt-20 pb-6 bg-white/95 backdrop-blur-xl shadow-strong animate-slide-in">
+            <div className="flex-1 flex flex-col overflow-y-auto px-2">
               <NavLinks />
             </div>
-            <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-              <div className="flex items-center">
-                <div>
-                  <Image
-                    src="/user-avatar.png"
-                    alt="User avatar"
-                    width={32}
-                    height={32}
-                    className="h-8 w-8 rounded-full"
-                  />
+            <div className="flex-shrink-0 flex border-t border-gray-200/50 p-6 bg-gray-50/50">
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-soft">
+                    <span className="text-white font-semibold text-sm">SA</span>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-secondary-500 rounded-full border-2 border-white"></div>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700">Super Admin</p>
-                  <p className="text-xs font-medium text-gray-500">View profile</p>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Super Admin</p>
+                  <p className="text-xs text-gray-500">Administrator</p>
                 </div>
               </div>
             </div>
@@ -152,37 +164,41 @@ export default function Sidebar() {
       )}
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex h-full bg-white border-r border-gray-200 w-64 fixed">
+      <div className="hidden lg:flex h-full bg-white/95 backdrop-blur-xl border-r border-gray-200/50 w-72 fixed shadow-soft">
         <div className="flex flex-col h-full w-full">
-          <div className="flex-1 flex flex-col pt-5 pb-4">
-            <div className="flex items-center flex-shrink-0 px-4">
-              <Image
-                src="/logo.png"
-                alt="Logo"
-                width={40}
-                height={40}
-                className="h-10 w-auto"
-              />
-              <span className="ml-2 text-xl font-semibold text-gray-900">Educite</span>
+          <div className="flex-1 flex flex-col pt-8 pb-6">
+            <div className="flex items-center flex-shrink-0 px-6 mb-8">
+              <div className="relative">
+                <Image
+                  src="/Logo.jpg"
+                  alt="Logo"
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 rounded-xl shadow-medium"
+                />
+              </div>
+              <div className="ml-4">
+                <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+                  Educite
+                </span>
+                <p className="text-sm text-gray-500 font-medium">School Management System</p>
+              </div>
             </div>
-            <div className="mt-8 flex-1 flex flex-col justify-between">
+            <div className="flex-1 flex flex-col justify-between">
               <NavLinks />
             </div>
           </div>
-          <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-            <div className="flex items-center">
-              <div>
-                <Image
-                  src="/user-avatar.png"
-                  alt="User avatar"
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-full"
-                />
+          <div className="flex-shrink-0 flex border-t border-gray-200/50 p-6 bg-gradient-to-r from-gray-50/50 to-gray-100/50">
+            <div className="flex items-center space-x-4 w-full">
+              <div className="relative">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-soft">
+                  <span className="text-white font-semibold">SA</span>
+                </div>
+                <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-secondary-500 rounded-full border-2 border-white"></div>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">Super Admin</p>
-                <p className="text-xs font-medium text-gray-500">View profile</p>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-900">Super Admin</p>
+                <p className="text-xs text-gray-500">System Administrator</p>
               </div>
             </div>
           </div>
