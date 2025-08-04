@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, UserGroupIcon, EnvelopeIcon, PhoneIcon, AcademicCapIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, UserGroupIcon, EnvelopeIcon, PhoneIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { teacherService } from '@/services/teacherService';
 import { Dialog } from '@/components/ui/dialog';
